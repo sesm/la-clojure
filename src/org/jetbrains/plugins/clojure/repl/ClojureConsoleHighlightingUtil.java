@@ -20,20 +20,5 @@ public class ClojureConsoleHighlightingUtil {
   private static final String CLOJURE_IDENTIFIER = LETTER + "(" + LETTER + "|[0-9]" + ")*";
   private static final String PROMPT_ARROW = "=>";
 
-  public static final String LINE_WITH_PROMPT = CLOJURE_IDENTIFIER + PROMPT_ARROW + ".*";
-
-  public static final Pattern CLOJURE_PROMPT_PATTERN = Pattern.compile(CLOJURE_IDENTIFIER + PROMPT_ARROW);
-  public static final Pattern LINE_WITH_PROMPT_PATTERN = Pattern.compile(LINE_WITH_PROMPT);
-
-  /**
-   * Print highlighted output to the console
-   * @param console
-   * @param text
-   */
-  public static void processOutput(LanguageConsoleImpl console, String text, Key attributes) {
-    final ConsoleViewContentType outputType = ConsoleViewContentType.NORMAL_OUTPUT;
-    // todo implement multiple cases for error etc.
-    LanguageConsoleImpl.printToConsole(console, text, outputType, null);
-  }
-
+  public static final Pattern CLOJURE_PROMPT_PATTERN = Pattern.compile("(" + CLOJURE_IDENTIFIER + ")" + PROMPT_ARROW);
 }

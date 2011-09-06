@@ -15,40 +15,50 @@ import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 /**
  * @author ilyas
  */
-public class LoadClojureFileInConsoleAction extends ClojureConsoleActionBase {
-
-  public LoadClojureFileInConsoleAction() {
+public class LoadClojureFileInConsoleAction extends RunActionBase
+{
+  public LoadClojureFileInConsoleAction()
+  {
     getTemplatePresentation().setIcon(ClojureIcons.REPL_LOAD);
   }
 
-  @Override
-  public void update(AnActionEvent e) {
-    super.update(e);
-  }
+  public void actionPerformed(AnActionEvent e)
+  {
+    Editor editor = e.getData(DataKeys.EDITOR);
 
-  @Override
-  public void actionPerformed(AnActionEvent e) {
-    final Editor editor = e.getData(DataKeys.EDITOR);
+    if (editor == null)
+    {
+      return;
+    }
+    Project project = editor.getProject();
+    if (project == null)
+    {
+      return;
+    }
 
-    if (editor == null) return;
-    final Project project = editor.getProject();
-    if (project == null) return;
+    Document document = editor.getDocument();
+    PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document);
+    if ((psiFile == null) || (!(psiFile instanceof ClojureFile)))
+    {
+      return;
+    }
 
-    final Document document = editor.getDocument();
-    final PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document);
-    if (psiFile == null || !(psiFile instanceof ClojureFile)) return;
+    VirtualFile virtualFile = psiFile.getVirtualFile();
+    if (virtualFile == null)
+    {
+      return;
+    }
+    String filePath = virtualFile.getPath();
+    if (filePath == null)
+    {
+      return;
+    }
 
-    final VirtualFile virtualFile = psiFile.getVirtualFile();
-    if (virtualFile == null) return;
-    final String filePath = virtualFile.getPath();
-    if (filePath == null) return;
-
-    final String command = "(load-file \"" + filePath + "\")";
+    String command = "(load-file \"" + filePath + "\")";
 
     PsiDocumentManager.getInstance(project).commitAllDocuments();
     FileDocumentManager.getInstance().saveAllDocuments();
 
     executeCommand(project, command);
   }
-
 }

@@ -32,7 +32,16 @@ public class ClojurePsiElementFactoryImpl extends ClojurePsiFactory {
   @Override
   public boolean hasSyntacticalErrors(@NotNull String text) {
     final ClojureFile clojureFile = (ClojureFile) PsiFileFactory.getInstance(getProject()).createFileFromText(DUMMY + ClojureFileType.CLOJURE_FILE_TYPE.getDefaultExtension(), text);
-    return hasErrorElement(clojureFile);
+    return hasSyntacticalErrors(clojureFile);
+  }
+
+  @Override
+  public boolean hasSyntacticalErrors(@NotNull PsiElement element) {
+    if (element instanceof PsiErrorElement) return true;
+    for (PsiElement child : element.getChildren()) {
+      if (hasSyntacticalErrors(child)) return true;
+    }
+    return false;
   }
 
   public String getErrorMessage(@NotNull String text) {
@@ -50,14 +59,6 @@ public class ClojurePsiElementFactoryImpl extends ClojurePsiFactory {
       if (msg != null) return msg;
     }
     return null;
-  }
-
-  private static boolean hasErrorElement(PsiElement element) {
-    if (element instanceof PsiErrorElement) return true;
-    for (PsiElement child : element.getChildren()) {
-      if (hasErrorElement(child)) return true;
-    }
-    return false;
   }
 
   @NotNull

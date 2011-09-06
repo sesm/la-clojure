@@ -39,7 +39,8 @@ import org.jetbrains.plugins.clojure.file.ClojureFileType;
  * @author ilyas
  * @author <a href="mailto:ianp@ianp.org">Ian Phillips</a>
  */
-public class ClojureUtils {
+public class ClojureUtils
+{
 
   public static final String CLOJURE_NOTIFICATION_GROUP = "Clojure";
   public static final String CLOJURE_REPL = "clojure.lang.Repl";
@@ -48,16 +49,22 @@ public class ClojureUtils {
 
   public static final String CLOJURE_DEFAULT_JVM_PARAMS = "-Xss1m -server";
 
-  public static boolean isClojureEditor(@NotNull Editor editor) {
+  public static boolean isClojureEditor(@NotNull Editor editor)
+  {
     VirtualFile vfile = FileDocumentManager.getInstance().getFile(editor.getDocument());
     Project project = editor.getProject();
-    if (vfile == null) return false;
-    if (project == null) {
+    if (vfile == null)
+    {
+      return false;
+    }
+    if (project == null)
+    {
       // XXX this is a hack, but what to do if we cannot access the PSI manager ???
       return vfile.getName().endsWith(".clj");
     }
     PsiFile file = PsiManager.getInstance(project).findFile(vfile);
-    if (file == null) {
+    if (file == null)
+    {
       // XXX oops, I did it again !
       return vfile.getName().endsWith(".clj");
     }
@@ -65,37 +72,13 @@ public class ClojureUtils {
     return ClojureFileType.CLOJURE_LANGUAGE.is(file.getLanguage());
   }
 
-  public static boolean isSuitableModule(Module module) {
-    if (module == null) return false;
+  public static boolean isSuitableModule(Module module)
+  {
+    if (module == null)
+    {
+      return false;
+    }
     ModuleType type = module.getModuleType();
     return type instanceof JavaModuleType || "PLUGIN_MODULE".equals(type.getId());
   }
-
-  @Nullable
-  public static Module getModule(AnActionEvent e) {
-    Module module = e.getData(DataKeys.MODULE);
-    if (module == null) {
-      final Project project = e.getData(DataKeys.PROJECT);
-      if (project == null) return null;
-      final Module[] modules = ModuleManager.getInstance(project).getModules();
-      if (modules.length == 1) {
-        module = modules[0];
-      } else {
-        for (Module m : modules) {
-          final FacetManager manager = FacetManager.getInstance(m);
-          final ClojureFacet clFacet = manager.getFacetByType(ClojureFacetType.INSTANCE.getId());
-          if (clFacet != null) {
-            module = m;
-            break;
-          }
-        }
-        if (module == null) {
-          module = modules[0];
-        }
-      }
-    }
-    return module;
-  }
-
-
 }

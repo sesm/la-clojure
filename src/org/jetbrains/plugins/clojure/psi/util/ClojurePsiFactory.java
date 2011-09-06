@@ -3,6 +3,7 @@ package org.jetbrains.plugins.clojure.psi.util;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.components.ServiceManager;
 import com.intellij.lang.ASTNode;
+import com.intellij.psi.PsiElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 
@@ -18,6 +19,8 @@ public abstract class ClojurePsiFactory {
   public abstract ASTNode createSymbolNodeFromText(@NotNull String newName); 
 
   public abstract boolean hasSyntacticalErrors(@NotNull String text);
+
+  public abstract boolean hasSyntacticalErrors(@NotNull PsiElement element);
 
   public abstract String getErrorMessage(@NotNull String text);
 
