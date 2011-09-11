@@ -1,0 +1,30 @@
+1. Fix parenthesis matching: (let [(|]), (let [{:keys [|}])
+
+2. Fix bindings for destructuring variables (lists & maps)
+
+3. Autocomplete all keywords used in file
+
+4. Autocomplete all methods from all Java types in file
+
+5. Bug: can't find usages of function
+    (def make-a-set
+      (fn
+        ([x] #{x})
+        ([x y] #{x y})))
+
+    (make-a-set 1 2 3)
+
+6. Bug: output problem:
+    > (find-doc xor)
+     > jskfdj
+     java.lang.Exception: Unable to resolve symbol: xor in this context (NO_SOURCE_FILE:29)
+    > (find-doc "xor")
+     java.lang.Exception: Unable to resolve symbol: jskfdj in this context (NO_SOURCE_FILE:0)
+    -------------------------
+    clojure.core/bit-xor
+    ([x y])
+      Bitwise exclusive or
+    nil
+
+7. Bug: completions in REPL show IntelliJRulezzzz
+
