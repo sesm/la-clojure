@@ -18,5 +18,6 @@ public class REPLToolWindowFactory implements ToolWindowFactory
     // By default tool window has no content
     toolWindow.setToHideOnEmptyContent(true);
     toolWindow.getComponent().setForeground(Color.WHITE);
+    toolWindow.setTitle(null);
   }
 }

@@ -105,7 +105,7 @@ public abstract class RunActionBase extends AnAction
     }
 
     REPL activeRepl = findActiveRepl(project);
-    if (activeRepl == null || !activeRepl.isActive() || activeRepl.isExecuting())
+    if (activeRepl == null || !activeRepl.isActive())
     {
       presentation.setEnabled(false);
       return;

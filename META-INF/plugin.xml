@@ -43,7 +43,6 @@
                              implementationClass="org.jetbrains.plugins.clojure.findUsages.ClojureFindUsagesProvider"/>
     <consoleFilterProvider
         implementation="org.jetbrains.plugins.clojure.runner.console.ClojureConsoleFilterProvider"/>
-    <completion.contributor implementation="org.jetbrains.plugins.clojure.completion.ClojureCompletionContributor"/>
     <compiler.makeDependencyProcessor
         implementation="org.jetbrains.plugins.clojure.compiler.ClojureDependencyProcessor"/>
     <configurationType implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationType"/>
@@ -224,7 +223,8 @@
     <!--</action>-->
 
     <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction" text="Start External Clojure Console"
+            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
+            text="Start nREPL Console"
             description="Runs Clojure REPL">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>

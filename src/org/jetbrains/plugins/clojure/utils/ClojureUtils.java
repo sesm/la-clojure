@@ -15,14 +15,10 @@
  */
 package org.jetbrains.plugins.clojure.utils;
 
-import com.intellij.facet.FacetManager;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.JavaModuleType;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.module.ModuleType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -30,9 +26,6 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.plugins.clojure.config.ClojureFacet;
-import org.jetbrains.plugins.clojure.config.ClojureFacetType;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 
 /**
@@ -46,6 +39,8 @@ public class ClojureUtils
   public static final String CLOJURE_REPL = "clojure.lang.Repl";
   @NonNls
   public static final String CLOJURE_MAIN = "clojure.main";
+  @NonNls
+  public static final String REPL_MAIN = "clojure.tools.nrepl.main";
 
   public static final String CLOJURE_DEFAULT_JVM_PARAMS = "-Xss1m -server";
 

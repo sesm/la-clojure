@@ -83,6 +83,7 @@ import java.util.Collections;
 
 /**
  * Copied from IDEA core and heavily modified.
+ *
  * @author Colin Fleming
  * @author Gregory.Shrago
  */
@@ -172,7 +173,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
 
     myHistoryViewer.getComponent().setMinimumSize(new Dimension(0, 0));
     myHistoryViewer.getComponent().setPreferredSize(new Dimension(0, 0));
-//    myConsoleEditor.getSettings().setAdditionalLinesCount(2);
+    //    myConsoleEditor.getSettings().setAdditionalLinesCount(2);
     myConsoleEditor.setHighlighter(EditorHighlighterFactory.getInstance()
                                      .createEditorHighlighter(myProject, myFile.getVirtualFile()));
     myHistoryViewer.setCaretEnabled(false);
@@ -434,13 +435,13 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     });
   }
 
-  public static void printToConsole(final LanguageConsoleImpl console,
-                                    final String string,
+  public static void printToConsole(LanguageConsoleImpl console,
+                                    String text,
                                     ConsoleViewContentType mainType,
                                     ConsoleViewContentType additionalType)
   {
     TextAttributes mainAttributes = mainType.getAttributes();
-    final TextAttributes attributes;
+    TextAttributes attributes;
     if (additionalType == null)
     {
       attributes = mainAttributes;
@@ -450,20 +451,27 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
       attributes = additionalType.getAttributes().clone();
       attributes.setBackgroundColor(mainAttributes.getBackgroundColor());
     }
+    printToConsole(console, text, attributes);
+  }
+
+  public static void printToConsole(final LanguageConsoleImpl console,
+                                    final String text,
+                                    final TextAttributes attributes)
+  {
     ApplicationManager.getApplication().invokeLater(new Runnable()
     {
       public void run()
       {
-        console.printToHistory(string, attributes);
+        console.printToHistory(text, attributes);
       }
     }, ModalityState.stateForComponent(console.getComponent()));
   }
 
-  private class ConsoleVisibleAreaListener implements VisibleAreaListener
+  private static class ConsoleVisibleAreaListener implements VisibleAreaListener
   {
     private final Editor editor;
 
-    public ConsoleVisibleAreaListener(Editor editor)
+    private ConsoleVisibleAreaListener(Editor editor)
     {
       this.editor = editor;
     }

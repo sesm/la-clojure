@@ -55,6 +55,7 @@ public class ClojureConfigUtil {
     }
   };
   public static String CLOJURE_SDK = PathUtil.getJarPathForClass(AFn.class);
+  public static String NREPL_LIB = PathUtil.getJarPathForClass(clojure.tools.nrepl.main.class);
 
   /**
    * Checks whether a given IDEA library contains Clojure Library classes

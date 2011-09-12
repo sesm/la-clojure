@@ -105,11 +105,6 @@ public abstract class REPLBase implements REPL
     });
   }
 
-  public String getTabName()
-  {
-    return tabName;
-  }
-
   public void setTabName(final String tabName)
   {
     this.tabName = tabName;

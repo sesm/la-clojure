@@ -1,6 +1,5 @@
 package org.jetbrains.plugins.clojure.repl;
 
-import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.CaretModel;
 import com.intellij.openapi.editor.Document;
@@ -11,7 +10,6 @@ import com.intellij.openapi.editor.colors.EditorColorsScheme;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.ex.RangeHighlighterEx;
 import com.intellij.openapi.editor.highlighter.HighlighterIterator;
-import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
@@ -28,8 +26,6 @@ import org.jetbrains.plugins.clojure.utils.Editors;
 public class ClojureConsole extends LanguageConsoleImpl
 {
   private final ConsoleHistoryModel historyModel;
-  private final String inputPrompt = "> ";
-  private final String continuationPrompt = "  ";
   private String currentREPLItem = null;
   private int currentREPLOffset = 0;
 
@@ -62,9 +58,9 @@ public class ClojureConsole extends LanguageConsoleImpl
 
     String candidate = text.trim();
 
-    if ((ClojurePsiUtil.isValidClojureExpression(candidate, project)) || ("".equals(candidate)))
+    if (ClojurePsiUtil.isValidClojureExpression(candidate, project) || "".equals(candidate))
     {
-      ConsoleHistoryModel consoleHistoryModel = getHistoryModel();
+      ConsoleHistoryModel consoleHistoryModel = historyModel;
 
       TextRange range = new TextRange(0, document.getTextLength());
       editor.getSelectionModel().setSelection(range.getStartOffset(), range.getEndOffset());
@@ -113,7 +109,7 @@ public class ClojureConsole extends LanguageConsoleImpl
   // Copied from LanguageConsoleImpl
   private String addTextRangeToHistoryImpl(EditorEx fromEditor, TextRange textRange)
   {
-    DocumentImpl history = (DocumentImpl) getHistoryViewer().getDocument();
+    Document history = getHistoryViewer().getDocument();
     MarkupModel markupModel = history.getMarkupModel(getProject());
 
     int startLine = fromEditor.offsetToLogicalPosition(textRange.getStartOffset()).line;
@@ -122,18 +118,8 @@ public class ClojureConsole extends LanguageConsoleImpl
     Document fromDocument = fromEditor.getDocument();
     String fullText = fromDocument.getText(textRange);
 
-    String prompt = inputPrompt;
     for (int line = startLine; line <= endLine; line++)
     {
-      appendToHistoryDocument(history, prompt);
-      markupModel.addRangeHighlighter(history.getTextLength() - prompt.length(),
-                                      history.getTextLength(),
-                                      HighlighterLayer.SYNTAX,
-                                      ConsoleViewContentType.USER_INPUT.getAttributes(),
-                                      HighlighterTargetArea.EXACT_RANGE);
-
-      prompt = continuationPrompt;
-
       int lineStart = fromDocument.getLineStartOffset(line);
       int lineEnd = fromDocument.getLineEndOffset(line);
 
@@ -170,6 +156,20 @@ public class ClojureConsole extends LanguageConsoleImpl
       duplicateHighlighters(markupModel, fromDocument.getMarkupModel(getProject()), offset, lineRange);
       duplicateHighlighters(markupModel, fromEditor.getMarkupModel(), offset, lineRange);
       appendToHistoryDocument(history, "\n");
+
+//      // Add REPL separators
+//      // TODO make this configurable
+//      if (line == startLine)
+//      {
+//        RangeHighlighter marker = markupModel.addRangeHighlighter(offset,
+//                                                                  history.getTextLength(),
+//                                                                  HighlighterLayer.ADDITIONAL_SYNTAX,
+//                                                                  null,
+//                                                                  HighlighterTargetArea.EXACT_RANGE);
+//        EditorColorsScheme clojureScheme = EditorColorsManager.getInstance().getGlobalScheme();
+//        marker.setLineSeparatorColor(clojureScheme.getColor(CodeInsightColors.METHOD_SEPARATORS_COLOR));
+//        marker.setLineSeparatorPlacement(SeparatorPlacement.TOP);
+//      }
     }
 
     return fullText;
@@ -209,7 +209,7 @@ public class ClojureConsole extends LanguageConsoleImpl
 
   public ConsoleHistoryModel getHistoryModel()
   {
-    return this.historyModel;
+    return historyModel;
   }
 
   public void saveCurrentREPLItem()
@@ -227,6 +227,7 @@ public class ClojureConsole extends LanguageConsoleImpl
     Editor editor = getCurrentEditor();
     Document document = editor.getDocument();
     document.setText(currentREPLItem == null ? "" : currentREPLItem);
+    //noinspection VariableNotUsedInsideIf
     editor.getCaretModel().moveToOffset(currentREPLItem == null ? 0 : currentREPLOffset);
   }
 }

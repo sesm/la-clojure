@@ -6,8 +6,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.ui.content.Content;
-import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
-import org.jetbrains.plugins.clojure.repl.REPLException;
 
 import java.util.Collection;
 
@@ -27,14 +25,10 @@ public interface REPL
 
   boolean isActive();
 
-  boolean isExecuting();
-
   ClojureConsoleView getConsoleView();
 
   // Guaranteed to be called after start()
   AnAction[] getToolbarActions() throws REPLException;
-
-  String getTabName();
 
   void setTabName(String tabName);
 

@@ -15,7 +15,7 @@ public class NewExternalConsoleAction extends AnAction implements DumbAware
 {
   public NewExternalConsoleAction()
   {
-    getTemplatePresentation().setIcon(ClojureIcons.CLOJURE_ICON_16x16);
+    getTemplatePresentation().setIcon(ClojureIcons.REPL_GO);
   }
 
   public void update(AnActionEvent e)
