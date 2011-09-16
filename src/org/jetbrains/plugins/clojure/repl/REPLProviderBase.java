@@ -14,6 +14,8 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.project.ProjectManagerListener;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.wm.IdeFocusManager;
@@ -22,6 +24,8 @@ import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.content.ContentManager;
+import com.intellij.ui.content.ContentManagerAdapter;
+import com.intellij.ui.content.ContentManagerEvent;
 import org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory;
 
 import javax.swing.*;
@@ -29,6 +33,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Colin Fleming
@@ -63,7 +68,7 @@ public abstract class REPLProviderBase implements REPLProvider
     // TODO
     String workingDir = ModuleRootManager.getInstance(module).getContentRoots()[0].getPath();
 
-    REPL repl = newREPL(project, module, consoleView, workingDir);
+    final REPL repl = newREPL(project, module, consoleView, workingDir);
 
     AnAction[] actions;
     try
@@ -94,8 +99,7 @@ public abstract class REPLProviderBase implements REPLProvider
 
     if (toolWindow.isActive())
     {
-      contentManager.addContent(content);
-      contentManager.setSelectedContent(content);
+      initContent(contentManager, content, project, repl);
     }
     else
     {
@@ -103,8 +107,7 @@ public abstract class REPLProviderBase implements REPLProvider
       {
         public void run()
         {
-          contentManager.addContent(content);
-          contentManager.setSelectedContent(content);
+          initContent(contentManager, content, project, repl);
         }
       });
     }
@@ -119,9 +122,29 @@ public abstract class REPLProviderBase implements REPLProvider
     });
   }
 
+  private void initContent(final ContentManager contentManager, Content content, final Project project, REPL repl)
+  {
+    contentManager.addContent(content);
+    contentManager.setSelectedContent(content);
+
+    final REPLListener listener = new REPLListener(project, repl, content);
+    final ProjectManager projectManager = ProjectManager.getInstance();
+    projectManager.addProjectManagerListener(project, listener);
+    contentManager.addContentManagerListener(listener);
+
+    repl.onShutdown(new Runnable()
+    {
+      public void run()
+      {
+        projectManager.removeProjectManagerListener(project, listener);
+        contentManager.removeContentManagerListener(listener);
+      }
+    });
+  }
+
   private AnAction[] getToolbarActions(REPL repl) throws REPLException
   {
-    java.util.List<AnAction> actions = new ArrayList<AnAction>();
+    List<AnAction> actions = new ArrayList<AnAction>();
     actions.addAll(Arrays.asList(repl.getToolbarActions()));
 
     ClojureConsole console = repl.getConsoleView().getConsole();
@@ -190,11 +213,11 @@ public abstract class REPLProviderBase implements REPLProvider
         e.getPresentation().setEnabled(canMoveInEditor(previous));
       }
 
-      private boolean canMoveInEditor(final boolean previous)
+      private boolean canMoveInEditor(boolean previous)
       {
-        final Editor consoleEditor = console.getCurrentEditor();
-        final Document document = consoleEditor.getDocument();
-        final CaretModel caretModel = consoleEditor.getCaretModel();
+        Editor consoleEditor = console.getCurrentEditor();
+        Document document = consoleEditor.getDocument();
+        CaretModel caretModel = consoleEditor.getCaretModel();
 
         if (LookupManager.getActiveLookup(consoleEditor) != null)
         {
@@ -207,7 +230,7 @@ public abstract class REPLProviderBase implements REPLProvider
         }
         else
         {
-          final int lineCount = document.getLineCount();
+          int lineCount = document.getLineCount();
           return (lineCount == 0 || document.getLineNumber(caretModel.getOffset()) == lineCount - 1) &&
                  StringUtil.isEmptyOrSpaces(document.getText().substring(caretModel.getOffset()));
         }
@@ -217,5 +240,59 @@ public abstract class REPLProviderBase implements REPLProvider
     action.registerCustomShortcutSet(keyEvent, 0, null);
     action.getTemplatePresentation().setVisible(false);
     return action;
+  }
+
+  private static class REPLListener extends ContentManagerAdapter implements ProjectManagerListener
+  {
+    private final Project project;
+    private final REPL repl;
+    private final Content content;
+
+    private REPLListener(Project project, REPL repl, Content content)
+    {
+      this.project = project;
+      this.repl = repl;
+      this.content = content;
+    }
+
+    @Override
+    public void contentRemoveQuery(ContentManagerEvent event)
+    {
+      if (content.equals(event.getContent()))
+      {
+        boolean canClose = repl.stopQuery();
+        if (!canClose)
+        {
+          event.consume();
+        }
+      }
+    }
+
+    public void projectOpened(Project project)
+    {
+    }
+
+    public boolean canCloseProject(Project project)
+    {
+      if (!this.project.equals(project))
+      {
+        return true;
+      }
+
+      boolean canClose = repl.stopQuery();
+      if (canClose)
+      {
+        content.getManager().removeContent(content, true);
+      }
+      return canClose;
+    }
+
+    public void projectClosed(Project project)
+    {
+    }
+
+    public void projectClosing(Project project)
+    {
+    }
   }
 }

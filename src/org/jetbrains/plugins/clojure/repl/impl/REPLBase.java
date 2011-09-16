@@ -9,6 +9,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
@@ -18,6 +19,7 @@ import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
 import org.jetbrains.plugins.clojure.repl.REPL;
 import org.jetbrains.plugins.clojure.repl.REPLException;
+import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.ExecuteImmediatelyAction;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.HistoryNextAction;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.HistoryPreviousAction;
@@ -37,7 +39,10 @@ public abstract class REPLBase implements REPL
 
   protected final Project project;
   protected final ClojureConsoleView consoleView;
-  private String tabName = "REPL";
+
+  private String displayName = getType();
+
+  private Runnable shutdownHook = null;
 
   public REPLBase(ClojureConsoleView consoleView, Project project)
   {
@@ -47,7 +52,45 @@ public abstract class REPLBase implements REPL
 
   public abstract void start() throws REPLException;
 
-  public abstract void stop();
+  public abstract void doStop();
+
+  public final void stop()
+  {
+    try
+    {
+      doStop();
+    }
+    finally
+    {
+      if (shutdownHook != null)
+      {
+        shutdownHook.run();
+      }
+    }
+  }
+
+  public boolean stopQuery()
+  {
+    if (!isActive())
+    {
+      return true;
+    }
+
+    TerminateREPLDialog dialog = new TerminateREPLDialog(project, displayName);
+    dialog.show();
+    if (dialog.getExitCode() != DialogWrapper.OK_EXIT_CODE)
+    {
+      return false;
+    }
+
+    stop();
+    return true;
+  }
+
+  public void onShutdown(Runnable runnable)
+  {
+    shutdownHook = runnable;
+  }
 
   public abstract void execute(String command);
 
@@ -87,7 +130,7 @@ public abstract class REPLBase implements REPL
           parent.add(historyViewer.getComponent());
           parent.remove(component);
           Editors.scrollDown(historyViewer);
-          ((JPanel) parent).updateUI();
+          ((JComponent) parent).updateUI();
         }
       }
     });
@@ -107,13 +150,13 @@ public abstract class REPLBase implements REPL
 
   public void setTabName(final String tabName)
   {
-    this.tabName = tabName;
     ApplicationManager.getApplication().invokeLater(new Runnable()
     {
       public void run()
       {
         Content content = getContent();
-        content.setDisplayName(getType() + ": " + tabName);
+        displayName = getType() + ": " + tabName;
+        content.setDisplayName(displayName);
       }
     });
   }

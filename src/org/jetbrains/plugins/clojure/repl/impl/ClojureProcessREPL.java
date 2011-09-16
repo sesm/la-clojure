@@ -192,7 +192,7 @@ public class ClojureProcessREPL extends REPLBase
   }
 
   @Override
-  public void stop()
+  public void doStop()
   {
     if (connection != null)
     {

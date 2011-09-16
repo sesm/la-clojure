@@ -6,6 +6,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.ui.content.Content;
+import org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory;
 
 import java.util.Collection;
 
@@ -14,7 +15,7 @@ import java.util.Collection;
 */
 public interface REPL
 {
-  Key<REPL> REPL_KEY = Key.create("Clojure.REPL");
+  Key<REPL> REPL_KEY = Key.create(REPLToolWindowFactory.TOOL_WINDOW_ID);
   Key<Content> CONTENT_KEY = Key.create("Clojure.REPL.Content");
 
   void execute(String command);
@@ -22,6 +23,10 @@ public interface REPL
   void start() throws REPLException;
 
   void stop() throws REPLException;
+
+  boolean stopQuery();
+
+  void onShutdown(Runnable runnable);
 
   boolean isActive();
 

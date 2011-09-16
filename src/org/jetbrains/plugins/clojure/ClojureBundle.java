@@ -18,6 +18,10 @@ public class ClojureBundle {
   @NonNls
   private static final String BUNDLE = "org.jetbrains.plugins.clojure.ClojureBundle";
 
+  private ClojureBundle()
+  {
+  }
+
   public static String message(@PropertyKey(resourceBundle = BUNDLE) String key, Object... params) {
     return CommonBundle.message(getBundle(), key, params);
   }
