@@ -46,7 +46,7 @@ public final class ClojureProjectSettings implements PersistentStateComponent<Cl
 
   public boolean autoStartRepl;
   public boolean coloredParentheses;
-
+  public boolean separateREPLItems;
 
   public ClojureProjectSettings() {
   }

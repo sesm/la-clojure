@@ -29,6 +29,7 @@ public final class ClojureProjectSettingsForm {
   private JPanel myPanel;
   private JCheckBox rainbowParenthesesCheckBox;
   private JPanel myAppearancePanel;
+  private JCheckBox separateREPLItems;
 
   public ClojureProjectSettingsForm(Project project) {
     mySettings = ClojureProjectSettings.getInstance(project);
@@ -42,13 +43,21 @@ public final class ClojureProjectSettingsForm {
     return rainbowParenthesesCheckBox.isSelected();
   }
 
+  boolean isSeparateREPLItems()
+  {
+    return separateREPLItems.isSelected();
+  }
+
   boolean isModified() {
     final boolean coloredParentheses = mySettings.coloredParentheses;
-    return (rainbowParenthesesCheckBox.isSelected() != coloredParentheses);
+    final boolean separateItems = mySettings.separateREPLItems;
+    return (rainbowParenthesesCheckBox.isSelected() != coloredParentheses) ||
+           (separateREPLItems.isSelected() != separateItems);
   }
 
   void reset() {
     rainbowParenthesesCheckBox.setSelected(mySettings.coloredParentheses);
+    separateREPLItems.setSelected(mySettings.separateREPLItems);
   }
 
 }

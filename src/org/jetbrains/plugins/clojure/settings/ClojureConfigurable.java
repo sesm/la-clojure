@@ -70,6 +70,7 @@ public final class ClojureConfigurable extends AbstractProjectComponent implemen
   public void apply() throws ConfigurationException {
     ClojureProjectSettings settings = ClojureProjectSettings.getInstance(myProject);
     settings.coloredParentheses = mySettingsForm.isColoredParentheses();
+    settings.separateREPLItems = mySettingsForm.isSeparateREPLItems();
   }
 
   public void reset() {

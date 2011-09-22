@@ -14,6 +14,7 @@ import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
+import com.intellij.openapi.editor.markup.SeparatorPlacement;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
@@ -21,6 +22,7 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
+import org.jetbrains.plugins.clojure.settings.ClojureProjectSettings;
 import org.jetbrains.plugins.clojure.utils.Editors;
 
 public class ClojureConsole extends LanguageConsoleImpl
@@ -157,19 +159,18 @@ public class ClojureConsole extends LanguageConsoleImpl
       duplicateHighlighters(markupModel, fromEditor.getMarkupModel(), offset, lineRange);
       appendToHistoryDocument(history, "\n");
 
-//      // Add REPL separators
-//      // TODO make this configurable
-//      if (line == startLine)
-//      {
-//        RangeHighlighter marker = markupModel.addRangeHighlighter(offset,
-//                                                                  history.getTextLength(),
-//                                                                  HighlighterLayer.ADDITIONAL_SYNTAX,
-//                                                                  null,
-//                                                                  HighlighterTargetArea.EXACT_RANGE);
-//        EditorColorsScheme clojureScheme = EditorColorsManager.getInstance().getGlobalScheme();
-//        marker.setLineSeparatorColor(clojureScheme.getColor(CodeInsightColors.METHOD_SEPARATORS_COLOR));
-//        marker.setLineSeparatorPlacement(SeparatorPlacement.TOP);
-//      }
+      // Add REPL separators
+      if (ClojureProjectSettings.getInstance(getProject()).separateREPLItems && (line == startLine))
+      {
+        RangeHighlighter marker = markupModel.addRangeHighlighter(offset,
+                                                                  history.getTextLength(),
+                                                                  HighlighterLayer.ADDITIONAL_SYNTAX,
+                                                                  null,
+                                                                  HighlighterTargetArea.EXACT_RANGE);
+        EditorColorsScheme clojureScheme = EditorColorsManager.getInstance().getGlobalScheme();
+        marker.setLineSeparatorColor(clojureScheme.getColor(CodeInsightColors.METHOD_SEPARATORS_COLOR));
+        marker.setLineSeparatorPlacement(SeparatorPlacement.TOP);
+      }
     }
 
     return fullText;
