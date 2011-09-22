@@ -12,6 +12,7 @@ import clojure.lang.Symbol;
 import clojure.lang.Var;
 import clojure.tools.nrepl.Connection;
 import clojure.tools.nrepl.Connection.Response;
+import clojure.tools.nrepl.SafeFn;
 import com.intellij.execution.CantRunException;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ExecutionHelper;
@@ -46,6 +47,7 @@ import org.jetbrains.plugins.clojure.highlighter.ClojureSyntaxHighlighter;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
 import org.jetbrains.plugins.clojure.repl.REPL;
+import org.jetbrains.plugins.clojure.repl.REPLComponent;
 import org.jetbrains.plugins.clojure.repl.REPLException;
 import org.jetbrains.plugins.clojure.repl.REPLProviderBase;
 import org.jetbrains.plugins.clojure.repl.REPLUtil;
@@ -54,7 +56,6 @@ import org.jetbrains.plugins.clojure.utils.Editors;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.net.ConnectException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -71,7 +72,6 @@ public class ClojureProcessREPL extends REPLBase
 
   public static final String REPL_TITLE = ClojureBundle.message("repl.toolWindowName");
   private static final Pattern SPACES = Pattern.compile("\\s+");
-  private static final int NREPL_PORT = 8197;
 
   @NonNls
   private static final Keyword NAMESPACE_KEYWORD = Keyword.intern("ns");
@@ -80,8 +80,11 @@ public class ClojureProcessREPL extends REPLBase
   @NonNls
   private static final Keyword ERROR_KEYWORD = Keyword.intern("err");
   private static final TextAttributes NORMAL_TEXT = ConsoleViewContentType.NORMAL_OUTPUT.getAttributes();
-  private static final int REPL_RETRY_COUNT = 20;
-  private static final long REPL_RETRY_PAUSE = 200L;
+  @NonNls
+  public static final String WAIT_FOR_ACK = "wait-for-ack";
+  @NonNls
+  public static final String RESET_ACK_PORT = "reset-ack-port!";
+  private static final long PROCESS_WAIT_TIME = 30000L;
 
   private final Module module;
   private final String workingDir;
@@ -98,6 +101,8 @@ public class ClojureProcessREPL extends REPLBase
   @Override
   public void start() throws REPLException
   {
+    SafeFn.find(REPLComponent.NREPL_NS, RESET_ACK_PORT).sInvoke();
+
     Process process;
     GeneralCommandLine commandLine;
     try
@@ -125,14 +130,24 @@ public class ClojureProcessREPL extends REPLBase
     getConsoleView().attachToProcess(processHandler);
     processHandler.startNotify();
 
-    try
-    {
-      connect();
-    }
-    catch (REPLException e)
+    SafeFn waitForAck = SafeFn.find(REPLComponent.NREPL_NS, WAIT_FOR_ACK);
+    Integer maybePort = (Integer) waitForAck.sInvoke(Long.valueOf(PROCESS_WAIT_TIME));
+
+    if (maybePort == null)
     {
       stop();
-      throw e;
+      throw new REPLException("Error waiting for REPL process start");
+    }
+
+    try
+    {
+      connection = new Connection("localhost", maybePort.intValue());
+    }
+    catch (Exception e)
+    {
+      log.error("Error connecting to REPL: " + e.getMessage(), e);
+      stop();
+      throw new REPLException(e);
     }
 
     // Initialise REPL and set namespace
@@ -147,48 +162,6 @@ public class ClojureProcessREPL extends REPLBase
     String namespace = (String) items.get(NAMESPACE_KEYWORD);
     ClojureConsole console = getConsoleView().getConsole();
     console.setTitle(namespace);
-  }
-
-  private void connect() throws REPLException
-  {
-    connection = null;
-    int errorCount = 0;
-    while ((errorCount < REPL_RETRY_COUNT) && (connection == null))
-    {
-      try
-      {
-        connection = new Connection("localhost", NREPL_PORT);
-      }
-      catch (ConnectException e)
-      {
-        if (e.getMessage().contains("Connection refused"))
-        {
-          errorCount++;
-          try
-          {
-            //noinspection BusyWait
-            Thread.sleep(REPL_RETRY_PAUSE);
-          }
-          catch (InterruptedException ignore)
-          {
-            Thread.currentThread().interrupt();
-          }
-        }
-        else
-        {
-          throw new REPLException("Error connecting to REPL: " + e.getMessage(), e);
-        }
-      }
-      catch (Exception e)
-      {
-        throw new REPLException("Error connecting to REPL: " + e.getMessage(), e);
-      }
-    }
-
-    if (errorCount == REPL_RETRY_COUNT)
-    {
-      throw new REPLException("Couldn't establish connection to REPL");
-    }
   }
 
   @Override
@@ -504,7 +477,11 @@ public class ClojureProcessREPL extends REPLBase
     params.configureByModule(module, JavaParameters.JDK_AND_CLASSES);
     params.getVMParametersList().addAll(getJvmClojureOptions(module));
     params.getProgramParametersList().addAll(getReplClojureOptions(module));
-    params.getProgramParametersList().addAll(Arrays.asList("--port", Integer.toString(NREPL_PORT)));
+    params.getProgramParametersList()
+      .addAll(Arrays.asList("--port",
+                            Integer.toString(0),
+                            "--ack",
+                            Integer.toString(REPLComponent.getLocalPort())));
 
     boolean sdkConfigured = ClojureConfigUtil.isClojureConfigured(module);
     if (!sdkConfigured)

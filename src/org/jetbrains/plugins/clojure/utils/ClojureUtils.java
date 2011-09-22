@@ -43,6 +43,8 @@ public class ClojureUtils
   public static final String REPL_MAIN = "clojure.tools.nrepl.main";
 
   public static final String CLOJURE_DEFAULT_JVM_PARAMS = "-Xss1m -server";
+  @NonNls
+  public static final String CORE_NAMESPACE = "clojure.core";
 
   public static boolean isClojureEditor(@NotNull Editor editor)
   {

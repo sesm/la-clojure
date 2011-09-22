@@ -17,6 +17,7 @@ import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
+import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +28,7 @@ import java.util.Collection;
  */
 public class NamespaceUtil {
 
-  public static final String[] DEFAULT_NSES = new String[]{"clojure.core",
+  public static final String[] DEFAULT_NSES = new String[]{ClojureUtils.CORE_NAMESPACE,
 //          "clojure.inspector",
 //          "clojure.main",
 //          "clojure.parallel",
