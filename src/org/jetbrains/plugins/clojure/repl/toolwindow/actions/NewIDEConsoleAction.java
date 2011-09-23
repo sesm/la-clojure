@@ -1,13 +1,13 @@
 package org.jetbrains.plugins.clojure.repl.toolwindow.actions;
 
 import org.jetbrains.plugins.clojure.repl.REPLProvider;
-import org.jetbrains.plugins.clojure.repl.impl.ClojureProcessREPL;
+import org.jetbrains.plugins.clojure.repl.impl.ClojureIDEREPL;
 
-public class NewExternalConsoleAction extends NewConsoleActionBase
+public class NewIDEConsoleAction extends NewConsoleActionBase
 {
   @Override
   protected REPLProvider getProvider()
   {
-    return new ClojureProcessREPL.Provider();
+    return new ClojureIDEREPL.Provider();
   }
 }

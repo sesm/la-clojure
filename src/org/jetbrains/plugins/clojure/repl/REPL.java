@@ -29,4 +29,6 @@ public interface REPL
 
   // Guaranteed to be called after start()
   AnAction[] getToolbarActions() throws REPLException;
+
+  String getType();
 }

@@ -318,7 +318,8 @@ public class ClojureConsole extends LanguageConsoleImpl
   public void setTitle(final String title)
   {
     final Content content = getConsoleEditor().getUserData(REPL.CONTENT_KEY);
-    if (content == null)
+    final REPL repl = getConsoleEditor().getUserData(REPL.REPL_KEY);
+    if ((content == null) || (repl == null))
     {
       return;
     }
@@ -327,7 +328,7 @@ public class ClojureConsole extends LanguageConsoleImpl
     {
       public void run()
       {
-        content.setDisplayName(title);
+        content.setDisplayName(repl.getType() + ": " + title);
       }
     });
   }

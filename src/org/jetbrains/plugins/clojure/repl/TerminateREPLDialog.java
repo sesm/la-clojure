@@ -1,10 +1,8 @@
 package org.jetbrains.plugins.clojure.repl;
 
-import com.intellij.execution.ExecutionBundle;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.util.ui.UIUtil;
-import org.jetbrains.plugins.clojure.ClojureBundle;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,14 +13,14 @@ import java.awt.*;
 public class TerminateREPLDialog extends DialogWrapper
 {
   private static final int ICON_TEXT_GAP = 7;
-  private final String replName;
+  private final String message;
 
-  public TerminateREPLDialog(Project project, String replName)
+  public TerminateREPLDialog(Project project, String title, String message, String okText)
   {
     super(project, true);
-    this.replName = replName;
-    setTitle(ClojureBundle.message("repl.is.running", replName));
-    setOKButtonText(ExecutionBundle.message("button.terminate"));
+    this.message = message;
+    setTitle(title);
+    setOKButtonText(okText);
     setButtonsAlignment(SwingConstants.CENTER);
     init();
   }
@@ -36,7 +34,7 @@ public class TerminateREPLDialog extends DialogWrapper
   @Override
   protected JComponent createNorthPanel()
   {
-    JLabel label = new JLabel(ClojureBundle.message("do.you.want.to.terminate.the.repl", replName));
+    JLabel label = new JLabel(message);
     JPanel panel = new JPanel(new BorderLayout());
     panel.add(label, BorderLayout.CENTER);
     Icon icon = UIUtil.getOptionPanelWarningIcon();

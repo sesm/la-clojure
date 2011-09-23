@@ -4,6 +4,7 @@ import clojure.lang.Keyword;
 import clojure.tools.nrepl.Connection;
 import clojure.tools.nrepl.SafeFn;
 import com.intellij.execution.CantRunException;
+import com.intellij.execution.ExecutionBundle;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ExecutionHelper;
 import com.intellij.execution.KillableProcess;
@@ -31,6 +32,7 @@ import org.jetbrains.plugins.clojure.repl.REPLException;
 import org.jetbrains.plugins.clojure.repl.REPLProviderBase;
 import org.jetbrains.plugins.clojure.repl.REPLUtil;
 import org.jetbrains.plugins.clojure.repl.Response;
+import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.io.File;
@@ -68,7 +70,6 @@ public class ClojureProcessREPL extends REPLBase
     this.workingDir = workingDir;
   }
 
-  @Override
   public void start() throws REPLException
   {
     SafeFn.find(REPLComponent.NREPL_NS, RESET_ACK_PORT).sInvoke();
@@ -147,7 +148,16 @@ public class ClojureProcessREPL extends REPLBase
   }
 
   @Override
-  public Response execute(String command)
+  protected TerminateREPLDialog getTerminateDialog()
+  {
+    return new TerminateREPLDialog(project,
+                                   ClojureBundle.message("repl.is.running", displayName),
+                                   ClojureBundle.message("do.you.want.to.terminate.the.repl", displayName),
+                                   ExecutionBundle.message("button.terminate"));
+  }
+
+  @Override
+  public Response doExecute(String command)
   {
     setEditorEnabled(false);
 
@@ -169,7 +179,6 @@ public class ClojureProcessREPL extends REPLBase
     };
   }
 
-  @Override
   public boolean isActive()
   {
     if (!processHandler.isStartNotified())
@@ -179,10 +188,9 @@ public class ClojureProcessREPL extends REPLBase
     return !(processHandler.isProcessTerminated() || processHandler.isProcessTerminating());
   }
 
-  @Override
-  protected String getType()
+  public String getType()
   {
-    return "nREPL";
+    return "Process";
   }
 
   protected Process createProcess(GeneralCommandLine commandLine) throws ExecutionException

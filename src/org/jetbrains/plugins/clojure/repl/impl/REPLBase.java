@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.clojure.repl.impl;
 
+import com.intellij.execution.ExecutionBundle;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -12,10 +13,10 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.ui.content.Content;
+import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
 import org.jetbrains.plugins.clojure.repl.REPL;
-import org.jetbrains.plugins.clojure.repl.REPLException;
 import org.jetbrains.plugins.clojure.repl.Response;
 import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.ExecuteImmediatelyAction;
@@ -37,17 +38,15 @@ public abstract class REPLBase implements REPL
   protected final Project project;
   protected final ClojureConsoleView consoleView;
 
-  private String displayName = getType();
+  protected String displayName = getType();
 
   private Runnable shutdownHook = null;
 
-  public REPLBase(ClojureConsoleView consoleView, Project project)
+  protected REPLBase(ClojureConsoleView consoleView, Project project)
   {
     this.consoleView = consoleView;
     this.project = project;
   }
-
-  public abstract void start() throws REPLException;
 
   public abstract void doStop();
 
@@ -73,7 +72,7 @@ public abstract class REPLBase implements REPL
       return true;
     }
 
-    TerminateREPLDialog dialog = new TerminateREPLDialog(project, displayName);
+    TerminateREPLDialog dialog = getTerminateDialog();
     dialog.show();
     if (dialog.getExitCode() != DialogWrapper.OK_EXIT_CODE)
     {
@@ -84,16 +83,27 @@ public abstract class REPLBase implements REPL
     return true;
   }
 
+  protected TerminateREPLDialog getTerminateDialog()
+  {
+    return new TerminateREPLDialog(project,
+                                   ClojureBundle.message("repl.is.connected", displayName),
+                                   ClojureBundle.message("do.you.want.to.disconnect.the.repl", displayName),
+                                   ExecutionBundle.message("button.disconnect"));
+  }
+
   public void onShutdown(Runnable runnable)
   {
     shutdownHook = runnable;
   }
 
-  public abstract Response execute(String command);
+  protected abstract Response doExecute(String command);
 
-  public abstract boolean isActive();
-
-  protected abstract String getType();
+  public final Response execute(String command)
+  {
+    Response response = doExecute(command);
+    displayName = getType() + ": " + response.namespace();
+    return response;
+  }
 
   public ClojureConsoleView getConsoleView()
   {

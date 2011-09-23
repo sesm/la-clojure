@@ -38,27 +38,27 @@
     <lang.formatter language="Clojure"
                     implementationClass="org.jetbrains.plugins.clojure.formatter.ClojureFormattingModelBuilder"/>
     <codeStyleSettingsProvider
-        implementation="org.jetbrains.plugins.clojure.formatter.codeStyle.ClojureCodeStyleSettingsProvider"/>
+      implementation="org.jetbrains.plugins.clojure.formatter.codeStyle.ClojureCodeStyleSettingsProvider"/>
     <lang.findUsagesProvider language="Clojure"
                              implementationClass="org.jetbrains.plugins.clojure.findUsages.ClojureFindUsagesProvider"/>
     <consoleFilterProvider
-        implementation="org.jetbrains.plugins.clojure.runner.console.ClojureConsoleFilterProvider"/>
+      implementation="org.jetbrains.plugins.clojure.runner.console.ClojureConsoleFilterProvider"/>
     <completion.contributor language="Clojure"
                             implementationClass="org.jetbrains.plugins.clojure.completion.ClojureCompletionContributor"/>
     <compiler.makeDependencyProcessor
-        implementation="org.jetbrains.plugins.clojure.compiler.ClojureDependencyProcessor"/>
+      implementation="org.jetbrains.plugins.clojure.compiler.ClojureDependencyProcessor"/>
     <configurationType implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationType"/>
     <configurationProducer
-        implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationProducer"/>
+      implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationProducer"/>
     <fileTemplateGroup implementation="org.jetbrains.plugins.clojure.actions.ClojureTemplatesFactory"/>
     <renameInputValidator
-        implementation="org.jetbrains.plugins.clojure.refactoring.rename.ClojureRenameInputValidator"/>
+      implementation="org.jetbrains.plugins.clojure.refactoring.rename.ClojureRenameInputValidator"/>
     <fileTypeIndentOptionsProvider
-        implementation="org.jetbrains.plugins.clojure.formatter.ClojureIndentOptionsProvider"/>
+      implementation="org.jetbrains.plugins.clojure.formatter.ClojureIndentOptionsProvider"/>
     <quoteHandler fileType="Clojure" className="org.jetbrains.plugins.clojure.editor.ClojureQuoteHandler"/>
     <annotator language="Clojure" implementationClass="org.jetbrains.plugins.clojure.annotator.ClojureAnnotator"/>
     <debuggerClassFilterProvider
-        implementation="org.jetbrains.plugins.clojure.debugger.filters.ClojureDebugClassesFilterProvider"/>
+      implementation="org.jetbrains.plugins.clojure.debugger.filters.ClojureDebugClassesFilterProvider"/>
     <gotoSymbolContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToSymbolContributor"/>
     <gotoClassContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToClassContributor"/>
     <xdebugger.settings implementation="org.jetbrains.plugins.clojure.debugger.filters.ClojureDebuggerSettings"/>
@@ -72,11 +72,11 @@
     <stubIndex implementation="org.jetbrains.plugins.clojure.psi.stubs.index.ClojureFullScriptNameIndex"/>
 
     <extendWordSelectionHandler
-        implementation="org.jetbrains.plugins.clojure.editor.selection.ClojureListSelectioner"/>
+      implementation="org.jetbrains.plugins.clojure.editor.selection.ClojureListSelectioner"/>
     <extendWordSelectionHandler
-        implementation="org.jetbrains.plugins.clojure.editor.selection.ClojureLiteralSelectioner"/>
+      implementation="org.jetbrains.plugins.clojure.editor.selection.ClojureLiteralSelectioner"/>
     <debugger.codeFragmentFactory
-        implementation="org.jetbrains.plugins.clojure.debugger.ClojureCodeFragmentFactory"/>
+      implementation="org.jetbrains.plugins.clojure.debugger.ClojureCodeFragmentFactory"/>
     <!-- <unscrambleSupport implementation="org.jetbrains.plugins.clojure.debugger.ClojureUnscrambler"/> -->
     <compilerSettingsFactory implementation="org.jetbrains.plugins.clojure.compiler.ClojureCompilerSettingsFactory"/>
     <frameworkSupport implementation="org.jetbrains.plugins.clojure.config.ClojureFacetSupportProvider"/>
@@ -97,7 +97,7 @@
     <lang.documentationProvider language="Clojure"
                                 implementationClass="org.jetbrains.plugins.clojure.documentation.ClojureDocumentationProvider"/>
     <renamePsiElementProcessor
-        implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>
+      implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>
 
     <toolWindow id="REPL" secondary="true" icon="/org/jetbrains/plugins/clojure/icons/clojure_icon_16x16.png"
                 anchor="right" factoryClass="org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory"/>
@@ -221,15 +221,23 @@
     </group>
 
     <!--<action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewInProcessConsoleAction"-->
-            <!--class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewInProcessConsoleAction" text="Start In-Process Clojure Console"-->
-            <!--description="Runs Clojure REPL">-->
-      <!--<add-to-group group-id="ToolsMenu" anchor="last"/>-->
-      <!--<keyboard-shortcut keymap="$default" first-keystroke="ctrl shift F10"/>-->
+    <!--class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewInProcessConsoleAction" text="Start In-Process Clojure Console"-->
+    <!--description="Runs Clojure REPL">-->
+    <!--<add-to-group group-id="ToolsMenu" anchor="last"/>-->
+    <!--<keyboard-shortcut keymap="$default" first-keystroke="ctrl shift F10"/>-->
     <!--</action>-->
 
     <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction" text="Start External Clojure Console"
+            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
+            text="Start Clojure Console"
             description="Runs Clojure REPL">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
+
+    <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewIDEConsoleAction"
+            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewIDEConsoleAction"
+            text="Start IDE Clojure Console"
+            description="Runs IDE Internal Clojure REPL">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>
 
