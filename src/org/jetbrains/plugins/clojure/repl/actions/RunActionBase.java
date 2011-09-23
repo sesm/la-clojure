@@ -1,7 +1,5 @@
 package org.jetbrains.plugins.clojure.repl.actions;
 
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
-import org.jetbrains.plugins.clojure.repl.LanguageConsoleImpl;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -21,9 +19,12 @@ import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.LightVirtualFile;
 import com.intellij.ui.content.Content;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
-import org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory;
+import org.jetbrains.plugins.clojure.repl.LanguageConsoleImpl;
 import org.jetbrains.plugins.clojure.repl.REPL;
+import org.jetbrains.plugins.clojure.repl.Response;
+import org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory;
 import org.jetbrains.plugins.clojure.utils.Editors;
 
 public abstract class RunActionBase extends AnAction
@@ -45,7 +46,8 @@ public abstract class RunActionBase extends AnAction
       languageConsole.getHistoryModel().addToHistory(command);
     }
 
-    activeRepl.execute(command);
+    Response response = activeRepl.execute(command);
+    languageConsole.printResponse(response, true);
   }
 
   protected static void executeTextRange(Editor editor, TextRange textRange)
@@ -61,7 +63,8 @@ public abstract class RunActionBase extends AnAction
       languageConsole.getHistoryModel().addToHistory(command);
     }
 
-    activeRepl.execute(command);
+    Response response = activeRepl.execute(command);
+    languageConsole.printResponse(response, true);
   }
 
   @Override

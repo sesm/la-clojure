@@ -11,7 +11,7 @@ import java.awt.*;
  */
 public class REPLToolWindowFactory implements ToolWindowFactory
 {
-  public static final String TOOL_WINDOW_ID = "Clojure.REPL";
+  public static final String TOOL_WINDOW_ID = "REPL";
 
   public void createToolWindowContent(Project project, ToolWindow toolWindow)
   {

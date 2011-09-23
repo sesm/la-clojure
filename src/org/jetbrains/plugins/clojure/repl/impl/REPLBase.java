@@ -11,14 +11,12 @@ import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.IconLoader;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiNamedElement;
 import com.intellij.ui.content.Content;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
 import org.jetbrains.plugins.clojure.repl.REPL;
 import org.jetbrains.plugins.clojure.repl.REPLException;
+import org.jetbrains.plugins.clojure.repl.Response;
 import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.ExecuteImmediatelyAction;
 import org.jetbrains.plugins.clojure.repl.toolwindow.actions.HistoryNextAction;
@@ -27,7 +25,6 @@ import org.jetbrains.plugins.clojure.utils.Editors;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collection;
 
 /**
  * @author Colin Fleming
@@ -92,7 +89,7 @@ public abstract class REPLBase implements REPL
     shutdownHook = runnable;
   }
 
-  public abstract void execute(String command);
+  public abstract Response execute(String command);
 
   public abstract boolean isActive();
 
@@ -112,8 +109,6 @@ public abstract class REPLBase implements REPL
                           new HistoryPreviousAction(console),
                           new HistoryNextAction(console)};
   }
-
-  public abstract Collection<PsiNamedElement> getSymbolVariants(PsiManager manager, PsiElement symbol);
 
   protected void hideEditor()
   {
@@ -144,19 +139,6 @@ public abstract class REPLBase implements REPL
       public void run()
       {
         consoleView.getConsole().getConsoleEditor().getComponent().updateUI();
-      }
-    });
-  }
-
-  public void setTabName(final String tabName)
-  {
-    ApplicationManager.getApplication().invokeLater(new Runnable()
-    {
-      public void run()
-      {
-        Content content = getContent();
-        displayName = getType() + ": " + tabName;
-        content.setDisplayName(displayName);
       }
     });
   }

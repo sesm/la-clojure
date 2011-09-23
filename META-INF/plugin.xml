@@ -99,7 +99,7 @@
     <renamePsiElementProcessor
         implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>
 
-    <toolWindow id="Clojure.REPL" secondary="true" icon="/org/jetbrains/plugins/clojure/icons/clojure_icon_16x16.png"
+    <toolWindow id="REPL" secondary="true" icon="/org/jetbrains/plugins/clojure/icons/clojure_icon_16x16.png"
                 anchor="right" factoryClass="org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory"/>
     <editorActionHandler action="EditorEnter"
                          implementationClass="org.jetbrains.plugins.clojure.repl.toolwindow.actions.REPLEnterAction"

@@ -140,6 +140,10 @@ public abstract class REPLProviderBase implements REPLProvider
         contentManager.removeContentManagerListener(listener);
       }
     });
+
+    Response response = repl.execute("(println \"Clojure\" (clojure-version))");
+    ClojureConsole console = repl.getConsoleView().getConsole();
+    console.printResponse(response, false);
   }
 
   private AnAction[] getToolbarActions(REPL repl) throws REPLException

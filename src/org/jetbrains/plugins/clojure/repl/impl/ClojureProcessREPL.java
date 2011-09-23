@@ -1,17 +1,7 @@
 package org.jetbrains.plugins.clojure.repl.impl;
 
-import clojure.lang.IMapEntry;
-import clojure.lang.IPersistentList;
-import clojure.lang.IPersistentMap;
-import clojure.lang.IPersistentSet;
-import clojure.lang.IPersistentVector;
-import clojure.lang.ISeq;
 import clojure.lang.Keyword;
-import clojure.lang.RT;
-import clojure.lang.Symbol;
-import clojure.lang.Var;
 import clojure.tools.nrepl.Connection;
-import clojure.tools.nrepl.Connection.Response;
 import clojure.tools.nrepl.SafeFn;
 import com.intellij.execution.CantRunException;
 import com.intellij.execution.ExecutionException;
@@ -24,43 +14,30 @@ import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.execution.process.ProcessEvent;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.process.ProcessTerminatedListener;
-import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.facet.FacetManager;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.editor.colors.EditorColorsManager;
-import com.intellij.openapi.editor.colors.EditorColorsScheme;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
-import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.vfs.CharsetToolkit;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiNamedElement;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.config.ClojureConfigUtil;
 import org.jetbrains.plugins.clojure.config.ClojureFacet;
-import org.jetbrains.plugins.clojure.highlighter.ClojureSyntaxHighlighter;
-import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
 import org.jetbrains.plugins.clojure.repl.REPL;
 import org.jetbrains.plugins.clojure.repl.REPLComponent;
 import org.jetbrains.plugins.clojure.repl.REPLException;
 import org.jetbrains.plugins.clojure.repl.REPLProviderBase;
 import org.jetbrains.plugins.clojure.repl.REPLUtil;
+import org.jetbrains.plugins.clojure.repl.Response;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
-import org.jetbrains.plugins.clojure.utils.Editors;
 
 import java.io.File;
-import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 /**
@@ -73,13 +50,6 @@ public class ClojureProcessREPL extends REPLBase
   public static final String REPL_TITLE = ClojureBundle.message("repl.toolWindowName");
   private static final Pattern SPACES = Pattern.compile("\\s+");
 
-  @NonNls
-  private static final Keyword NAMESPACE_KEYWORD = Keyword.intern("ns");
-  @NonNls
-  private static final Keyword OUTPUT_KEYWORD = Keyword.intern("out");
-  @NonNls
-  private static final Keyword ERROR_KEYWORD = Keyword.intern("err");
-  private static final TextAttributes NORMAL_TEXT = ConsoleViewContentType.NORMAL_OUTPUT.getAttributes();
   @NonNls
   public static final String WAIT_FOR_ACK = "wait-for-ack";
   @NonNls
@@ -149,19 +119,6 @@ public class ClojureProcessREPL extends REPLBase
       stop();
       throw new REPLException(e);
     }
-
-    // Initialise REPL and set namespace
-    Response response = connection.send("(clojure-version)");
-    List<Object> values = response.values();
-    if (!values.isEmpty())
-    {
-      print("Clojure " + values.get(0) + '\n', NORMAL_TEXT);
-    }
-
-    Map<Keyword, Object> items = response.combinedResponse();
-    String namespace = (String) items.get(NAMESPACE_KEYWORD);
-    ClojureConsole console = getConsoleView().getConsole();
-    console.setTitle(namespace);
   }
 
   @Override
@@ -190,25 +147,26 @@ public class ClojureProcessREPL extends REPLBase
   }
 
   @Override
-  public void execute(String command)
+  public Response execute(String command)
   {
     setEditorEnabled(false);
 
-    final Response response = connection.send(command);
-    ApplicationManager.getApplication().runWriteAction(new Runnable()
+    return new Response(connection.send(command))
     {
-      public void run()
+      private final AtomicBoolean editorEnabled = new AtomicBoolean(false);
+
+      @Override
+      public Map<Keyword, Object> combinedResponse()
       {
-        try
-        {
-          printResponse(response);
-        }
-        finally
+        Map<Keyword, Object> ret = super.combinedResponse();
+
+        if (!editorEnabled.getAndSet(true))
         {
           setEditorEnabled(true);
         }
+        return ret;
       }
-    });
+    };
   }
 
   @Override
@@ -221,238 +179,10 @@ public class ClojureProcessREPL extends REPLBase
     return !(processHandler.isProcessTerminated() || processHandler.isProcessTerminating());
   }
 
-  private void printResponse(Response response)
-  {
-    Map<Keyword, Object> items = response.combinedResponse();
-
-    List<Object> values = response.values();
-
-    String namespace = (String) items.get(NAMESPACE_KEYWORD);
-    String errorOutput = (String) items.get(ERROR_KEYWORD);
-    String stdOutput = (String) items.get(OUTPUT_KEYWORD);
-
-    ClojureConsole console = getConsoleView().getConsole();
-    console.setTitle(namespace);
-
-    if (errorOutput != null)
-    {
-      console.printToHistory(errorOutput, ConsoleViewContentType.ERROR_OUTPUT.getAttributes());
-    }
-    if (stdOutput != null)
-    {
-      console.printToHistory(stdOutput, NORMAL_TEXT);
-    }
-
-    for (Object value : values)
-    {
-      print("=> ", ConsoleViewContentType.USER_INPUT.getAttributes());
-      printValue(value);
-      print("\n", NORMAL_TEXT);
-    }
-
-    Editors.scrollDown(getConsoleView().getConsole().getHistoryViewer());
-  }
-
-  // Based on RT.print
-  @SuppressWarnings("HardCodedStringLiteral")
-  public void printValue(Object x)
-  {
-    // TODO add repl options for printing (*print-meta*, *print-dup*, *print-readably*)
-    // TODO then add back meta code
-
-    if (x == null)
-    {
-      print("nil", NORMAL_TEXT);
-    }
-    else if (x instanceof ISeq || x instanceof IPersistentList)
-    {
-      print("(", ClojureSyntaxHighlighter.PARENTS);
-      printInnerSeq(RT.seq(x));
-      print(")", ClojureSyntaxHighlighter.PARENTS);
-    }
-    else if (x instanceof String)
-    {
-      CharSequence charSequence = (CharSequence) x;
-      StringBuilder buffer = new StringBuilder(charSequence.length() + 8);
-      buffer.append('\"');
-      for (int i = 0; i < charSequence.length(); i++)
-      {
-        char c = charSequence.charAt(i);
-        switch (c)
-        {
-          case '\n':
-            buffer.append("\\n");
-            break;
-          case '\t':
-            buffer.append("\\t");
-            break;
-          case '\r':
-            buffer.append("\\r");
-            break;
-          case '"':
-            buffer.append("\\\"");
-            break;
-          case '\\':
-            buffer.append("\\\\");
-            break;
-          case '\f':
-            buffer.append("\\f");
-            break;
-          case '\b':
-            buffer.append("\\b");
-            break;
-          default:
-            buffer.append(c);
-        }
-      }
-      buffer.append('\"');
-      print(buffer.toString(), ClojureSyntaxHighlighter.STRING);
-    }
-    else if (x instanceof IPersistentMap)
-    {
-      print("{", ClojureSyntaxHighlighter.BRACES);
-      for (ISeq seq = RT.seq(x); seq != null; seq = seq.next())
-      {
-        IMapEntry e = (IMapEntry) seq.first();
-        printValue(e.key());
-        print(" ", NORMAL_TEXT);
-        printValue(e.val());
-        if (seq.next() != null)
-        {
-          print(", ", NORMAL_TEXT);
-        }
-      }
-      print("}", ClojureSyntaxHighlighter.BRACES);
-    }
-    else if (x instanceof IPersistentVector)
-    {
-      IPersistentVector vector = (IPersistentVector) x;
-      print("[", ClojureSyntaxHighlighter.BRACES);
-      for (int i = 0; i < vector.count(); i++)
-      {
-        printValue(vector.nth(i));
-        if (i < vector.count() - 1)
-        {
-          print(" ", NORMAL_TEXT);
-        }
-      }
-      print("]", ClojureSyntaxHighlighter.BRACES);
-    }
-    else if (x instanceof IPersistentSet)
-    {
-      print("#{", ClojureSyntaxHighlighter.BRACES);
-      for (ISeq seq = RT.seq(x); seq != null; seq = seq.next())
-      {
-        printValue(seq.first());
-        if (seq.next() != null)
-        {
-          print(" ", NORMAL_TEXT);
-        }
-      }
-      print("}", ClojureSyntaxHighlighter.BRACES);
-    }
-    else if (x instanceof Character)
-    {
-      char c = ((Character) x).charValue();
-      print("\\", ClojureSyntaxHighlighter.CHAR);
-      switch (c)
-      {
-        case '\n':
-          print("newline", ClojureSyntaxHighlighter.CHAR);
-          break;
-        case '\t':
-          print("tab", ClojureSyntaxHighlighter.CHAR);
-          break;
-        case ' ':
-          print("space", ClojureSyntaxHighlighter.CHAR);
-          break;
-        case '\b':
-          print("backspace", ClojureSyntaxHighlighter.CHAR);
-          break;
-        case '\f':
-          print("formfeed", ClojureSyntaxHighlighter.CHAR);
-          break;
-        case '\r':
-          print("return", ClojureSyntaxHighlighter.CHAR);
-          break;
-        default:
-          print(Character.toString(c), ClojureSyntaxHighlighter.CHAR);
-      }
-    }
-    else if (x instanceof Class)
-    {
-      print("#=", NORMAL_TEXT);
-      print(((Class<?>) x).getName(), NORMAL_TEXT);
-    }
-    else if (x instanceof BigDecimal)
-    {
-      print(x.toString(), ClojureSyntaxHighlighter.NUMBER);
-      print("M", ClojureSyntaxHighlighter.NUMBER);
-    }
-    else if (x instanceof Number)
-    {
-      print(x.toString(), ClojureSyntaxHighlighter.NUMBER);
-    }
-    else if (x instanceof Keyword)
-    {
-      print(x.toString(), ClojureSyntaxHighlighter.KEY);
-    }
-    else if (x instanceof Symbol)
-    {
-      print(x.toString(), ClojureSyntaxHighlighter.ATOM);
-    }
-    else if (x instanceof Var)
-    {
-      Var v = (Var) x;
-      print("#=(var " + v.ns.name + '/' + v.sym + ')', NORMAL_TEXT);
-    }
-    else if (x instanceof Pattern)
-    {
-      Pattern p = (Pattern) x;
-      print("#\"" + p.pattern() + '\"', NORMAL_TEXT);
-    }
-    else
-    {
-      print(x.toString(), NORMAL_TEXT);
-    }
-  }
-
-  private void printInnerSeq(ISeq x)
-  {
-    for (ISeq seq = x; seq != null; seq = seq.next())
-    {
-      printValue(seq.first());
-      if (seq.next() != null)
-      {
-        print(" ", NORMAL_TEXT);
-      }
-    }
-  }
-
-  private void print(String text, TextAttributes attributes)
-  {
-    ClojureConsole console = getConsoleView().getConsole();
-    console.printToHistory(text, attributes);
-  }
-
-  private void print(String text, TextAttributesKey key)
-  {
-    ClojureConsole console = getConsoleView().getConsole();
-    EditorColorsScheme clojureScheme = EditorColorsManager.getInstance().getGlobalScheme();
-    console.printToHistory(text, clojureScheme.getAttributes(key));
-  }
-
   @Override
   protected String getType()
   {
     return "nREPL";
-  }
-
-  @Override
-  public Collection<PsiNamedElement> getSymbolVariants(PsiManager manager, PsiElement symbol)
-  {
-    // TODO
-    return Collections.emptyList();
   }
 
   protected Process createProcess(GeneralCommandLine commandLine) throws ExecutionException
@@ -478,10 +208,7 @@ public class ClojureProcessREPL extends REPLBase
     params.getVMParametersList().addAll(getJvmClojureOptions(module));
     params.getProgramParametersList().addAll(getReplClojureOptions(module));
     params.getProgramParametersList()
-      .addAll(Arrays.asList("--port",
-                            Integer.toString(0),
-                            "--ack",
-                            Integer.toString(REPLComponent.getLocalPort())));
+      .addAll(Arrays.asList("--port", Integer.toString(0), "--ack", Integer.toString(REPLComponent.getLocalPort())));
 
     boolean sdkConfigured = ClojureConfigUtil.isClojureConfigured(module);
     if (!sdkConfigured)
