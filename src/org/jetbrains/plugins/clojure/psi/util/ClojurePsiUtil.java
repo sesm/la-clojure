@@ -26,7 +26,7 @@ import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
-import org.jetbrains.plugins.clojure.psi.impl.ClKeyImpl;
+import org.jetbrains.plugins.clojure.psi.impl.ClKeywordImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.intellij.openapi.util.Trinity;
@@ -41,9 +41,6 @@ import java.util.Arrays;
  * @author <a href="mailto:ianp@ianp.org">Ian Phillips</a>
  */
 public class ClojurePsiUtil {
-  public static final String GEN_CLASS = ":gen-class";
-  public static final String EXTENDS = ":extends";
-  public static final String IMPLEMENTS = ":implements";
   public static final String JAVA_LANG = "java.lang";
   public static final String CLOJURE_LANG = "clojure.lang";
 
@@ -81,12 +78,12 @@ public class ClojurePsiUtil {
     return null;
   }
 
-  public static ClKeyImpl findNamespaceKeyByName(ClList ns, String keyName) {
+  public static ClKeywordImpl findNamespaceKeyByName(ClList ns, String keyName) {
     final ClList list = ns.findFirstChildByClass(ClList.class);
     if (list == null) return null;
     for (PsiElement element : list.getChildren()) {
-      if (element instanceof ClKeyImpl) {
-        ClKeyImpl key = (ClKeyImpl) element;
+      if (element instanceof ClKeywordImpl) {
+        ClKeywordImpl key = (ClKeywordImpl) element;
         if (keyName.equals(key.getText())) {
           return key;
         }
@@ -249,6 +246,11 @@ public class ClojurePsiUtil {
       if (containsSyntaxErrors(child)) return true;
     }
     return false;
+  }
+
+  public static boolean isStrictlyBefore(PsiElement e1, PsiElement e2) {
+    final Trinity<PsiElement, PsiElement, PsiElement> result = findCommonParentAndLastChildren(e1, e2);
+    return result.second.getTextRange().getStartOffset() < result.third.getTextRange().getStartOffset();
   }
 
 }

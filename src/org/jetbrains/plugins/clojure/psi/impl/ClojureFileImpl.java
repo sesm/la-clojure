@@ -2,18 +2,26 @@ package org.jetbrains.plugins.clojure.psi.impl;
 
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.lang.ASTNode;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Condition;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import com.intellij.psi.impl.source.PsiFileImpl;
+import com.intellij.util.IncorrectOperationException;
+import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
+import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
+import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
+import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
@@ -22,6 +30,8 @@ import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.parser.ClojureParser;
+
+import java.util.List;
 
 /**
  * User: peter
@@ -141,6 +151,16 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     return first;
   }
 
+  public PsiElement getNonLeafElement(int k) {
+    final List<PsiElement> elements = ContainerUtil.filter(getChildren(), new Condition<PsiElement>() {
+      public boolean value(PsiElement psiElement) {
+        return !isWrongElement(psiElement);
+      }
+    });
+    if (k - 1 >= elements.size()) return  null;
+    return elements.get(k-1);
+  }
+
   public PsiElement getLastNonLeafElement() {
     PsiElement lastChild = getLastChild();
     while (lastChild != null && isWrongElement(lastChild)) {
@@ -175,7 +195,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     final ClSymbol snd = PsiTreeUtil.getNextSiblingOfType(first, ClSymbol.class);
     if (snd == null) return false;
 
-    return ClojurePsiUtil.findNamespaceKeyByName(ns, ClojurePsiUtil.GEN_CLASS) != null;
+    return ClojurePsiUtil.findNamespaceKeyByName(ns, ClojureKeywords.GEN_CLASS) != null;
   }
 
   public String getNamespace() {
@@ -189,8 +209,23 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     return snd.getNameString();
   }
 
-  public ClList getNamespaceElement() {
-    return ClojurePsiUtil.findFormByNameSet(this, ClojureParser.NS_TOKENS);
+  public ClNs getNamespaceElement() {
+    return ((ClNs) ClojurePsiUtil.findFormByNameSet(this, ClojureParser.NS_TOKENS));
+  }
+
+  @NotNull
+  public ClNs findOrCreateNamespaceElement() throws IncorrectOperationException {
+    final ClNs ns = getNamespaceElement();
+    if (ns != null) return ns;
+    commitDocument();
+    final ClojurePsiFactory factory = ClojurePsiFactory.getInstance(getProject());
+    final ClList nsList = factory.createListFromText(ListDeclarations.NS + " " + getName());
+    final PsiElement anchor = getFirstChild();
+    if (anchor != null) {
+      return (ClNs)addBefore(nsList, anchor);
+    } else {
+      return (ClNs)add (nsList);
+    }
   }
 
   public String getClassName() {
@@ -245,4 +280,13 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     //todo implement me!
     return null;
   }
+
+  protected void commitDocument() {
+    final Project project = getProject();
+    final Document document = PsiDocumentManager.getInstance(project).getDocument(this);
+    if (document != null) {
+      PsiDocumentManager.getInstance(project).commitDocument(document);
+    }
+  }
+
 }
