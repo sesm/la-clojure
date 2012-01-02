@@ -3,14 +3,15 @@ package org.jetbrains.plugins.clojure.runner;
 import com.intellij.ide.util.BrowseFilesListener;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleType;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.FieldPanel;
 import com.intellij.ui.RawCommandLineEditor;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.ClojureBundle;
+import org.jetbrains.plugins.clojure.file.ClojureFileType;
 
 import javax.swing.*;
 import java.awt.*;
@@ -109,7 +110,7 @@ public class ClojureRunConfigurationEditor extends SettingsEditor<ClojureScriptR
         super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
         final Module module = (Module) value;
         if (module != null) {
-          setIcon(module.getModuleType().getNodeIcon(false));
+          setIcon(ModuleType.get(module).getNodeIcon(false));
           setText(module.getName());
         }
         return this;

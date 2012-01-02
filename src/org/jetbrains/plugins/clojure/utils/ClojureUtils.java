@@ -69,13 +69,9 @@ public class ClojureUtils
     return ClojureFileType.CLOJURE_LANGUAGE.is(file.getLanguage());
   }
 
-  public static boolean isSuitableModule(Module module)
-  {
-    if (module == null)
-    {
-      return false;
-    }
-    ModuleType type = module.getModuleType();
+  public static boolean isSuitableModule(Module module) {
+    if (module == null) return false;
+    ModuleType type = ModuleType.get(module);
     return type instanceof JavaModuleType || "PLUGIN_MODULE".equals(type.getId());
   }
 }

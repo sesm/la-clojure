@@ -40,6 +40,7 @@ import com.intellij.openapi.editor.event.VisibleAreaEvent;
 import com.intellij.openapi.editor.event.VisibleAreaListener;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory;
+import com.intellij.openapi.editor.impl.DocumentMarkupModel;
 import com.intellij.openapi.editor.impl.EditorFactoryImpl;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
@@ -259,7 +260,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
   {
     text = StringUtil.convertLineSeparators(text);
     Document history = myHistoryViewer.getDocument();
-    MarkupModel markupModel = history.getMarkupModel(myProject);
+    MarkupModel markupModel = DocumentMarkupModel.forDocument(history, myProject, true);
     int offset = history.getTextLength();
     appendToHistoryDocument(history, text);
     markupModel.addRangeHighlighter(offset,

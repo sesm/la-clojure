@@ -22,6 +22,7 @@ import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.ex.RangeHighlighterEx;
 import com.intellij.openapi.editor.highlighter.HighlighterIterator;
+import com.intellij.openapi.editor.impl.DocumentMarkupModel;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
@@ -351,7 +352,7 @@ public class ClojureConsole extends LanguageConsoleImpl
   private String addTextRangeToHistoryImpl(EditorEx fromEditor, TextRange textRange)
   {
     Document history = getHistoryViewer().getDocument();
-    MarkupModel markupModel = history.getMarkupModel(getProject());
+    MarkupModel markupModel = DocumentMarkupModel.forDocument(history, getProject(), true);
 
     int startLine = fromEditor.offsetToLogicalPosition(textRange.getStartOffset()).line;
     int endLine = fromEditor.offsetToLogicalPosition(textRange.getEndOffset()).line;
@@ -394,7 +395,7 @@ public class ClojureConsole extends LanguageConsoleImpl
         }
         iterator.advance();
       }
-      duplicateHighlighters(markupModel, fromDocument.getMarkupModel(getProject()), offset, lineRange);
+      duplicateHighlighters(markupModel, DocumentMarkupModel.forDocument(fromDocument, getProject(), true), offset, lineRange);
       duplicateHighlighters(markupModel, fromEditor.getMarkupModel(), offset, lineRange);
       appendToHistoryDocument(history, "\n");
 

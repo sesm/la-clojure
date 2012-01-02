@@ -2,7 +2,6 @@ package org.jetbrains.plugins.clojure.findUsages;
 
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.search.PsiSearchHelper;
@@ -44,7 +43,7 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
             return true;
           }
         };
-        final PsiSearchHelper helper = PsiManager.getInstance(elem.getProject()).getSearchHelper();
+        final PsiSearchHelper helper = PsiSearchHelper.SERVICE.getInstance(elem.getProject());
         for (String word : wordsIn) {
           helper.processElementsWithWord(processor, scope, word, UsageSearchContext.ANY, true);
         }
