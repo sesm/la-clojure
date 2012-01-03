@@ -40,7 +40,6 @@
     </fileset>
   </path>
 
-
   <path id="base.path">
     <path refid="jdk.classpath"/>
     <path refid="idea.classpath"/>
@@ -101,31 +100,7 @@
     </java>
   </target>
 
-  <target name="make.scala" depends="make.lexer, unzip.last.successful.IDEA.build">
-
-    <mkdir dir="${project.dest}"/>
-
-    <taskdef resource="scala/tools/ant/antlib.xml">
-      <classpath>
-        <pathelement location="${project.lib}/scala-compiler.jar"/>
-        <pathelement location="${project.lib}/scala-library.jar"/>
-      </classpath>
-    </taskdef>
-
-    <scalac destdir="${project.dest}"
-            srcdir="${project.dir}"
-            force="changed"
-            fork="true"
-            jvmargs="-Xmx1024M -Xms768M -Xss1024k -server">
-      <classpath>
-        <path refid="base.path"/>
-      </classpath>
-      <include name="src/**/*.scala"/>
-      <include name="src/**/*.java"/>
-    </scalac>
-  </target>
-
-  <target name="make.java" depends="make.scala">
+  <target name="make.java">
     <!-- Read SINCE and UNTIL properties -->
     <loadfile property="idea.build" srcFile="${idea.home}/build.txt" failonerror="true"/>
     <!--Copy descriptor-->
@@ -188,9 +163,6 @@
     </jar>
 
     <copy todir="${project.dir}/tempjar/clojure-plugin/lib">
-      <fileset dir="${project.lib}">
-        <include name="scala-library.jar"/>
-      </fileset>
       <fileset dir="${clojure.lib}">
         <include name="clojure.jar"/>
       </fileset>
@@ -238,7 +210,6 @@
 
     <!--<copy toDir="${project.lib}/testdata">-->
     <!--<fileset dir="${base.dir}/testdata"/>-->
-    <!--<fileset dir="${scalax.dir}/testdata"/>-->
     <!--</copy>-->
 
   </target>
