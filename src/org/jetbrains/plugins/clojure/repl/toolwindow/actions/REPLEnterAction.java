@@ -10,7 +10,7 @@ import org.jetbrains.plugins.clojure.repl.REPL;
 /**
  * @author Colin Fleming
  */
-public class REPLEnterAction extends EditorWriteActionHandler implements DumbAware
+public class REPLEnterAction extends EditorActionHandler implements DumbAware
 {
   private final EditorActionHandler originalHandler;
 
@@ -20,7 +20,7 @@ public class REPLEnterAction extends EditorWriteActionHandler implements DumbAwa
   }
 
   @Override
-  public void executeWriteAction(Editor editor, DataContext dataContext)
+  public void execute(Editor editor, DataContext dataContext)
   {
     REPL repl = editor.getUserData(REPL.REPL_KEY);
     if (repl == null)
