@@ -122,7 +122,8 @@
     <!--Compile project Java files-->
     <javac2 srcdir="${project.dir}"
             destdir="${project.dest}"
-            debug="true">
+            debug="true"
+            includeantruntime="false">
       <classpath refid="base.path"/>
       <include name="src/**/*.java"/>
       <include name="src/**/*.form"/>
@@ -169,6 +170,9 @@
       <fileset dir="${clojure.contrib}">
         <include name="clojure-contrib.jar"/>
       </fileset>
+        <fileset dir="${project.lib}">
+            <include name="tools.nrepl-0.0.6-SNAPSHOT.jar"/>
+        </fileset>
     </copy>
 
     <mkdir dir="${main.dist}"/>
