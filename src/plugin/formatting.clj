@@ -1,17 +1,17 @@
 (ns plugin.formatting
   (:import (com.intellij.formatting FormattingModelBuilder
-             FormattingModelProvider
-             Indent
-             Block
-             Spacing
-             ChildAttributes
-             Alignment)
-           (com.intellij.openapi.diagnostic Logger)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClListLike ClVector ClKeyword)
-           (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
-           (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
-           (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
-           (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
+                                    FormattingModelProvider
+                                    Indent
+                                    Block
+                                    Spacing
+                                    ChildAttributes
+                                    Alignment)
+   (com.intellij.openapi.diagnostic Logger)
+   (org.jetbrains.plugins.clojure.psi.api ClList ClListLike ClVector ClKeyword)
+   (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
+   (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
+   (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
+   (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
 
 (def logger (Logger/getInstance "plugin.formatting"))
 
@@ -56,16 +56,16 @@
       (instance? ClList psi)
       (let [first (.getFirstNonLeafElement psi)]
         (if (instance? ClSymbol first)
-          (let [parameter (create-alignment)
-                parameter-child (child-alignment parameter)
-                body (create-alignment)
-                body-child (child-alignment body)
-                application-alignment (assoc alignment :parameter parameter
-              :parameter-child parameter-child
-              :body body
-              :body-child body-child)]
-            (ClojureBlock. :application node application-alignment indent wrap settings))
-          (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)))
+            (let [parameter (create-alignment)
+                  parameter-child (child-alignment parameter)
+                  body (create-alignment)
+                  body-child (child-alignment body)
+                  application-alignment (assoc alignment :parameter parameter
+                                                         :parameter-child parameter-child
+                                                         :body body
+                                                         :body-child body-child)]
+              (ClojureBlock. :application node application-alignment indent wrap settings))
+            (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)))
       (instance? ClVector psi)
       (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)
       :else (ClojureBlock. :basic node alignment indent wrap settings))))
@@ -76,8 +76,8 @@
   (let [sub-block #(create-block % {} (no-indent) (:wrap block) (:settings block))]
     (java.util.ArrayList.
       (into [] (map sub-block
-                 (filter non-empty?
-                   (seq (.getChildren (:node block) nil))))))))
+                    (filter non-empty?
+                            (seq (.getChildren (:node block) nil))))))))
 
 (defmethod sub-blocks :list [block]
   (let [sub-block #(let [brace? (brace? (.getElementType %))
@@ -86,8 +86,8 @@
                      (create-block % align indent (:wrap block) (:settings block)))]
     (java.util.ArrayList.
       (into [] (map sub-block
-                 (filter non-empty?
-                   (seq (.getChildren (:node block) nil))))))))
+                    (filter non-empty?
+                            (seq (.getChildren (:node block) nil))))))))
 
 (def indent-form {:ns 1, :let 1, :defmethod 3, :defn 2, :defrecord 3, :assoc 1, :loop 1})
 
@@ -95,8 +95,8 @@
   (let [psi (.getPsi (:node block))
         head (.getFirstNonLeafElement psi)]
     (if (instance? ClSymbol head)
-      (get indent-form (keyword (.getText head)) 0)
-      0)))
+        (get indent-form (keyword (.getText head)) 0)
+        0)))
 
 (defmethod sub-blocks :application [block]
   (let [parameters (num-parameters block)]
@@ -104,48 +104,48 @@
            index 0
            result []]
       (if (seq children)
-        (let [child (first children)
-              element (.getElementType child)
-              increment (if (comment? element) 0 1)
-              params (cond
-            (brace? element) [index {} (no-indent)]
-            (= index 0) [(+ index increment) {} (normal-indent)]
-            (< (dec index) parameters) [(+ index increment)
-                                        {:this ((if (comment? element) :parameter-child :parameter )
-                                                 (:alignment block))}
-                                        (continuation-indent)]
-            :else [(+ index increment)
-                   {:this ((if (comment? element) :body-child :body )
-                            (:alignment block))}
-                   (normal-indent)])]
-          (recur (rest children)
-            (params 0)
-            (conj result (create-block child (params 1) (params 2) (:wrap block) (:settings block)))))
-        (java.util.ArrayList. result)))))
+          (let [child (first children)
+                element (.getElementType child)
+                increment (if (comment? element) 0 1)
+                params (cond
+                         (brace? element) [index {} (no-indent)]
+                         (= index 0) [(+ index increment) {} (normal-indent)]
+                         (< (dec index) parameters) [(+ index increment)
+                                                     {:this ((if (comment? element) :parameter-child :parameter )
+                                                             (:alignment block))}
+                                                     (continuation-indent)]
+                         :else [(+ index increment)
+                                {:this ((if (comment? element) :body-child :body )
+                                        (:alignment block))}
+                                (normal-indent)])]
+            (recur (rest children)
+                   (params 0)
+                   (conj result (create-block child (params 1) (params 2) (:wrap block) (:settings block)))))
+          (java.util.ArrayList. result)))))
 
 (defn spacing [child1 child2]
   (if (and (instance? ClojureBlock child1)
-        (instance? ClojureBlock child2))
-    (let [node1 (:node child1)
-          node2 (:node child2)
-          type1 (.getElementType node1)
-          type2 (.getElementType node2)
-          psi1 (.getPsi node1)
-          psi2 (.getPsi node2)]
-      (cond
-        (ClojurePsiCheckers/isNs psi1) ns-spacing
-        (ClojurePsiCheckers/isImportingClause psi2) mandatory-newline
-        (instance? ClKeyword psi1) no-newline
-        (and (instance? ClListLike psi1)
-          (instance? ClListLike psi2)
-          (= (.getParent psi1) (.getParent psi2))
-          (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
-        (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
-        (.contains ClojureTokenTypes/ATOMS type2) no-spacing
-        (= "," (.getText node2)) no-spacing
-        (or (brace? type1)
-          (brace? type2)) no-spacing-with-newline
-        :else common-spacing))))
+           (instance? ClojureBlock child2))
+      (let [node1 (:node child1)
+            node2 (:node child2)
+            type1 (.getElementType node1)
+            type2 (.getElementType node2)
+            psi1 (.getPsi node1)
+            psi2 (.getPsi node2)]
+        (cond
+          (ClojurePsiCheckers/isNs psi1) ns-spacing
+          (ClojurePsiCheckers/isImportingClause psi2) mandatory-newline
+          (instance? ClKeyword psi1) no-newline
+          (and (instance? ClListLike psi1)
+               (instance? ClListLike psi2)
+               (= (.getParent psi1) (.getParent psi2))
+               (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
+          (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
+          (.contains ClojureTokenTypes/ATOMS type2) no-spacing
+          (= "," (.getText node2)) no-spacing
+          (or (brace? type1)
+              (brace? type2)) no-spacing-with-newline
+          :else common-spacing))))
 
 (defmethod child-attributes :default [block index]
   (ChildAttributes. (no-indent) nil))
@@ -164,10 +164,10 @@
 
 (defrecord ClojureFormattingModelBuilder [] FormattingModelBuilder
   (createModel [this element settings]
-    (let [file (.getContainingFile element)
-          node (.getNode file)
-          block (ClojureBlock. :basic node {} (absolute-no-indent) nil settings)]
-      (FormattingModelProvider/createFormattingModelForPsiFile file block settings)))
+               (let [file (.getContainingFile element)
+                     node (.getNode file)
+                     block (ClojureBlock. :basic node {} (absolute-no-indent) nil settings)]
+                 (FormattingModelProvider/createFormattingModelForPsiFile file block settings)))
   (getRangeAffectingIndent [this file offset elementAtOffset] nil))
 
 (defn initialise []
@@ -179,4 +179,4 @@
 ;; debugging tools
 (defn get-extension []
   (.forLanguage com.intellij.lang.LanguageFormatting/INSTANCE
-    (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)))
+                (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)))
