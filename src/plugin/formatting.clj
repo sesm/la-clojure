@@ -11,7 +11,10 @@
    (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
    (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
    (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
-   (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
+   (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
+   (com.intellij.lang ASTNode)))
+
+(set! *warn-on-reflection* true)
 
 (def logger (Logger/getInstance "plugin.formatting"))
 
@@ -28,9 +31,11 @@
 (def spacing)
 (def incomplete?)
 
-(defrecord ClojureBlock [type node alignment indent wrap settings] Block
+(def cached-sub-blocks (memoize sub-blocks))
+
+(defrecord ClojureBlock [type ^ASTNode node alignment indent wrap settings] Block
   (getTextRange [this] (.getTextRange node))
-  (getSubBlocks [this] (sub-blocks this))
+  (getSubBlocks [this] (cached-sub-blocks this))
   (getWrap [this] wrap)
   (getIndent [this] indent)
   (getAlignment [this] (:this alignment))
@@ -50,11 +55,11 @@
 (defn brace? [element] (.contains ClojureElementTypes/BRACES element))
 (defn comment? [element] (.contains ClojureTokenTypes/COMMENTS element))
 
-(defn create-block [node alignment indent wrap settings]
+(defn create-block [^ASTNode node alignment indent wrap settings]
   (let [psi (.getPsi node)]
     (cond
       (instance? ClList psi)
-      (let [first (.getFirstNonLeafElement psi)]
+      (let [first (.getFirstNonLeafElement ^ClList psi)]
         (if (instance? ClSymbol first)
             (let [parameter (create-alignment)
                   parameter-child (child-alignment parameter)
@@ -70,42 +75,42 @@
       (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)
       :else (ClojureBlock. :basic node alignment indent wrap settings))))
 
-(defn non-empty? [node] (> (.length (.trim (.getText node))) 0))
+(defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
 
 (defmethod sub-blocks :basic [block]
   (let [sub-block #(create-block % {} (no-indent) (:wrap block) (:settings block))]
-    (java.util.ArrayList.
-      (into [] (map sub-block
-                    (filter non-empty?
-                            (seq (.getChildren (:node block) nil))))))))
+    (java.util.ArrayList. ^java.util.Collection
+                          (into [] (map sub-block
+                                        (filter non-empty?
+                                                (seq (.getChildren ^ASTNode (:node block) nil))))))))
 
 (defmethod sub-blocks :list [block]
-  (let [sub-block #(let [brace? (brace? (.getElementType %))
+  (let [sub-block #(let [brace? (brace? (.getElementType ^ASTNode %))
                          indent (if brace? (no-indent) (normal-indent))
                          align (if brace? {} {:this (:child (:alignment block))})]
                      (create-block % align indent (:wrap block) (:settings block)))]
-    (java.util.ArrayList.
-      (into [] (map sub-block
-                    (filter non-empty?
-                            (seq (.getChildren (:node block) nil))))))))
+    (java.util.ArrayList. ^java.util.Collection
+                          (into [] (map sub-block
+                                        (filter non-empty?
+                                                (seq (.getChildren ^ASTNode (:node block) nil))))))))
 
 (def indent-form {:ns 1, :let 1, :defmethod 3, :defn 2, :defrecord 3, :assoc 1, :loop 1})
 
 (defn num-parameters [block]
-  (let [psi (.getPsi (:node block))
-        head (.getFirstNonLeafElement psi)]
+  (let [psi (.getPsi ^ASTNode (:node block))
+        head (.getFirstNonLeafElement ^ClList psi)]
     (if (instance? ClSymbol head)
         (get indent-form (keyword (.getText head)) 0)
         0)))
 
 (defmethod sub-blocks :application [block]
   (let [parameters (num-parameters block)]
-    (loop [children (filter non-empty? (seq (.getChildren (:node block) nil)))
+    (loop [children (filter non-empty? (seq (.getChildren ^ASTNode (:node block) nil)))
            index 0
            result []]
       (if (seq children)
           (let [child (first children)
-                element (.getElementType child)
+                element (.getElementType ^ASTNode child)
                 increment (if (comment? element) 0 1)
                 params (cond
                          (brace? element) [index {} (no-indent)]
@@ -121,13 +126,13 @@
             (recur (rest children)
                    (params 0)
                    (conj result (create-block child (params 1) (params 2) (:wrap block) (:settings block)))))
-          (java.util.ArrayList. result)))))
+          (java.util.ArrayList. ^java.util.Collection result)))))
 
 (defn spacing [child1 child2]
   (if (and (instance? ClojureBlock child1)
            (instance? ClojureBlock child2))
-      (let [node1 (:node child1)
-            node2 (:node child2)
+      (let [node1 ^ASTNode (:node child1)
+            node2 ^ASTNode (:node child2)
             type1 (.getElementType node1)
             type2 (.getElementType node2)
             psi1 (.getPsi node1)
