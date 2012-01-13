@@ -31,6 +31,12 @@ public class REPLComponent implements ApplicationComponent
   @NonNls
   private static final Symbol START_SERVER = Symbol.intern("clojure.tools.nrepl/start-server");
   @NonNls
+  public static final String INITIALISE_NS = "plugin.initialise";
+  @NonNls
+  public static final Symbol INITIALISE_NS_SYMBOL = Symbol.intern(INITIALISE_NS);
+  @NonNls
+  private static final Symbol INITIALISE = Symbol.intern("plugin.initialise/initialise-all");
+  @NonNls
   private static final String COMPONENT_NAME = "clojure.support.repl";
 
   private ServerSocket replServerSocket = null;
@@ -48,6 +54,9 @@ public class REPLComponent implements ApplicationComponent
       RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(NREPL_NS_SYMBOL);
       replServerSocket = (ServerSocket) ((List<?>) Var.find(START_SERVER).invoke()).get(0);
       logger.info(ClojureBundle.message("started.local.repl", Integer.valueOf(replServerSocket.getLocalPort())));
+
+      RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(INITIALISE_NS_SYMBOL);
+      Var.find(INITIALISE).invoke();
     }
     catch (Exception e)
     {
