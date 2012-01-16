@@ -12,9 +12,11 @@
    (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
    (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
    (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
-   (com.intellij.lang ASTNode)))
+   (com.intellij.psi.tree TokenSet)
+   (com.intellij.lang ASTNode)
+   (java.util Collection ArrayList)))
 
-(set! *warn-on-reflection* true)
+;(set! *warn-on-reflection* true)
 
 (def logger (Logger/getInstance "plugin.formatting"))
 
@@ -31,11 +33,12 @@
 (def spacing)
 (def incomplete?)
 
-(def cached-sub-blocks (memoize sub-blocks))
-
-(defrecord ClojureBlock [type ^ASTNode node alignment indent wrap settings] Block
+(defrecord ClojureBlock [type ^ASTNode node alignment indent wrap settings ^Collection children] Block
   (getTextRange [this] (.getTextRange node))
-  (getSubBlocks [this] (cached-sub-blocks this))
+  (getSubBlocks [this]
+                (if (.isEmpty children)
+                    (.addAll children (sub-blocks this)))
+                children)
   (getWrap [this] wrap)
   (getIndent [this] indent)
   (getAlignment [this] (:this alignment))
@@ -53,6 +56,10 @@
 (defn child-alignment [parent] (Alignment/createChildAlignment parent))
 
 (defn brace? [element] (.contains ClojureElementTypes/BRACES element))
+(def ^TokenSet opening-braces (TokenSet/create (into-array [ClojureTokenTypes/LEFT_PAREN
+                                                            ClojureTokenTypes/LEFT_SQUARE
+                                                            ClojureTokenTypes/LEFT_CURLY])))
+(defn opening-brace? [element] (.contains opening-braces element))
 (defn comment? [element] (.contains ClojureTokenTypes/COMMENTS element))
 
 (defn create-block [^ASTNode node alignment indent wrap settings]
@@ -69,32 +76,30 @@
                                                          :parameter-child parameter-child
                                                          :body body
                                                          :body-child body-child)]
-              (ClojureBlock. :application node application-alignment indent wrap settings))
-            (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)))
+              (ClojureBlock. :application node application-alignment indent wrap settings (ArrayList.)))
+            (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings (ArrayList.))))
       (instance? ClVector psi)
-      (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings)
-      :else (ClojureBlock. :basic node alignment indent wrap settings))))
+      (ClojureBlock. :list node (assoc alignment :child (create-alignment)) indent wrap settings (ArrayList.))
+      :else (ClojureBlock. :basic node alignment indent wrap settings (ArrayList.)))))
 
 (defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
 
 (defmethod sub-blocks :basic [block]
   (let [sub-block #(create-block % {} (no-indent) (:wrap block) (:settings block))]
-    (java.util.ArrayList. ^java.util.Collection
-                          (into [] (map sub-block
-                                        (filter non-empty?
-                                                (seq (.getChildren ^ASTNode (:node block) nil))))))))
+    (into [] (map sub-block
+                  (filter non-empty?
+                          (seq (.getChildren ^ASTNode (:node block) nil)))))))
 
 (defmethod sub-blocks :list [block]
-  (let [sub-block #(let [brace? (brace? (.getElementType ^ASTNode %))
+  (let [sub-block #(let [brace? (opening-brace? (.getElementType ^ASTNode %))
                          indent (if brace? (no-indent) (normal-indent))
                          align (if brace? {} {:this (:child (:alignment block))})]
                      (create-block % align indent (:wrap block) (:settings block)))]
-    (java.util.ArrayList. ^java.util.Collection
-                          (into [] (map sub-block
-                                        (filter non-empty?
-                                                (seq (.getChildren ^ASTNode (:node block) nil))))))))
+    (into [] (map sub-block
+                  (filter non-empty?
+                          (seq (.getChildren ^ASTNode (:node block) nil)))))))
 
-(def indent-form {:ns 1, :let 1, :defmethod 3, :defn 2, :defrecord 3, :assoc 1, :loop 1})
+(def indent-form {:ns 1 , :let 1 , :defmethod 3 , :defn 2 , :def 2 , :defrecord 3 , :assoc 1 , :loop 1})
 
 (defn num-parameters [block]
   (let [psi (.getPsi ^ASTNode (:node block))
@@ -113,7 +118,7 @@
                 element (.getElementType ^ASTNode child)
                 increment (if (comment? element) 0 1)
                 params (cond
-                         (brace? element) [index {} (no-indent)]
+                         (opening-brace? element) [index {} (no-indent)]
                          (= index 0) [(+ index increment) {} (normal-indent)]
                          (< (dec index) parameters) [(+ index increment)
                                                      {:this ((if (comment? element) :parameter-child :parameter )
@@ -126,7 +131,7 @@
             (recur (rest children)
                    (params 0)
                    (conj result (create-block child (params 1) (params 2) (:wrap block) (:settings block)))))
-          (java.util.ArrayList. ^java.util.Collection result)))))
+          result))))
 
 (defn spacing [child1 child2]
   (if (and (instance? ClojureBlock child1)
@@ -147,7 +152,7 @@
                (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
           (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
           (.contains ClojureTokenTypes/ATOMS type2) no-spacing
-          (= "," (.getText node2)) no-spacing
+          (= ClojureTokenTypes/COMMA type2) no-spacing
           (or (brace? type1)
               (brace? type2)) no-spacing-with-newline
           :else common-spacing))))
@@ -171,7 +176,7 @@
   (createModel [this element settings]
                (let [file (.getContainingFile element)
                      node (.getNode file)
-                     block (ClojureBlock. :basic node {} (absolute-no-indent) nil settings)]
+                     block (ClojureBlock. :basic node {} (absolute-no-indent) nil settings (ArrayList.))]
                  (FormattingModelProvider/createFormattingModelForPsiFile file block settings)))
   (getRangeAffectingIndent [this file offset elementAtOffset] nil))
 
