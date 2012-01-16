@@ -103,7 +103,9 @@
                       (let [offset (.getEndOffset (.getTextRange enclosing))
                             highlighter (highlighter-iterator editor offset)]
                         (.moveToOffset (.getCaretModel editor) offset)
-                        (doto highlighter (.retreat) (.retreat))
+                        (if (= offset (.getStart highlighter))
+                            (.retreat highlighter))
+                        (.retreat highlighter)
                         (if (looking-at highlighter whitespace-token?)
                             (.deleteString (.getDocument editor)
                                            (.getStart highlighter)
