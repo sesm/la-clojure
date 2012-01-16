@@ -1,5 +1,7 @@
 (ns plugin.initialise
-  (:use [plugin.formatting :only initialise]))
+  (:require plugin.formatting
+   plugin.typing))
 
 (defn initialise-all []
-  (plugin.formatting/initialise))
+  (plugin.formatting/initialise)
+  (plugin.typing/initialise))
