@@ -99,7 +99,7 @@
                   (filter non-empty?
                           (seq (.getChildren ^ASTNode (:node block) nil)))))))
 
-(def indent-form {:ns 1 , :let 1 , :defmethod 3 , :defn 2 , :def 2 , :defrecord 3 , :assoc 1 , :loop 1})
+(def indent-form {:ns 1 , :let 1 , :defmethod 3 , :defn 2 , :def 2 , :defrecord 3 , :assoc 1 , :loop 1, :deftest 1})
 
 (defn num-parameters [block]
   (let [psi (.getPsi ^ASTNode (:node block))
