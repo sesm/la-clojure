@@ -87,30 +87,33 @@
         is-comment (inside-comment? editor)]
     (if (or is-string is-comment)
         (if (and is-string (= char-typed \"))
-            (insert editor "\\\"")
+            (let [string (PsiUtilBase/getElementAtCaret editor)
+                  offset (offset editor)
+                  end-offset (.getEndOffset (.getTextRange string))]
+              (if (= offset (dec end-offset))
+                  (.moveToOffset (.getCaretModel editor) end-offset)
+                  (insert editor "\\\"")))
             (insert editor (str char-typed)))
         (if (contains? #{\( \[ \{ \"} char-typed)
             (let [offset (offset editor)
                   highlighter (highlighter-iterator editor offset)
-                  needs-whitespace (and (not (.atEnd highlighter))
-                                        (and (not (whitespace-token? (.getTokenType highlighter)))
-                                             (not (closing-brace? (.getTokenType highlighter)))))]
+                  needs-whitespace (looking-at highlighter
+                                               (fn [token] (not (or (whitespace-token? token)
+                                                                    (closing-brace? token)))))]
               (insert editor (str char-typed))
               (if needs-whitespace (insert-after editor " "))
               (insert-after editor (str (matching-char char-typed))))
-            (do
-              (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
-                      (let [offset (.getEndOffset (.getTextRange enclosing))
-                            highlighter (highlighter-iterator editor offset)]
-                        (.moveToOffset (.getCaretModel editor) offset)
-                        (if (= offset (.getStart highlighter))
-                            (.retreat highlighter))
-                        (.retreat highlighter)
-                        (if (looking-at highlighter whitespace-token?)
-                            (.deleteString (.getDocument editor)
-                                           (.getStart highlighter)
-                                           (.getEnd highlighter)))))
-              true)))))
+            (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
+                    (let [offset (.getEndOffset (.getTextRange enclosing))
+                          highlighter (highlighter-iterator editor offset)]
+                      (.moveToOffset (.getCaretModel editor) offset)
+                      (if (= offset (.getStart highlighter))
+                          (.retreat highlighter))
+                      (.retreat highlighter)
+                      (if (looking-at highlighter whitespace-token?)
+                          (.deleteString (.getDocument editor)
+                                         (.getStart highlighter)
+                                         (.getEnd highlighter)))))))))
 
 (defrecord ClojureTypedHandler [^TypedActionHandler previous] TypedActionHandler
   (execute [this editor char-typed data-context]
@@ -124,8 +127,7 @@
                          (if (nil? psi-file)
                              (do-original)
                              (if (= (.getLanguage psi-file) ClojureFileType/CLOJURE_LANGUAGE)
-                                 (if-not (process-key project editor psi-file char-typed)
-                                         (do-original))
+                                 (process-key project editor psi-file char-typed)
                                  (do-original))))))
                  (do-original)))))
 

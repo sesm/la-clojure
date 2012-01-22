@@ -12,6 +12,7 @@
 
 (deftest close-paren-tests
          (is (typing-result? \) "(a b <caret>c   )" "(a b c)<caret>"))
+         (is (typing-result? \) "(a b c)<caret>" "(a b c)<caret>"))
          (is (typing-result? \) "\"bar <caret>baz\"" "\"bar )<caret>baz\""))
          (is (typing-result? \) "; bar <caret>baz" "; bar )<caret>baz"))
          (is (typing-result? \) "(let [a <caret>b]   )" "(let [a b])<caret>"))
@@ -20,4 +21,5 @@
 
 (deftest quote-tests
          (is (typing-result? \" "<caret>" "\"<caret>\""))
-         (is (typing-result? \" "\"<caret>\"" "\"\\\"\"")))
+         (is (typing-result? \" "\"<caret> \"" "\"\\\" \""))
+         (is (typing-result? \" "\"<caret>\"" "\"\"<caret>")))

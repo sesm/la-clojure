@@ -5,3 +5,6 @@
 
 (run-tests 'plugin.tests.typingtests
            'plugin.tests.editoractiontests)
+
+; TODO investigate why we need this
+(System/exit 0)
