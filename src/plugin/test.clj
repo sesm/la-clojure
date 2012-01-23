@@ -48,12 +48,12 @@
                   (.doModificationTest this#
                                        before#
                                        after#))))
-          (do-report {:type :pass , :message ~msg ,
-                     :expected '~form , :actual nil})
+          (do-report {:type :pass, :message ~msg,
+                     :expected '~form, :actual nil})
           (catch junit.framework.AssertionFailedError e#
-                 (do-report {:type :fail ,
-                            :message (str ~msg ": " (.getMessage e#)) ,
-                            :expected '~form ,
+                 (do-report {:type :fail,
+                            :message (str ~msg ": " (.getMessage e#)),
+                            :expected '~form,
                             :actual e#})
                  e#))))
 
@@ -69,12 +69,12 @@
                   (.doModificationTest this#
                                        before#
                                        after#))))
-          (do-report {:type :pass , :message ~msg ,
-                     :expected '~form , :actual nil})
+          (do-report {:type :pass, :message ~msg,
+                     :expected '~form, :actual nil})
           (catch junit.framework.AssertionFailedError e#
-                 (do-report {:type :fail ,
-                            :message (str ~msg ": " (.getMessage e#)) ,
-                            :expected '~form ,
+                 (do-report {:type :fail,
+                            :message (str ~msg ": " (.getMessage e#)),
+                            :expected '~form,
                             :actual e#})
                  e#))))
 
@@ -89,11 +89,11 @@
                   (.doModificationTest this#
                                        before#
                                        after#))))
-          (do-report {:type :pass , :message ~msg ,
-                     :expected '~form , :actual nil})
+          (do-report {:type :pass, :message ~msg,
+                     :expected '~form, :actual nil})
           (catch junit.framework.AssertionFailedError e#
-                 (do-report {:type :fail ,
-                            :message (str ~msg ": " (.getMessage e#)) ,
-                            :expected '~form ,
+                 (do-report {:type :fail,
+                            :message (str ~msg ": " (.getMessage e#)),
+                            :expected '~form,
                             :actual e#})
                  e#))))

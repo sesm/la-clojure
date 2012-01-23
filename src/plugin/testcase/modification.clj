@@ -10,14 +10,14 @@
    (com.intellij.ide DataManager)))
 
 (defn test-init [modification-fn test-fn]
-  [[] (atom {:modification modification-fn , :test test-fn})])
+  [[] (atom {:modification modification-fn, :test test-fn})])
 
 (defn test-getTestName [this _]
   "testImpl")
 
 (defn test-doModification [this project editor psi-file data-context]
-  ((@(.state this) :modification ) this {:project project ,
-  :editor editor , :data-context data-context, :psi-file psi-file}))
+  ((@(.state this) :modification ) this {:project project,
+  :editor editor, :data-context data-context, :psi-file psi-file}))
 
 (defn test-testImpl [this]
   ((@(.state this) :test ) this))

@@ -69,9 +69,9 @@
 (defn insert-after [editor string]
   (EditorModificationUtil/insertStringAtCaret editor string false false))
 
-(def matching-char {\( \) , \[ \] , \{ \} , \" \"})
+(def matching-char {\( \), \[ \], \{ \}, \" \"})
 
-(def matching-type {\) ClList , \] ClVector , \} ClMap})
+(def matching-type {\) ClList, \] ClVector, \} ClMap})
 
 (defn ^PsiElement find-enclosing [^Editor editor type]
                                  (loop [psi (PsiUtilBase/getElementAtCaret editor)]

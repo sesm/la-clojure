@@ -85,7 +85,7 @@
 (defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
 
 (defn non-empty-children [^ASTNode node]
-      (filter non-empty? (seq (.getChildren node nil))))
+  (filter non-empty? (seq (.getChildren node nil))))
 
 (defmethod sub-blocks :basic [block]
   (let [sub-block #(create-block % {} (no-indent) (:wrap block) (:settings block))]
@@ -98,7 +98,7 @@
                      (create-block % align indent (:wrap block) (:settings block)))]
     (into [] (map sub-block (non-empty-children (:node block))))))
 
-(def indent-form {:ns 1 , :let 1 , :defmethod 3 , :defn 2 , :def 2 , :defrecord 3 , :assoc 1 , :loop 1, :deftest 1})
+(def indent-form {:ns 1, :let 1, :defmethod 3, :defn 2, :def 2, :defrecord 3, :assoc 1, :loop 1, :deftest 1})
 
 (defn num-parameters [block]
   (let [psi (.getPsi ^ASTNode (:node block))
@@ -151,7 +151,7 @@
                (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
           (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
           (.contains ClojureTokenTypes/ATOMS type2) no-spacing
-          (= ClojureTokenTypes/COMMA type2) no-spacing
+          (= "," (.getText node2)) no-spacing
           (or (brace? type1)
               (brace? type2)) no-spacing-with-newline
           :else common-spacing))))
