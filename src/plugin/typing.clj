@@ -27,12 +27,13 @@
 (defn whitespace-token? [token]
   (.contains ClojureTokenTypes/WHITESPACE_SET token))
 
-(def ^TokenSet closing-braces (TokenSet/create (into-array [ClojureTokenTypes/RIGHT_PAREN
-                                                            ClojureTokenTypes/RIGHT_SQUARE
-                                                            ClojureTokenTypes/RIGHT_CURLY])))
+(def opening-braces #{ClojureTokenTypes/LEFT_PAREN
+ClojureTokenTypes/LEFT_SQUARE
+ClojureTokenTypes/LEFT_CURLY})
 
-(defn closing-brace? [token]
-  (.contains closing-braces token))
+(def closing-braces #{ClojureTokenTypes/RIGHT_PAREN
+ClojureTokenTypes/RIGHT_SQUARE
+ClojureTokenTypes/RIGHT_CURLY})
 
 
 (defn offset [^Editor editor]
@@ -44,6 +45,17 @@
 (defn looking-at [^HighlighterIterator highlighter predicate]
   (and (not (.atEnd highlighter))
        (predicate (.getTokenType highlighter))))
+
+(defn looking-back-at [^HighlighterIterator highlighter predicate offset]
+  (if (or (.atEnd highlighter)
+          (= offset (.getStart highlighter)))
+      (do
+        (.retreat highlighter)
+        (let [result (and (not (.atEnd highlighter))
+                          (predicate (.getTokenType highlighter)))]
+          (.advance highlighter)
+          result))
+      (looking-at highlighter predicate)))
 
 (defn inside-string? [^Editor editor]
   (let [offset (offset editor)
@@ -81,7 +93,6 @@
                                           (> (offset editor) (.getStartOffset (.getTextRange psi)))) psi
                                      :else (recur (.getParent psi)))))
 
-; TODO insert space beforehand too
 (defn process-key [project ^Editor editor psi-file char-typed]
   (let [is-string (inside-string? editor)
         is-comment (inside-comment? editor)]
@@ -97,11 +108,16 @@
         (if (contains? #{\( \[ \{ \"} char-typed)
             (let [offset (offset editor)
                   highlighter (highlighter-iterator editor offset)
-                  needs-whitespace (looking-at highlighter
-                                               (fn [token] (not (or (whitespace-token? token)
-                                                                    (closing-brace? token)))))]
+                  needs-whitespace-before (looking-back-at highlighter
+                                                           (fn [token] (not (or (whitespace-token? token)
+                                                                                (opening-braces token))))
+                                                           offset)
+                  needs-whitespace-after (looking-at highlighter
+                                                     (fn [token] (not (or (whitespace-token? token)
+                                                                          (closing-braces token)))))]
+              (if needs-whitespace-before (insert editor " "))
               (insert editor (str char-typed))
-              (if needs-whitespace (insert-after editor " "))
+              (if needs-whitespace-after (insert-after editor " "))
               (insert-after editor (str (matching-char char-typed))))
             (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
                     (let [offset (.getEndOffset (.getTextRange enclosing))

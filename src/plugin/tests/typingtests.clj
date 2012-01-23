@@ -5,6 +5,8 @@
 (deftest open-paren-tests
   (is (typing-result? \( "<caret>" "(<caret>)"))
   (is (typing-result? \( "(a b <caret>c d)" "(a b (<caret>) c d)"))
+  (is (typing-result? \( "(a b<caret> c d)" "(a b (<caret>) c d)"))
+  (is (typing-result? \( "(te<caret>st)" "(te (<caret>) st)"))
   (is (typing-result? \( "\"bar <caret>baz\"" "\"bar (<caret>baz\""))
   (is (typing-result? \( "; bar <caret>baz" "; bar (<caret>baz"))
   (is (typing-result? \[ "<caret>" "[<caret>]"))
