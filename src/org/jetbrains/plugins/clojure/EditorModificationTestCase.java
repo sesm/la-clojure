@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.LightCodeInsightTestCase;
 
 import java.io.IOException;
@@ -14,13 +15,13 @@ import java.io.IOException;
  */
 public abstract class EditorModificationTestCase extends LightCodeInsightTestCase {
 
-  public abstract void doModification(Project project, Editor editor, DataContext dataContext);
+  public abstract void doModification(Project project, Editor editor, PsiFile file, DataContext dataContext);
 
   public void doModificationTest(String before, String after) throws IOException {
-    configureFromFileText("editor-typing-test.clj", before);
-    doModification(getProject(), getEditor(), DataManager.getInstance().getDataContext());
+    configureFromFileText("editor-modification-test.clj", before);
+    doModification(getProject(), getEditor(), getFile(), DataManager.getInstance().getDataContext());
     PsiDocumentManager.getInstance(getProject()).commitAllDocuments();
     assertEquals("Reparse error!", myEditor.getDocument().getText(), myFile.getText());
-    checkResultByText(null, after, true);
+    checkResultByText(null, after, false);
   }
 }

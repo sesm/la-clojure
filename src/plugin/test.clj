@@ -4,7 +4,8 @@
    (com.intellij.openapi.actionSystem ActionManager AnActionEvent)
    (com.intellij.ide DataManager)
    (com.intellij.psi PsiDocumentManager)
-   (com.intellij.openapi.editor.actionSystem EditorActionManager)))
+   (com.intellij.openapi.editor.actionSystem EditorActionManager)
+   (com.intellij.psi.codeStyle CodeStyleManager)))
 
 
 (defn invoke-action [action-id params]
@@ -25,6 +26,15 @@
                       (:editor params)
                       character
                       (:data-context params))))
+
+(defn reformat [params]
+  (let [style-manager (CodeStyleManager/getInstance (:project params))
+        psi-file (:psi-file params)
+        text-range (.getTextRange psi-file)]
+    (.reformatText style-manager
+                   psi-file
+                   (.getStartOffset text-range)
+                   (.getEndOffset text-range))))
 
 (defmethod assert-expr 'editor-action-result? [msg form]
   `(let [action# ~(nth form 1)
@@ -55,6 +65,26 @@
             (plugin.testcase.modification.
               (fn [this# params#]
                   (do-typing-action character# params#))
+              (fn [this#]
+                  (.doModificationTest this#
+                                       before#
+                                       after#))))
+          (do-report {:type :pass , :message ~msg ,
+                     :expected '~form , :actual nil})
+          (catch junit.framework.AssertionFailedError e#
+                 (do-report {:type :fail ,
+                            :message (str ~msg ": " (.getMessage e#)) ,
+                            :expected '~form ,
+                            :actual e#})
+                 e#))))
+
+(defmethod assert-expr 'reformat-result? [msg form]
+  `(let [before# ~(nth form 1)
+         after# ~(nth form 2)]
+     (try (.doTest
+            (plugin.testcase.modification.
+              (fn [this# params#]
+                  (reformat params#))
               (fn [this#]
                   (.doModificationTest this#
                                        before#

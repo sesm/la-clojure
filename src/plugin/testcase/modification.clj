@@ -15,9 +15,9 @@
 (defn test-getTestName [this _]
   "testImpl")
 
-(defn test-doModification [this project editor data-context]
+(defn test-doModification [this project editor psi-file data-context]
   ((@(.state this) :modification ) this {:project project ,
-  :editor editor , :data-context data-context}))
+  :editor editor , :data-context data-context, :psi-file psi-file}))
 
 (defn test-testImpl [this]
   ((@(.state this) :test ) this))

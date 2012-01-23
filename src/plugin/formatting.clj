@@ -84,20 +84,19 @@
 
 (defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
 
+(defn non-empty-children [^ASTNode node]
+      (filter non-empty? (seq (.getChildren node nil))))
+
 (defmethod sub-blocks :basic [block]
   (let [sub-block #(create-block % {} (no-indent) (:wrap block) (:settings block))]
-    (into [] (map sub-block
-                  (filter non-empty?
-                          (seq (.getChildren ^ASTNode (:node block) nil)))))))
+    (into [] (map sub-block (non-empty-children (:node block))))))
 
 (defmethod sub-blocks :list [block]
   (let [sub-block #(let [brace? (opening-brace? (.getElementType ^ASTNode %))
                          indent (if brace? (no-indent) (normal-indent))
                          align (if brace? {} {:this (:child (:alignment block))})]
                      (create-block % align indent (:wrap block) (:settings block)))]
-    (into [] (map sub-block
-                  (filter non-empty?
-                          (seq (.getChildren ^ASTNode (:node block) nil)))))))
+    (into [] (map sub-block (non-empty-children (:node block))))))
 
 (def indent-form {:ns 1 , :let 1 , :defmethod 3 , :defn 2 , :def 2 , :defrecord 3 , :assoc 1 , :loop 1, :deftest 1})
 
@@ -110,7 +109,7 @@
 
 (defmethod sub-blocks :application [block]
   (let [parameters (num-parameters block)]
-    (loop [children (filter non-empty? (seq (.getChildren ^ASTNode (:node block) nil)))
+    (loop [children (non-empty-children (:node block))
            index 0
            result []]
       (if (seq children)
