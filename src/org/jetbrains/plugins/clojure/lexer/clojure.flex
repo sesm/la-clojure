@@ -174,7 +174,7 @@ mSLASH_LETTER = \\ ({mLETTER} | .)
 mOTHER = "_" | "-" | "*" | "." | "+" | "=" | "&" | "<" | ">" | "$" | "/" | "?" | "!"
 mNoDigit = ({mLETTER} | {mOTHER})
 
-mOTHER_REDUCED = "_" | "-" | "*" | "+" | "=" | "&" | "<" | ">" | "$" | "?" | "!"
+mOTHER_REDUCED = "_" | "-" | "*" | "+" | "=" | "&" | "<" | ">" | "$" | "?" | "!" | "'"
 mNoDigit1 = ({mLETTER} | {mOTHER_REDUCED})
 
 mIDENT = {mNoDigit} ({mNoDigit} | {mDIGIT} | "#")*

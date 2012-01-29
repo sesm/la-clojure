@@ -1,6 +1,5 @@
 package org.jetbrains.plugins.clojure.parser;
 
-import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IStubFileElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -41,7 +40,7 @@ public interface ClojureElementTypes extends ClojureTokenTypes {
   final IElementType LIST = new ClojureElementType("list");
   final IElementType VECTOR = new ClojureElementType("vector");
   final IElementType MAP = new ClojureElementType("map");
-  final IElementType SET = new ClojureElementType("map");
+  final IElementType SET = new ClojureElementType("set");
 
   final ClStubElementType<ClDefStub, ClDef> DEF = new ClDefElementType();
   final ClStubElementType<ClDefStub, ClDef> DEFMETHOD = new ClDefMethodElementType();
