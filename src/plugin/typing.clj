@@ -111,7 +111,7 @@
               needs-whitespace-before (looking-back-at highlighter
                                                        (fn [token] (not (or (whitespace-token? token)
                                                                             (opening-braces token)
-                                                                            (= ClojureTokenTypes/SHARP))))
+                                                                            (= ClojureTokenTypes/SHARP token))))
                                                        offset)
               needs-whitespace-after (looking-at highlighter
                                                  (fn [token] (not (or (whitespace-token? token)
