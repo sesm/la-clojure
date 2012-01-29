@@ -19,6 +19,13 @@
                ")")
         (lines "(defn f"
                "      []"
+               "  )")))
+  (is (reformat-result?
+        (lines "(defn f"
+               "[]"
+               ")")
+        (lines "(defn f"
+               "      []"
                "  )"))))
 
 (deftest application-enter-tests

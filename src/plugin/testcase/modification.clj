@@ -16,11 +16,13 @@
   "testImpl")
 
 (defn test-doModification [this project editor psi-file data-context]
-  ((@(.state this) :modification ) this {:project project,
-  :editor editor, :data-context data-context, :psi-file psi-file}))
+  ((@(.state this) :modification) this {:project      project,
+                                        :editor       editor,
+                                        :data-context data-context,
+                                        :psi-file     psi-file}))
 
 (defn test-testImpl [this]
-  ((@(.state this) :test ) this))
+  ((@(.state this) :test) this))
 
 (defn test-doTest [this]
   (.setName this "testImpl")
