@@ -1,8 +1,8 @@
 (ns plugin.tests.alltests
   (:use [clojure.test :only [run-tests]])
   (:require plugin.tests.typingtests
-   plugin.tests.editoractiontests
-   plugin.tests.formattingtests))
+            plugin.tests.editoractiontests
+            plugin.tests.formattingtests))
 
 (run-tests 'plugin.tests.typingtests
            'plugin.tests.editoractiontests

@@ -1,16 +1,16 @@
 (ns plugin.typing
   (:import (com.intellij.openapi.diagnostic Logger)
-   (com.intellij.openapi.editor Editor EditorModificationUtil)
-   (com.intellij.openapi.editor.ex EditorEx)
-   (com.intellij.openapi.editor.actionSystem TypedActionHandler EditorActionManager)
-   (com.intellij.openapi.editor.highlighter HighlighterIterator)
-   (com.intellij.openapi.actionSystem PlatformDataKeys)
-   (com.intellij.psi PsiElement)
-   (com.intellij.psi.util PsiUtilBase)
-   (org.jetbrains.plugins.clojure.file ClojureFileType)
-   (com.intellij.psi.tree TokenSet)
-   (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
-   (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
+           (com.intellij.openapi.editor Editor EditorModificationUtil)
+           (com.intellij.openapi.editor.ex EditorEx)
+           (com.intellij.openapi.editor.actionSystem TypedActionHandler EditorActionManager)
+           (com.intellij.openapi.editor.highlighter HighlighterIterator)
+           (com.intellij.openapi.actionSystem PlatformDataKeys)
+           (com.intellij.psi PsiElement)
+           (com.intellij.psi.util PsiUtilBase)
+           (org.jetbrains.plugins.clojure.file ClojureFileType)
+           (com.intellij.psi.tree TokenSet)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
+           (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
 
 ;(set! *warn-on-reflection* true)
 
@@ -93,6 +93,35 @@
            (> (offset editor) (.getStartOffset (.getTextRange psi)))) psi
       :else (recur (.getParent psi)))))
 
+(defn open-matched [^Editor editor char-typed]
+  (let [offset (offset editor)
+        highlighter (highlighter-iterator editor offset)
+        needs-whitespace-before (looking-back-at highlighter
+                                                 (fn [token] (not (or (whitespace-token? token)
+                                                                      (opening-braces token)
+                                                                      (= ClojureTokenTypes/SHARP token))))
+                                                 offset)
+        needs-whitespace-after (looking-at highlighter
+                                           (fn [token] (not (or (whitespace-token? token)
+                                                                (closing-braces token)))))]
+    (if needs-whitespace-before (insert editor " "))
+    (insert editor (str char-typed))
+    (if needs-whitespace-after (insert-after editor " "))
+    (insert-after editor (str (matching-char char-typed)))))
+
+(defn close-matched [^Editor editor char-typed]
+  (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
+    (let [offset (.getEndOffset (.getTextRange enclosing))
+          highlighter (highlighter-iterator editor offset)]
+      (.moveToOffset (.getCaretModel editor) offset)
+      (if (= offset (.getStart highlighter))
+        (.retreat highlighter))
+      (.retreat highlighter)
+      (if (looking-at highlighter whitespace-token?)
+        (.deleteString (.getDocument editor)
+                       (.getStart highlighter)
+                       (.getEnd highlighter))))))
+
 (defn process-key [project ^Editor editor psi-file char-typed]
   (let [is-string (inside-string? editor)
         is-comment (inside-comment? editor)]
@@ -106,47 +135,25 @@
             (insert editor "\\\"")))
         (insert editor (str char-typed)))
       (if (contains? #{\( \[ \{ \"} char-typed)
-        (let [offset (offset editor)
-              highlighter (highlighter-iterator editor offset)
-              needs-whitespace-before (looking-back-at highlighter
-                                                       (fn [token] (not (or (whitespace-token? token)
-                                                                            (opening-braces token)
-                                                                            (= ClojureTokenTypes/SHARP token))))
-                                                       offset)
-              needs-whitespace-after (looking-at highlighter
-                                                 (fn [token] (not (or (whitespace-token? token)
-                                                                      (closing-braces token)))))]
-          (if needs-whitespace-before (insert editor " "))
-          (insert editor (str char-typed))
-          (if needs-whitespace-after (insert-after editor " "))
-          (insert-after editor (str (matching-char char-typed))))
-        (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
-          (let [offset (.getEndOffset (.getTextRange enclosing))
-                highlighter (highlighter-iterator editor offset)]
-            (.moveToOffset (.getCaretModel editor) offset)
-            (if (= offset (.getStart highlighter))
-              (.retreat highlighter))
-            (.retreat highlighter)
-            (if (looking-at highlighter whitespace-token?)
-              (.deleteString (.getDocument editor)
-                             (.getStart highlighter)
-                             (.getEnd highlighter)))))))))
+        (open-matched editor char-typed)
+        (close-matched editor char-typed)))))
 
-(defrecord ClojureTypedHandler [^TypedActionHandler previous] TypedActionHandler
+(defrecord ClojureTypedHandler [^TypedActionHandler previous]
+  TypedActionHandler
   (execute [this editor char-typed data-context]
-           (let [do-original (fn [] (if-not (nil? previous)
-                                      (.execute previous editor char-typed data-context)))]
-             (if (contains? #{\( \) \[ \] \{ \} \"} char-typed)
-               (let [project (.getData PlatformDataKeys/PROJECT data-context)]
-                 (if (or (nil? project) (.isColumnMode editor))
-                   (do-original)
-                   (let [psi-file (PsiUtilBase/getPsiFileInEditor editor project)]
-                     (if (nil? psi-file)
-                       (do-original)
-                       (if (= (.getLanguage psi-file) ClojureFileType/CLOJURE_LANGUAGE)
-                         (process-key project editor psi-file char-typed)
-                         (do-original))))))
-               (do-original)))))
+    (let [do-original (fn [] (if-not (nil? previous)
+                               (.execute previous editor char-typed data-context)))]
+      (if (contains? #{\( \) \[ \] \{ \} \"} char-typed)
+        (let [project (.getData PlatformDataKeys/PROJECT data-context)]
+          (if (or (nil? project) (.isColumnMode editor))
+            (do-original)
+            (let [psi-file (PsiUtilBase/getPsiFileInEditor editor project)]
+              (if (nil? psi-file)
+                (do-original)
+                (if (= (.getLanguage psi-file) ClojureFileType/CLOJURE_LANGUAGE)
+                  (process-key project editor psi-file char-typed)
+                  (do-original))))))
+        (do-original)))))
 
 (defn initialise []
   (let [action-manager (EditorActionManager/getInstance)

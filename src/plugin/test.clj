@@ -1,11 +1,11 @@
 (ns plugin.test
   (:use [clojure.test :only [assert-expr do-report]])
   (:import (com.intellij.testFramework LightPlatformCodeInsightTestCase)
-   (com.intellij.openapi.actionSystem ActionManager AnActionEvent)
-   (com.intellij.ide DataManager)
-   (com.intellij.psi PsiDocumentManager)
-   (com.intellij.openapi.editor.actionSystem EditorActionManager)
-   (com.intellij.psi.codeStyle CodeStyleManager)))
+           (com.intellij.openapi.actionSystem ActionManager AnActionEvent)
+           (com.intellij.ide DataManager)
+           (com.intellij.psi PsiDocumentManager)
+           (com.intellij.openapi.editor.actionSystem EditorActionManager)
+           (com.intellij.psi.codeStyle CodeStyleManager)))
 
 
 (defn invoke-action [action-id params]

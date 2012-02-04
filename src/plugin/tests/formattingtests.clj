@@ -1,7 +1,7 @@
 (ns plugin.tests.formattingtests
   (:use [clojure.test :only [deftest is]])
   (:require plugin.test
-   [clojure.string :as string])
+            [clojure.string :as string])
   (:import [com.intellij.openapi.actionSystem IdeActions]))
 
 (defn lines [& strings]

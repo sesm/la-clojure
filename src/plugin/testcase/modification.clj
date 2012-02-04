@@ -1,13 +1,13 @@
 (ns plugin.testcase.modification
   (:gen-class :prefix test-
-   :state state
-   :init init
-   :extends org.jetbrains.plugins.clojure.EditorModificationTestCase
-   :constructors {[clojure.lang.IFn clojure.lang.IFn] []}
-   :methods [[testImpl [] void]
-             [doTest [] void]])
+              :state state
+              :init init
+              :extends org.jetbrains.plugins.clojure.EditorModificationTestCase
+              :constructors {[clojure.lang.IFn clojure.lang.IFn] []}
+              :methods [[testImpl [] void]
+                        [doTest [] void]])
   (:import [org.jetbrains.plugins.clojure EditorModificationTestCase]
-   (com.intellij.ide DataManager)))
+           (com.intellij.ide DataManager)))
 
 (defn test-init [modification-fn test-fn]
   [[] (atom {:modification modification-fn, :test test-fn})])

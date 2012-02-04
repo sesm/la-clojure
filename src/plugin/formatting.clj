@@ -1,23 +1,18 @@
 (ns plugin.formatting
-  (:import (com.intellij.formatting FormattingModelBuilder
-                                    FormattingModelProvider
-                                    Indent
-                                    Block
-                                    Spacing
-                                    ChildAttributes
-                                    Alignment)
-   (com.intellij.openapi.diagnostic Logger)
-   (org.jetbrains.plugins.clojure.psi.api ClList ClListLike ClVector ClMap ClSet ClKeyword)
-   (org.jetbrains.plugins.clojure.psi.impl ClMapEntry)
-   (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
-   (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
-   (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
-   (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
-   (com.intellij.psi PsiComment PsiFile)
-   (com.intellij.psi.tree TokenSet)
-   (com.intellij.lang ASTNode)
-   (com.intellij.psi.impl.source.tree LeafPsiElement)
-   (java.util Collection ArrayList)))
+  (:import (com.intellij.formatting FormattingModelBuilder FormattingModelProvider Indent Block Spacing ChildAttributes
+                                    Alignment Wrap WrapType)
+           (com.intellij.openapi.diagnostic Logger)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClListLike ClVector ClMap ClSet ClKeyword)
+           (org.jetbrains.plugins.clojure.psi.impl ClMapEntry)
+           (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
+           (org.jetbrains.plugins.clojure.psi.util ClojurePsiCheckers)
+           (org.jetbrains.plugins.clojure.parser ClojureElementTypes)
+           (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
+           (com.intellij.psi PsiComment PsiFile)
+           (com.intellij.psi.tree TokenSet)
+           (com.intellij.lang ASTNode)
+           (com.intellij.psi.impl.source.tree LeafPsiElement)
+           (java.util Collection ArrayList)))
 
 ;(set! *warn-on-reflection* true)
 
@@ -36,17 +31,26 @@
 (def sub-blocks)
 (def child-attributes)
 
-(defrecord ClojureBlock [^ASTNode node alignment indent wrap settings ^Collection children] Block
+(defmacro with-logging [& body]
+  `(try
+     ~@body
+     (catch java.lang.reflect.InvocationTargetException e#
+       (.error logger "Invocation target exception:" (.getTargetException e#)))
+     (catch Exception e#
+       (.error logger e#))))
+
+(defrecord ClojureBlock [^ASTNode node alignment indent wrap settings params ^Collection children]
+  Block
   (getTextRange [this] (.getTextRange node))
   (getSubBlocks [this]
-                (if (.isEmpty children)
-                  (.addAll children (sub-blocks this)))
-                children)
+    (if (.isEmpty children)
+      (.addAll children (with-logging (sub-blocks this))))
+    children)
   (getWrap [this] wrap)
   (getIndent [this] indent)
   (getAlignment [this] alignment)
-  (getSpacing [this child1 child2] (spacing child1 child2))
-  (getChildAttributes [this newChildIndex] (child-attributes this newChildIndex))
+  (getSpacing [this child1 child2] (with-logging (spacing child1 child2)))
+  (getChildAttributes [this newChildIndex] (with-logging (child-attributes this newChildIndex)))
   (isIncomplete [this] (incomplete? node))
   (isLeaf [this] (nil? (.getFirstChildNode node))))
 
@@ -72,16 +76,82 @@
                   ClojureTokenTypes/WHITESPACE
                   ClojureTokenTypes/COMMA})
 
-(defn opening-brace? [element] (opening-braces element))
-(defn comment? [element] (comments element))
-(defn whitespace? [element] (whitespace element))
+(def list-like-forms #{ClojureElementTypes/LIST
+                       ClojureElementTypes/VECTOR
+                       ClojureElementTypes/DEF
+                       ClojureElementTypes/DEFMETHOD
+                       ClojureElementTypes/NS})
+
 (defn meta-form? [element] (= ClojureElementTypes/META_FORM element))
+(defn symbol-token? [element] (= ClojureElementTypes/SYMBOL element))
+(defn keyword-token? [element] (= ClojureElementTypes/KEYWORD element))
+
+(defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
+
+(defn formattable? [^ASTNode node]
+  (and (non-empty? node)
+       (let [element (.getElementType node)]
+         (not (or (whitespace element)
+                  (meta-form? element)
+                  (comments element))))))
+
+(defn significant? [^ASTNode node]
+  (and (formattable? node)
+       (not (instance? LeafPsiElement node))))
+
+(defn significant-elements [^ASTNode node]
+  (filter significant? (seq (.getChildren node nil))))
+
+;; predicates
+
+(defn matches? [node & predicates]
+  (every? true? (map #(% node) predicates)))
+
+(defn list-like? [^ASTNode node]
+  (not (nil? (list-like-forms (.getElementType node)))))
+
+(defn list-like-parent? [& predicates]
+  (fn [^ASTNode node]
+    (let [parent (.getTreeParent node)
+          element-type (if-not (nil? parent) (.getElementType parent))]
+      (if (list-like-forms element-type)
+        (every? true? (map #(% parent) predicates))))))
+
+(defn head-text? [text]
+  (fn [^ASTNode node]
+    (let [head ^ASTNode (first (significant-elements node))
+          head-text (if-not (nil? head) (.getText head))]
+      (= head-text text))))
+
+(defn head-text-in? [& options]
+  (fn [^ASTNode node]
+    (let [head ^ASTNode (first (significant-elements node))
+          head-text (if-not (nil? head) (.getText head))]
+      (loop [items options]
+        (cond
+          (empty? items) false
+          (= head-text (first items)) true
+          :else (recur (rest items)))))))
+
+(defn symbol-head? [node]
+  (let [head ^ASTNode (first (significant-elements node))]
+    (if (nil? head) false (symbol-token? (.getElementType head)))))
+
+(defn keyword-head? [node]
+  (let [head ^ASTNode (first (significant-elements node))]
+    (if (nil? head) false (keyword-token? (.getElementType head)))))
+
+;; parameters
 
 (defn brace-params [] {:indent (no-indent)})
 
 (defn create-params [align indent]
   (let [child (if (nil? align) nil (child-alignment align))]
     {:alignment align, :child child, :indent indent}))
+
+(defn create-wrap-params [align indent wrap]
+  (let [child (if (nil? align) nil (child-alignment align))]
+    {:alignment align, :child child, :indent indent, :wrap wrap}))
 
 (defn body-params []
   (create-params (create-alignment) (normal-indent)))
@@ -97,6 +167,9 @@
 
 (defn file-params [] (repeat {:indent (absolute-no-indent)}))
 
+(defn import-class-params []
+  (create-wrap-params (create-alignment) (normal-indent) (Wrap/createWrap (WrapType/NORMAL) true)))
+
 (defn normal-params []
   (concat [(brace-params)]
           (repeat (body-params))))
@@ -106,41 +179,16 @@
           (repeat num-parameters (parameter-params))
           (repeat (body-params))))
 
-; TODO fix lexer to lex #{ as single token
-(defn set-params []
-  (concat (repeat 2 (brace-params))
-          (repeat (body-params))))
-
-(defn map-params []
-  (concat [(brace-params)]
-          (cycle [(body-params) (shifting-params)])))
-
-(defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
-
-(defn non-empty-children [^ASTNode node]
-  (filter non-empty?
-          (flatten
-            (map
-              (fn [^ASTNode node] (if (instance? ClMapEntry (.getPsi node))
-                                    (seq (.getChildren node nil))
-                                    node))
-              (seq (.getChildren node nil))))))
-
-(defn significant-elements [^ASTNode node]
-  (filter (fn [node]
-            (and (non-empty? node)
-                 (let [element (.getElementType node)]
-                   (not (or (whitespace? element)
-                            (meta-form? element)
-                            (comment? element)
-                            (instance? LeafPsiElement node))))))
-          (seq (.getChildren node nil))))
+(defn import-clause-params []
+  (concat [(brace-params) (head-params)]
+          (repeat (import-class-params))))
 
 (defn has-types? [^ASTNode node types]
-  (let [elements (map #(.getElementType %) (significant-elements node))]
+  (let [elements (map #(.getElementType ^ASTNode %) (significant-elements node))]
     (every? true? (map = elements types))))
 
-(defn defn-parameters [^ASTNode node]
+(defn defn-parameters [^ASTNode
+                       node]
   (if (has-types? node [ClojureElementTypes/SYMBOL
                         ClojureElementTypes/SYMBOL
                         ClojureElementTypes/VECTOR])
@@ -157,54 +205,108 @@
                           ClojureElementTypes/SYMBOL]) 1
         :else 0))
 
-(def indent-form {:ns        1,
-                  :let       1,
-                  :if-let    1,
-                  :when-let  1,
-                  :with-open 1,
-                  :binding   1,
-                  :defmethod 3,
-                  :defn      defn-parameters,
-                  :defmacro  defn-parameters,
-                  :definline defn-parameters,
-                  :defn-     defn-parameters,
-                  :fn        fn-parameters,
-                  :defrecord 3,
-                  :assoc     1,
-                  :loop      1,
-                  :deftest   1,
-                  :if        1,
-                  :if-not    1,
-                  :when      1,
-                  :when-not  1,
-                  :doseq     1,
-                  :dotimes   1,
-                  :catch     2})
+(def indent-form {:ns              1,
+                  :let             1,
+                  :if-let          1,
+                  :when-let        1,
+                  :when-first      1,
+                  :with-open       1,
+                  :with-local-vars 1,
+                  :loop            1,
+                  :binding         1,
+                  :defmethod       3,
+                  :defn            defn-parameters,
+                  :defmacro        defn-parameters,
+                  :definline       defn-parameters,
+                  :defn-           defn-parameters,
+                  :fn              fn-parameters,
+                  :defrecord       2,
+                  :deftype         2,
+                  :extend-type     1,
+                  :reify           1,
+                  :assoc           1,
+                  :deftest         1,
+                  :if              1,
+                  :if-not          1,
+                  :when            1,
+                  :when-not        1,
+                  :doseq           1,
+                  :dotimes         1,
+                  :catch           2})
 
 (defn num-parameters [^ASTNode node]
-  (let [psi (.getPsi node)
-        head (.getFirstNonLeafElement ^ClList psi)]
-    (if (instance? ClSymbol head)
-      (let [indent (get indent-form (keyword (.getText head)) 0)]
+  (let [head-token ^ASTNode (first (significant-elements node))
+        element-type (.getElementType head-token)]
+    (if (symbol-token? element-type)
+      (let [indent (get indent-form (keyword (.getText head-token)) 0)]
         (if (fn? indent)
           (indent node)
           indent))
       0)))
 
+(defn list-params [^ASTNode node]
+  (cond
+    (matches? node
+              list-like?
+              symbol-head?
+              (list-like-parent?
+                (head-text-in? "defrecord" "extend-type" "reify" "deftype" "proxy"))) (application-params 1)
+    (matches? node
+              list-like?
+              symbol-head?
+              (list-like-parent?
+                keyword-head?
+                (head-text? ":import")
+                (list-like-parent?
+                  symbol-head?
+                  (head-text? "ns")))) (import-clause-params)
+    (matches? node
+              symbol-head?) (application-params (num-parameters node))
+    (matches? node
+              list-like?
+              keyword-head?
+              (list-like-parent?
+                (head-text? "ns"))) (application-params 0)
+    :else (normal-params)))
+
+; TODO fix lexer to lex #{ as single token
+(defn set-params []
+  (concat (repeat 2 (brace-params))
+          (repeat (body-params))))
+
+(defn map-params []
+  (concat [(brace-params)]
+          (cycle [(body-params) (shifting-params)])))
+
+
+(defn flatten-children [^ASTNode node]
+  (flatten
+    (map
+      (fn [^ASTNode node] (if (instance? ClMapEntry (.getPsi node))
+                            (seq (.getChildren node nil))
+                            node))
+      (seq (.getChildren node nil)))))
+
+(defn non-empty-children [^ASTNode node]
+  (filter non-empty? (flatten-children node)))
+
 (defn get-params [^ASTNode node]
   (let [psi (.getPsi node)]
     (cond
-      (instance? ClList psi) (let [first (.getFirstNonLeafElement ^ClList psi)]
-                               (if (instance? ClSymbol first)
-                                 (application-params (num-parameters node))
-                                 (normal-params)))
+      (instance? ClList psi) (list-params node)
       (instance? ClVector psi) (normal-params)
       (instance? ClSet psi) (set-params)
       (instance? ClMap psi) (map-params)
       (instance? PsiFile psi) (file-params))))
 
+(defn create-block
+  ([node settings]
+   (ClojureBlock. node nil nil nil settings (file-params) (ArrayList.)))
+  ([node alignment indent wrap settings]
+   (ClojureBlock. node alignment indent wrap settings (get-params node) (ArrayList.))))
+
 (defn sub-blocks
-  ([block] (sub-blocks block (get-params (:node block))))
+  ([block] (sub-blocks block (:params block)))
   ([block params]
    (loop [children (non-empty-children (:node block))
           child-params params
@@ -212,29 +314,28 @@
      (if (seq children)
        (let [child (first children)
              element (.getElementType ^ASTNode child)
-             params (first child-params)]
-         (if (or (comment? element)
-                 (whitespace? element)
+             params (first child-params)
+             wrap (if (brace? element) nil (:wrap params))]
+         (if (or (comments element)
+                 (whitespace element)
                  (meta-form? element))
            (recur (rest children)
                   child-params
-                  (conj result (ClojureBlock. child
-                                              (cond
-                                                (whitespace? element) nil
-                                                (meta-form? element) (:alignment params)
-                                                :else (:child params))
-                                              (:indent params)
-                                              (:wrap params)
-                                              (:settings block)
-                                              (ArrayList.))))
+                  (conj result (create-block child
+                                             (cond
+                                               (whitespace element) nil
+                                               (meta-form? element) (:alignment params)
+                                               :else (:child params))
+                                             (:indent params)
+                                             wrap
+                                             (:settings block))))
            (recur (rest children)
                   (rest child-params)
-                  (conj result (ClojureBlock. child
-                                              (:alignment params)
-                                              (:indent params)
-                                              (:wrap params)
-                                              (:settings block)
-                                              (ArrayList.))))))
+                  (conj result (create-block child
+                                             (:alignment params)
+                                             (:indent params)
+                                             wrap
+                                             (:settings block))))))
        result))))
 
 
@@ -262,26 +363,30 @@
         (.contains ClojureTokenTypes/ATOMS type2) no-spacing
         :else common-spacing))))
 
+
 (defn child-attributes [block index]
-  (let [params (get-params (:node block))
-        item-params (nth params index)]
-    (ChildAttributes. (:indent item-params) (:alignment item-params))))
+  (loop [children (flatten-children (:node block))
+         params (:params block)
+         item index]
+    (cond
+      (= item 0) (ChildAttributes. (:indent (first params)) (:alignment (first params)))
+      (formattable? (first children)) (recur (rest children) (rest params) (dec item))
+      :else (recur (rest children) params (if (non-empty? (first children)) (dec item) item)))))
 
 (defn incomplete? [node] false)
-
-(defrecord ClojureFormattingModelBuilder [] FormattingModelBuilder
-  (createModel [this element settings]
-               (let [file (.getContainingFile element)
-                     node (.getNode file)
-                     block (ClojureBlock. node nil nil nil settings (ArrayList.))]
-                 (FormattingModelProvider/createFormattingModelForPsiFile file block settings)))
-  (getRangeAffectingIndent [this file offset elementAtOffset] nil))
 
 (defn initialise []
   (.addExplicitExtension
     com.intellij.lang.LanguageFormatting/INSTANCE
     (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)
-    (ClojureFormattingModelBuilder.)))
+    (reify FormattingModelBuilder
+      (createModel [this element settings]
+        (with-logging
+          (let [file (.getContainingFile element)
+                node (.getNode file)
+                block (create-block node settings)]
+            (FormattingModelProvider/createFormattingModelForPsiFile file block settings))))
+      (getRangeAffectingIndent [this file offset elementAtOffset] nil))))
 
 ;; debugging tools
 (defn get-extension []

@@ -1,6 +1,6 @@
 (ns plugin.initialise
   (:require plugin.formatting
-   plugin.typing))
+            plugin.typing))
 
 (defn initialise-all []
   (plugin.formatting/initialise)
