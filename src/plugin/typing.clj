@@ -10,31 +10,15 @@
            (org.jetbrains.plugins.clojure.file ClojureFileType)
            (com.intellij.psi.tree TokenSet)
            (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
-           (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)))
+           (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes))
+  (:use [plugin.util :only [safely]]
+        [plugin.tokens]))
 
 ;(set! *warn-on-reflection* true)
 
 (def ^Logger logger (Logger/getInstance "plugin.typing"))
 
 (defn not-nil? [x] (not (nil? x)))
-
-(defn string-token? [token]
-  (.contains ClojureTokenTypes/STRINGS token))
-
-(defn comment-token? [token]
-  (.contains ClojureTokenTypes/COMMENTS token))
-
-(defn whitespace-token? [token]
-  (.contains ClojureTokenTypes/WHITESPACE_SET token))
-
-(def opening-braces #{ClojureTokenTypes/LEFT_PAREN
-                      ClojureTokenTypes/LEFT_SQUARE
-                      ClojureTokenTypes/LEFT_CURLY})
-
-(def closing-braces #{ClojureTokenTypes/RIGHT_PAREN
-                      ClojureTokenTypes/RIGHT_SQUARE
-                      ClojureTokenTypes/RIGHT_CURLY})
-
 
 (defn offset [^Editor editor]
   (.getOffset (.getCaretModel editor)))
@@ -60,19 +44,19 @@
 (defn inside-string? [^Editor editor]
   (let [offset (offset editor)
         highlighter (highlighter-iterator editor offset)]
-    (and (looking-at highlighter string-token?)
+    (and (looking-at highlighter strings)
          (< (.getStart highlighter) offset (.getEnd highlighter)))))
 
 (defn inside-comment? [editor]
   (let [offset (offset editor)
         highlighter (highlighter-iterator editor offset)]
-    (or (and (looking-at highlighter comment-token?)
+    (or (and (looking-at highlighter comments)
              (< (.getStart highlighter) offset (.getEnd highlighter)))
         (if (and (> offset 0)
                  (= offset (.getStart highlighter)))
           (do
             (.retreat highlighter)
-            (comment-token? (.getTokenType highlighter)))
+            (comments (.getTokenType highlighter)))
           false))))
 
 (defn insert [editor string]
@@ -97,12 +81,12 @@
   (let [offset (offset editor)
         highlighter (highlighter-iterator editor offset)
         needs-whitespace-before (looking-back-at highlighter
-                                                 (fn [token] (not (or (whitespace-token? token)
+                                                 (fn [token] (not (or (whitespace token)
                                                                       (opening-braces token)
                                                                       (= ClojureTokenTypes/SHARP token))))
                                                  offset)
         needs-whitespace-after (looking-at highlighter
-                                           (fn [token] (not (or (whitespace-token? token)
+                                           (fn [token] (not (or (whitespace token)
                                                                 (closing-braces token)))))]
     (if needs-whitespace-before (insert editor " "))
     (insert editor (str char-typed))
@@ -117,7 +101,7 @@
       (if (= offset (.getStart highlighter))
         (.retreat highlighter))
       (.retreat highlighter)
-      (if (looking-at highlighter whitespace-token?)
+      (if (looking-at highlighter whitespace)
         (.deleteString (.getDocument editor)
                        (.getStart highlighter)
                        (.getEnd highlighter))))))
@@ -141,8 +125,7 @@
 (defrecord ClojureTypedHandler [^TypedActionHandler previous]
   TypedActionHandler
   (execute [this editor char-typed data-context]
-    (let [do-original (fn [] (if-not (nil? previous)
-                               (.execute previous editor char-typed data-context)))]
+    (let [do-original (fn [] (safely (.execute previous editor char-typed data-context)))]
       (if (contains? #{\( \) \[ \] \{ \} \"} char-typed)
         (let [project (.getData PlatformDataKeys/PROJECT data-context)]
           (if (or (nil? project) (.isColumnMode editor))

@@ -12,7 +12,10 @@
            (com.intellij.psi.tree TokenSet)
            (com.intellij.lang ASTNode)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
-           (java.util Collection ArrayList)))
+           (java.util Collection ArrayList))
+  (:use [plugin.util :only [safely with-logging]]
+        [plugin.tokens]
+        [plugin.predicates]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -30,14 +33,6 @@
 
 (def sub-blocks)
 (def child-attributes)
-
-(defmacro with-logging [& body]
-  `(try
-     ~@body
-     (catch java.lang.reflect.InvocationTargetException e#
-       (.error logger "Invocation target exception:" (.getTargetException e#)))
-     (catch Exception e#
-       (.error logger e#))))
 
 (defrecord ClojureBlock [^ASTNode node alignment indent wrap settings params ^Collection children]
   Block
@@ -62,84 +57,6 @@
 (defn create-alignment [] (Alignment/createAlignment))
 (defn shifting-alignment [] (Alignment/createAlignment true))
 (defn child-alignment [parent] (Alignment/createChildAlignment parent))
-
-(defn brace? [element] (.contains ClojureElementTypes/BRACES element))
-
-(def opening-braces #{ClojureTokenTypes/LEFT_PAREN
-                      ClojureTokenTypes/LEFT_SQUARE
-                      ClojureTokenTypes/LEFT_CURLY})
-
-(def comments #{ClojureTokenTypes/LINE_COMMENT})
-
-(def whitespace #{ClojureTokenTypes/EOL
-                  ClojureTokenTypes/EOF
-                  ClojureTokenTypes/WHITESPACE
-                  ClojureTokenTypes/COMMA})
-
-(def list-like-forms #{ClojureElementTypes/LIST
-                       ClojureElementTypes/VECTOR
-                       ClojureElementTypes/DEF
-                       ClojureElementTypes/DEFMETHOD
-                       ClojureElementTypes/NS})
-
-(defn meta-form? [element] (= ClojureElementTypes/META_FORM element))
-(defn symbol-token? [element] (= ClojureElementTypes/SYMBOL element))
-(defn keyword-token? [element] (= ClojureElementTypes/KEYWORD element))
-
-(defn non-empty? [^ASTNode node] (> (.length (.trim (.getText node))) 0))
-
-(defn formattable? [^ASTNode node]
-  (and (non-empty? node)
-       (let [element (.getElementType node)]
-         (not (or (whitespace element)
-                  (meta-form? element)
-                  (comments element))))))
-
-(defn significant? [^ASTNode node]
-  (and (formattable? node)
-       (not (instance? LeafPsiElement node))))
-
-(defn significant-elements [^ASTNode node]
-  (filter significant? (seq (.getChildren node nil))))
-
-;; predicates
-
-(defn matches? [node & predicates]
-  (every? true? (map #(% node) predicates)))
-
-(defn list-like? [^ASTNode node]
-  (not (nil? (list-like-forms (.getElementType node)))))
-
-(defn list-like-parent? [& predicates]
-  (fn [^ASTNode node]
-    (let [parent (.getTreeParent node)
-          element-type (if-not (nil? parent) (.getElementType parent))]
-      (if (list-like-forms element-type)
-        (every? true? (map #(% parent) predicates))))))
-
-(defn head-text? [text]
-  (fn [^ASTNode node]
-    (let [head ^ASTNode (first (significant-elements node))
-          head-text (if-not (nil? head) (.getText head))]
-      (= head-text text))))
-
-(defn head-text-in? [& options]
-  (fn [^ASTNode node]
-    (let [head ^ASTNode (first (significant-elements node))
-          head-text (if-not (nil? head) (.getText head))]
-      (loop [items options]
-        (cond
-          (empty? items) false
-          (= head-text (first items)) true
-          :else (recur (rest items)))))))
-
-(defn symbol-head? [node]
-  (let [head ^ASTNode (first (significant-elements node))]
-    (if (nil? head) false (symbol-token? (.getElementType head)))))
-
-(defn keyword-head? [node]
-  (let [head ^ASTNode (first (significant-elements node))]
-    (if (nil? head) false (keyword-token? (.getElementType head)))))
 
 ;; parameters
 
