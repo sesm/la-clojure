@@ -1,10 +1,10 @@
 <project name="Build Clojure plugin for IntelliJ IDEA" default="deploy.plugin">
-  <!-- Properties file -->  
+  <!-- Properties file -->
   <property file="clojure.properties"/>
 
   <property name="jdk.home" value="${java.home}"/>
-  <property name="project.dir" value="."/>
-  <property name="src.dir" value="./src"/>
+  <property name="project.dir" value="${basedir}"/>
+  <property name="src.dir" value="${project.dir}/src"/>
   <property name="project.lib" value="${project.dir}/lib"/>
   <property name="project.dest" value="${project.dir}/out/production/clojure-plugin"/>
   <property name="test.dest" value="${project.dir}/out/test/clojure-plugin"/>
@@ -131,14 +131,32 @@
 
   </target>
 
+  <target name="find.clojure.files">
+    <pathconvert property="clojure.files" pathsep=" ">
+      <fileset dir="${src.dir}" includes="**/*.clj">
+        <contains text=":gen-class" casesensitive="yes"/>
+      </fileset>
+      <packagemapper from="${src.dir}/*.clj" to="*"/>
+    </pathconvert>
+
+    <echo message="${clojure.files}"/>
+  </target>
+
   <target name="make.clojure" depends="make.java">
     <!-- Compile project Clojure files -->
+    <pathconvert property="clojure.files" pathsep=" ">
+      <fileset dir="${src.dir}" includes="**/*.clj">
+        <contains text=":gen-class" casesensitive="yes"/>
+      </fileset>
+      <packagemapper from="${src.dir}/*.clj" to="*"/>
+    </pathconvert>
+
     <java classname="clojure.lang.Compile">
       <classpath refid="clojure.base.path"/>
       <sysproperty key="clojure.compile.path" value="${project.dest}"/>
+      <sysproperty key="clojure.compile.warn-on-reflection" value="true"/>
 
-      <!-- TODO: rework! -->
-      <arg value="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor"/>
+      <arg line="${clojure.files}"/>
     </java>
 
   </target>
@@ -170,9 +188,9 @@
       <fileset dir="${clojure.contrib}">
         <include name="clojure-contrib.jar"/>
       </fileset>
-        <fileset dir="${project.lib}">
-            <include name="tools.nrepl-0.0.6-SNAPSHOT.jar"/>
-        </fileset>
+      <fileset dir="${project.lib}">
+        <include name="tools.nrepl-0.0.6-SNAPSHOT.jar"/>
+      </fileset>
     </copy>
 
     <mkdir dir="${main.dist}"/>
