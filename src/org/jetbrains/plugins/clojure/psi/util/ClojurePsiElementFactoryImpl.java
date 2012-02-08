@@ -17,6 +17,7 @@ import org.jetbrains.plugins.clojure.psi.api.ClListLike;
 import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
+import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 
 /**
  * @author ilyas
@@ -116,6 +117,15 @@ public class ClojurePsiElementFactoryImpl extends ClojurePsiFactory {
 
     assert importMember != null;
 
+    // Check if we're already importing this class
+    ClSymbol[] classes = PsiTreeUtil.getChildrenOfType(importMember, ClSymbol.class);
+    for (ClSymbol aClass : classes) {
+      if (aClass.getText().equals(suffix))
+      {
+        return importMember;
+      }
+    }
+
     // Insert a new class into it
     final PsiElement lastChild = importMember.getLastChild();
     final PsiElement newClass = createSymbolNodeFromText(suffix).getPsi();
@@ -130,12 +140,12 @@ public class ClojurePsiElementFactoryImpl extends ClojurePsiFactory {
   }
 
   private ClListLike addFreshImportToMember(ClList importClause, String prefix) {
-    final ClListLike vector = createVectorFromText(prefix);
+    final ClListLike newImport = createListFromText(prefix);
     final PsiElement lastChild = importClause.getLastChild();
     if (lastChild instanceof LeafPsiElement) {
-      return (ClListLike) importClause.addBefore(vector, lastChild);
+      return (ClListLike) importClause.addBefore(newImport, lastChild);
     } else {
-      return (ClListLike) importClause.add(vector);
+      return (ClListLike) importClause.add(newImport);
     }
   }
 

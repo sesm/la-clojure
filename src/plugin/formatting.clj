@@ -141,6 +141,7 @@
                   :deftype         2,
                   :extend-type     1,
                   :reify           1,
+                  :proxy           2,
                   :assoc           1,
                   :deftest         1,
                   :if              1,
