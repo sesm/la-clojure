@@ -40,7 +40,6 @@
     <renameInputValidator implementation="org.jetbrains.plugins.clojure.refactoring.rename.ClojureRenameInputValidator"/>
     <fileTypeIndentOptionsProvider implementation="org.jetbrains.plugins.clojure.formatter.ClojureIndentOptionsProvider"/>
     <quoteHandler fileType="Clojure" className="org.jetbrains.plugins.clojure.editor.ClojureQuoteHandler"/>
-    <annotator language="Clojure" implementationClass="org.jetbrains.plugins.clojure.annotator.ClojureAnnotator"/>
     <debuggerClassFilterProvider implementation="org.jetbrains.plugins.clojure.debugger.filters.ClojureDebugClassesFilterProvider"/>
     <gotoSymbolContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToSymbolContributor"/>
     <gotoClassContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToClassContributor"/>
@@ -201,13 +200,6 @@
       <add-to-group group-id="EditMenu" anchor="last"/>
 
     </group>
-
-    <!--<action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewInProcessConsoleAction"-->
-    <!--class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewInProcessConsoleAction" text="Start In-Process Clojure Console"-->
-    <!--description="Runs Clojure REPL">-->
-    <!--<add-to-group group-id="ToolsMenu" anchor="last"/>-->
-    <!--<keyboard-shortcut keymap="$default" first-keystroke="ctrl shift F10"/>-->
-    <!--</action>-->
 
     <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
             class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
