@@ -88,7 +88,10 @@
   </target>
 
   <target name="clean" depends="init">
-    <delete dir="build" includes="**/*"/>
+    <delete dir="${project.dest}"/>
+    <delete dir="${test.dest}"/>
+    <delete dir="${main.dist}"/>
+    <delete dir="${test.dist}"/>
   </target>
 
   <target name="make.lexer">
@@ -143,6 +146,11 @@
   </target>
 
   <target name="make.clojure" depends="make.java">
+    <!--Copy clojure source-->
+    <copy todir="${project.dest}">
+      <fileset dir="${src.dir}" includes="**/*.clj"/>
+    </copy>
+
     <!-- Compile project Clojure files -->
     <pathconvert property="clojure.files" pathsep=" ">
       <fileset dir="${src.dir}" includes="**/*.clj">
