@@ -1,6 +1,7 @@
 package org.jetbrains.plugins.clojure.psi.impl.ns;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.Trinity;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
@@ -27,6 +28,8 @@ import java.util.Collection;
  * @author ilyas
  */
 public class NamespaceUtil {
+
+  public static final Key<PsiNamedElement[]> DEFAULT_DEFINITIONS_KEY = new Key<PsiNamedElement[]>("DEFAULT_DEFINITIONS_KEY");
 
   public static final String[] DEFAULT_NSES = new String[]{ClojureUtils.CORE_NAMESPACE,
 //          "clojure.inspector",
@@ -67,11 +70,31 @@ public class NamespaceUtil {
   }
 
   public static PsiNamedElement[] getDefaultDefinitions(@NotNull Project project) {
-    final ArrayList<PsiNamedElement> res = new ArrayList<PsiNamedElement>();
-    for (String ns : DEFAULT_NSES) {
-      res.addAll(Arrays.asList(getDeclaredElements(ns, project)));
+    PsiNamedElement[] ret;
+    synchronized (project)
+    {
+      ret = project.getUserData(DEFAULT_DEFINITIONS_KEY);
+      if (ret != null)
+      {
+        for (PsiNamedElement namedElement : ret) {
+          if (!namedElement.isValid())
+          {
+            ret = null;
+            break;
+          }
+        }
+      }
+      if (ret == null)
+      {
+        final ArrayList<PsiNamedElement> res = new ArrayList<PsiNamedElement>();
+        for (String ns : DEFAULT_NSES) {
+          res.addAll(Arrays.asList(getDeclaredElements(ns, project)));
+        }
+        ret = res.toArray(PsiNamedElement.EMPTY_ARRAY);
+        project.putUserData(DEFAULT_DEFINITIONS_KEY, ret);
+      }
     }
-    return res.toArray(PsiNamedElement.EMPTY_ARRAY);
+    return ret;
   }
 
   private static boolean suitsByPosition(PsiNamedElement candidate, ClNs ns) {
