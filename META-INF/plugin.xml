@@ -208,13 +208,6 @@
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>
 
-    <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewIDEConsoleAction"
-            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewIDEConsoleAction"
-            text="Start IDE Clojure Console"
-            description="Runs IDE Internal Clojure REPL">
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-    </action>
-
     <action id="Clojure.REPL.Execute.Immediately"
             class="com.intellij.openapi.actionSystem.EmptyAction"
             text="Execute Current Statement">

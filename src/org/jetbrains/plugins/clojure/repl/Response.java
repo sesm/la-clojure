@@ -40,7 +40,7 @@ public class Response
     return response.combinedResponse();
   }
 
-  public final List<Object> values()
+  public List<Object> values()
   {
     List<Object> ret = new ArrayList<Object>();
     Seqable values = (Seqable) combinedResponse().get(VALUE_KEYWORD);
@@ -57,17 +57,17 @@ public class Response
     return ret;
   }
 
-  public final String namespace()
+  public String namespace()
   {
     return (String) combinedResponse().get(NAMESPACE_KEYWORD);
   }
 
-  public final String errorOutput()
+  public String errorOutput()
   {
     return (String) combinedResponse().get(ERROR_KEYWORD);
   }
 
-  public final String stdOutput()
+  public String stdOutput()
   {
     return (String) combinedResponse().get(OUTPUT_KEYWORD);
   }

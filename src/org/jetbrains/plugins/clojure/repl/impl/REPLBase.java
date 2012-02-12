@@ -38,7 +38,7 @@ public abstract class REPLBase implements REPL
   protected final Project project;
   protected final ClojureConsoleView consoleView;
 
-  protected String displayName = getType();
+  protected String displayName = "Initializing...";
 
   private Runnable shutdownHook = null;
 

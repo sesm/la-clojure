@@ -196,7 +196,10 @@ public class ClojureConsole extends LanguageConsoleImpl {
       print(x.toString(), ClojureSyntaxHighlighter.ATOM);
     } else if (x instanceof Var) {
       Var v = (Var) x;
-      print("#=(var " + v.ns.name + '/' + v.sym + ')', NORMAL_TEXT);
+      if(v.ns != null)
+        print("#=(var " + v.ns.name + '/' + v.sym + ')', NORMAL_TEXT);
+      else
+        print("#=(var " + (v.sym != null ? v.sym.toString() : "--unnamed--") + ')', NORMAL_TEXT);
     } else if (x instanceof Pattern) {
       Pattern p = (Pattern) x;
       print("#\"" + p.pattern() + '\"', NORMAL_TEXT);
