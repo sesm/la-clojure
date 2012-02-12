@@ -38,7 +38,11 @@
   (if (not (.isQualified element))
     (let [cache (PsiShortNamesCache/getInstance (.getProject element))
           scope (.getResolveScope element)
-          name (.getReferenceName element)
+          ref-name (.getReferenceName element)
+          name (cond
+                 (nil? ref-name) nil
+                 (.endsWith ref-name ".") (.substring ref-name 0 (dec (.length ref-name)))
+                 :else ref-name)
           classes (if-not (nil? name) (.getClassesByName cache name scope))]
       (if (and (not (nil? classes))
                (< 0 (alength classes)))
@@ -49,7 +53,10 @@
           (.registerFix annotation
                         (proxy [ImportClassFixBase] [element]
                           (getReferenceName [^ClSymbol reference]
-                            (.getReferenceName reference))
+                            (if-let [ref-name (.getReferenceName element)]
+                              (if (.endsWith ref-name ".")
+                                (.substring ref-name 0 (dec (.length ref-name)))
+                                ref-name)))
                           (getReferenceNameElement [^ClSymbol reference]
                             (.getReferenceNameElement reference))
                           (hasTypeParameters [reference] false)
@@ -90,7 +97,7 @@
   (let [annotation (.createInfoAnnotation holder
                                           element
                                           (str (.getText element) " is fully qualified"))]
-    (.setTextAttributes annotation CodeInsightColors/WARNINGS_ATTRIBUTES)
+    (.setTextAttributes annotation CodeInsightColors/WEAK_WARNING_ATTRIBUTES)
     (.registerFix annotation
                   (reify IntentionAction
                     (getText [this] "Import Class")
