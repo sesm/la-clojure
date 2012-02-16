@@ -41,6 +41,9 @@ import org.jetbrains.plugins.clojure.settings.ClojureProjectSettings;
 import org.jetbrains.plugins.clojure.utils.Editors;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class ClojureConsole extends LanguageConsoleImpl {
@@ -357,10 +360,6 @@ public class ClojureConsole extends LanguageConsoleImpl {
 
   // Copied from LanguageConsoleImpl
   private static void duplicateHighlighters(MarkupModel to, MarkupModel from, int offset, TextRange textRange) {
-    EditorColorsScheme clojure = EditorColorsManager.getInstance().getGlobalScheme();
-    TextAttributes matched = clojure.getAttributes(CodeInsightColors.MATCHED_BRACE_ATTRIBUTES);
-    TextAttributes unmatched = clojure.getAttributes(CodeInsightColors.UNMATCHED_BRACE_ATTRIBUTES);
-
     for (RangeHighlighter rangeHighlighter : from.getAllHighlighters()) {
       int localOffset = textRange.getStartOffset();
       int start = Math.max(rangeHighlighter.getStartOffset(), localOffset) - localOffset;
@@ -370,7 +369,7 @@ public class ClojureConsole extends LanguageConsoleImpl {
       }
 
       TextAttributes attributes = rangeHighlighter.getTextAttributes();
-      if (matched.equals(attributes) || unmatched.equals(attributes)) {
+      if (!ClojureSyntaxHighlighter.ALL_KEYS.contains(attributes)) {
         continue;
       }
 

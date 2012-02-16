@@ -16,7 +16,9 @@ import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
 
 import java.awt.*;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * User: peter
@@ -34,8 +36,8 @@ import java.util.Map;
  */
 public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements ClojureTokenTypes {
 
-  private static final Map<IElementType, TextAttributesKey> ATTRIBUTES = new HashMap<IElementType, TextAttributesKey>();
-
+  public static final Map<IElementType, TextAttributesKey> ATTRIBUTES = new HashMap<IElementType, TextAttributesKey>();
+  public static final Set<TextAttributesKey> ALL_KEYS = new HashSet<TextAttributesKey>();
 
   static final TokenSet sNUMBERS = TokenSet.create(
       INTEGER_LITERAL, LONG_LITERAL, BIG_INT_LITERAL, FLOAT_LITERAL, DOUBLE_LITERAL, BIG_DECIMAL_LITERAL, RATIO
@@ -150,6 +152,8 @@ public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements C
     fillMap(ATTRIBUTES, sPARENTS, PARENTS);
     fillMap(ATTRIBUTES, sLITERALS, LITERAL);
     fillMap(ATTRIBUTES, sCHARS, CHAR);
+
+    ALL_KEYS.addAll(ATTRIBUTES.values());
   }
 
 }
