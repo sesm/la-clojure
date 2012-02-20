@@ -1,12 +1,15 @@
 package org.jetbrains.plugins.clojure.psi.impl;
 
+import clojure.lang.Keyword;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
@@ -16,11 +19,13 @@ import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
+import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
+import org.jetbrains.plugins.clojure.psi.impl.symbols.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
@@ -30,8 +35,9 @@ import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.parser.ClojureParser;
+import org.jetbrains.plugins.clojure.repl.REPL;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * User: peter
@@ -51,6 +57,13 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   private PsiElement myContext = null;
   private PsiClass myClass;
   private boolean myScriptClassInitialized = false;
+
+  @NonNls
+  public static final Keyword NAMESPACES_KEYWORD = Keyword.intern("namespaces");
+  @NonNls
+  public static final Keyword IMPORTS_KEYWORD = Keyword.intern("imports");
+  @NonNls
+  public static final Keyword SYMBOLS_KEYWORD = Keyword.intern("symbols");
 
   @Override
   public String toString() {
@@ -157,8 +170,8 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         return !isWrongElement(psiElement);
       }
     });
-    if (k - 1 >= elements.size()) return  null;
-    return elements.get(k-1);
+    if (k - 1 >= elements.size()) return null;
+    return elements.get(k - 1);
   }
 
   public PsiElement getLastNonLeafElement() {
@@ -222,9 +235,9 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     final ClList nsList = factory.createListFromText(ListDeclarations.NS + " " + getName());
     final PsiElement anchor = getFirstChild();
     if (anchor != null) {
-      return (ClNs)addBefore(nsList, anchor);
+      return (ClNs) addBefore(nsList, anchor);
     } else {
-      return (ClNs)add (nsList);
+      return (ClNs) add(nsList);
     }
   }
 
@@ -243,37 +256,145 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
     final JavaPsiFacade facade = JavaPsiFacade.getInstance(getProject());
 
-    // Add all java.lang classes
-    final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
-    if (javaLang != null) {
-      for (PsiClass clazz : javaLang.getClasses()) {
-        if (!ResolveUtil.processElement(processor, clazz)) {
+    //Add top-level package names
+    final PsiPackage rootPackage = facade.findPackage("");
+    if (rootPackage != null) {
+      rootPackage.processDeclarations(processor, state, null, place);
+    }
+
+    REPL repl = getCopyableUserData(REPL.REPL_KEY);
+    if (repl != null) {
+      Map<Keyword, Collection<String>> completions = repl.getCompletions();
+
+      Collection<String> symbols = completions.get(SYMBOLS_KEYWORD);
+      if (symbols != null) {
+        for (String symbol : symbols) {
+          if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(getManager(), symbol))) {
+            return false;
+          }
+        }
+      }
+
+      Collection<String> namespaces = completions.get(NAMESPACES_KEYWORD);
+      if (namespaces != null) {
+        for (String namespace : topLevel(namespaces)) {
+          if (!ResolveUtil.processElement(
+              processor,
+              new CompletionSyntheticNamespace(repl, PsiManager.getInstance(getProject()), namespace, namespace, namespaces))) {
+            return false;
+          }
+        }
+      }
+
+      Collection<String> imports = completions.get(IMPORTS_KEYWORD);
+      if (imports != null) {
+        for (String fqn : imports) {
+          PsiClass psiClass = facade.findClass(fqn, GlobalSearchScope.allScope(getProject()));
+          if (psiClass != null) {
+            if (!ResolveUtil.processElement(processor, psiClass)) {
+              return false;
+            }
+          }
+        }
+      }
+    } else {
+      // Add all java.lang classes
+      final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+      if (javaLang != null) {
+        for (PsiClass clazz : javaLang.getClasses()) {
+          if (!ResolveUtil.processElement(processor, clazz)) {
+            return false;
+          }
+        }
+      }
+
+      // Add all symbols from default namespaces
+      for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(getProject())) {
+        if (PsiTreeUtil.findCommonParent(element, place) != element && !ResolveUtil.processElement(processor, element)) {
+          return false;
+        }
+      }
+
+      //todo Add all namespaces, available in project
+      for (ClSyntheticNamespace ns : NamespaceUtil.getTopLevelNamespaces(getProject())) {
+        if (!ResolveUtil.processElement(processor, ns)) {
           return false;
         }
       }
     }
 
-    //Add top-level package names
-    final PsiPackage rootPackage = JavaPsiFacade.getInstance(getProject()).findPackage("");
-    if (rootPackage != null) {
-      rootPackage.processDeclarations(processor, state, null, place);
-    }
-
-    // Add all symbols from default namespaces
-    for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(getProject())) {
-      if (PsiTreeUtil.findCommonParent(element, place) != element && !ResolveUtil.processElement(processor, element)) {
-        return false;
-      }
-    }
-
-    //todo Add all namespaces, available in project
-    for (ClSyntheticNamespace ns : NamespaceUtil.getTopLevelNamespaces(getProject())) {
-      if (!ResolveUtil.processElement(processor, ns)) {
-        return false;
-      }
-    }
-
     return super.processDeclarations(processor, state, lastParent, place);
+  }
+
+  public static Collection<String> topLevel(Collection<String> namespaces) {
+    Collection<String> ret = new HashSet<String>();
+    for (String namespace : namespaces) {
+      int index = namespace.indexOf('.');
+      if (index > 0)
+      {
+        ret.add(namespace.substring(0, index));
+      }
+      else
+      {
+        ret.add(namespace);
+      }
+    }
+    return ret;
+  }
+
+  public static Collection<String> nextLevel(Collection<String> namespaces, String fqn) {
+    Collection<String> ret = new HashSet<String>();
+    for (String namespace : namespaces) {
+      if (namespace.startsWith(fqn + '.')) {
+        String shortName = StringUtil.trimStart(namespace, fqn + ".");
+        int index = shortName.indexOf('.');
+        if (index > 0) {
+          ret.add(shortName.substring(0, index));
+        } else {
+          ret.add(shortName);
+        }
+      }
+    }
+    return ret;
+  }
+
+  private static class CompletionSyntheticNamespace extends ClSyntheticNamespace {
+    private final REPL repl;
+    private final Collection<String> namespaces;
+
+    public CompletionSyntheticNamespace(REPL repl, PsiManager manager, String name, String fqn, Collection<String> namespaces) {
+      super(manager, name, fqn, null);
+      this.repl = repl;
+      this.namespaces = namespaces;
+    }
+
+    @Override
+    public boolean
+    processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+      final String qualifiedName = getQualifiedName();
+      PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
+
+      if ((separator == null) || separator.getText().equals(".")) {
+        for (String namespace : nextLevel(namespaces, qualifiedName)) {
+          if (!ResolveUtil.processElement(processor, new CompletionSyntheticNamespace(repl, getManager(), namespace, qualifiedName + '.' + namespace, namespaces))) {
+            return false;
+          }
+        }
+      }
+
+      if ((separator == null) || separator.getText().equals("/")) {
+        Collection<String> symbolsInNS = repl.getSymbolsInNS(qualifiedName);
+        if (symbolsInNS != null) {
+          for (String symbol : symbolsInNS) {
+            if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(getManager(), symbol))) {
+              return false;
+            }
+          }
+        }
+      }
+
+      return true;
+    }
   }
 
   public PsiElement setClassName(@NonNls String s) {

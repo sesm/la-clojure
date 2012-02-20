@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
+import org.jetbrains.plugins.clojure.psi.impl.symbols.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
@@ -121,63 +122,53 @@ public class NamespaceUtil {
       final ClNs ns = nsWithPrefix.iterator().next();
       final String nsName = ns.getName();
       assert nsName != null;
-      final String synthName = nsName.equals(fqn) ? nsName : fqn;
-      final String refName = StringUtil.getShortName(synthName);
+      final String refName = StringUtil.getShortName(fqn);
 
-      final ClNs navigationElement = fqn.equals(ns.getName()) ? ns : null;
-      return new MyClSyntheticNamespace(project, refName, synthName, navigationElement);
+      final ClNs navigationElement = fqn.equals(nsName) ? ns : null;
+      return new MyClSyntheticNamespace(project, refName, fqn, navigationElement);
 
     }
     return null;
   }
 
   private static class MyClSyntheticNamespace extends ClSyntheticNamespace {
-
     private final Project project;
-    private final ClNs navigationElement;
 
     public MyClSyntheticNamespace(Project project, String refName, String synthName, ClNs navigationElement) {
       super(PsiManager.getInstance(project), refName, synthName, navigationElement);
       this.project = project;
-      this.navigationElement = navigationElement;
-    }
-
-    @NotNull
-    @Override
-    public PsiElement getNavigationElement() {
-      return navigationElement != null ? navigationElement : super.getNavigationElement();
     }
 
     @Override
-    public boolean canNavigateToSource() {
-      return navigationElement != null;
-    }
+    public boolean
+    processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
 
-    @Override
-    public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+      PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
 
-      // Add inner namespaces
-      for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, project)) {
-        final String outerName = getQualifiedName();
-        if (fqn.startsWith(outerName) && !fqn.equals(outerName) &&
-                !StringUtil.trimStart(fqn, outerName + ".").contains(".")) {
-          final ClSyntheticNamespace inner = getNamespace(fqn, project);
-          if (!ResolveUtil.processElement(processor, inner)) {
-            return false;
+      if (separator == null || separator.getText().equals(".")) {
+        // Add inner namespaces
+        for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, project)) {
+          final String outerName = getQualifiedName();
+          if (fqn.startsWith(outerName) && !fqn.equals(outerName) &&
+              !StringUtil.trimStart(fqn, outerName + ".").contains(".")) {
+            final ClSyntheticNamespace inner = getNamespace(fqn, project);
+            if (!ResolveUtil.processElement(processor, inner)) {
+              return false;
+            }
           }
-
         }
       }
 
-      // Add declared elements
-      for (PsiNamedElement element : getDeclaredElements(getQualifiedName(), getProject())) {
-        if (!ResolveUtil.processElement(processor, element)) {
-          return false;
+      if (separator == null || separator.getText().equals("/")) {
+        // Add declared elements
+        for (PsiNamedElement element : getDeclaredElements(getQualifiedName(), getProject())) {
+          if (!ResolveUtil.processElement(processor, element)) {
+            return false;
+          }
         }
       }
 
       return true;
     }
-
   }
 }

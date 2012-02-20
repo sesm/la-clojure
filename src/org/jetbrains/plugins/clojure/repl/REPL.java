@@ -1,9 +1,13 @@
 package org.jetbrains.plugins.clojure.repl;
 
+import clojure.lang.Keyword;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.util.Key;
 import com.intellij.ui.content.Content;
 import org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory;
+
+import java.util.Collection;
+import java.util.Map;
 
 /**
 * @author Colin Fleming
@@ -31,4 +35,8 @@ public interface REPL
   AnAction[] getToolbarActions() throws REPLException;
 
   String getType();
+  
+  Map<Keyword, Collection<String>> getCompletions();
+
+  Collection<String> getSymbolsInNS(String ns);
 }

@@ -36,9 +36,7 @@ import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -191,6 +189,14 @@ public class ClojureProcessREPL extends REPLBase
   public String getType()
   {
     return "Process";
+  }
+
+  public Map<Keyword, Collection<String>> getCompletions() {
+    return Collections.emptyMap();
+  }
+
+  public Collection<String> getSymbolsInNS(String ns) {
+    return Collections.emptyList();
   }
 
   protected Process createProcess(GeneralCommandLine commandLine) throws ExecutionException

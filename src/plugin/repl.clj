@@ -63,6 +63,15 @@
      :err   (str @err-buffer),
      :ns    (str (ns-name (get @client-state #'*ns*)))}))
 
+(defn ns-symbols [the-ns]
+  (map str (keys (ns-interns the-ns))))
+
+(defn completions [client-state]
+  (let [the-ns (get @client-state #'*ns*)]
+    {:imports    (map (fn [^Class c] (.getName c)) (vals (ns-imports the-ns))),
+     :symbols    (map str (keys (filter (fn [v] (var? (second v))) (seq (ns-map the-ns)))))
+     :namespaces (map str (all-ns))}))
+
 (defn create-repl [project module console-view working-dir]
   (let [active (atom false)
         client-state (atom {#'*ns* (create-ns 'user)
@@ -81,7 +90,12 @@
             (values []
               (:value response)))))
       (isActive [] @active)
-      (getType [] "IDE"))))
+      (getType [] "IDE")
+      (getCompletions []
+        (completions client-state))
+      (getSymbolsInNS [ns-name]
+        (if-let [the-ns (find-ns (symbol ns-name))]
+          (ns-symbols the-ns))))))
 
 (defn initialise []
   (let [action (proxy [NewConsoleActionBase] []

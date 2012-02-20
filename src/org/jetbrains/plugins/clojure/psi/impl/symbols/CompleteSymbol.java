@@ -2,6 +2,8 @@ package org.jetbrains.plugins.clojure.psi.impl.symbols;
 
 import com.intellij.codeInsight.TailType;
 import com.intellij.codeInsight.lookup.LookupItem;
+import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
 import com.intellij.psi.util.MethodSignature;
@@ -23,6 +25,9 @@ import java.util.*;
  * @author ilyas
  */
 public class CompleteSymbol {
+  public static Logger logger = Logger.getInstance(CompleteSymbol.class);
+
+  public static Key<PsiElement> SEPARATOR = Key.create("SEPARATOR");
 
   public static Object[] getVariants(ClSymbol symbol) {
     Collection<Object> variants = new ArrayList<Object>();
@@ -38,9 +43,9 @@ public class CompleteSymbol {
           final PsiElement sep = symbol.getSeparatorToken();
           if (sep != null) {
             if ("/".equals(sep.getText()) && isNamespaceLike(element)) {
-              element.processDeclarations(processor, ResolveState.initial(), null, symbol);
+              element.processDeclarations(processor, ResolveState.initial().put(SEPARATOR, sep), null, symbol);
             } else if (".".equals(sep.getText())) {
-              element.processDeclarations(processor, ResolveState.initial(), null, symbol);
+              element.processDeclarations(processor, ResolveState.initial().put(SEPARATOR, sep), null, symbol);
             }
           }
         }
