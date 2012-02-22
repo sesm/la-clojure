@@ -75,3 +75,8 @@
                "<caret>b]")
         (lines "[a "
                " <caret>b]"))))
+
+(deftest formatting-bugs
+  (is (reformat-result?
+        (lines "{#'*ns* (create-ns 'user)}")
+        (lines "{#'*ns* (create-ns 'user)}"))))

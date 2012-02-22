@@ -268,7 +268,7 @@
           psi1 (.getPsi node1)
           psi2 (.getPsi node2)]
       (cond
-        (ClojurePsiCheckers/isNs psi1) ns-spacing
+        (= ClojureElementTypes/NS type1) ns-spacing
         (ClojurePsiCheckers/isImportingClause psi2) mandatory-newline
         (= "," (.getText node2)) no-spacing
         (or (brace? type1)
