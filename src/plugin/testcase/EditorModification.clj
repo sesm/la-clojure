@@ -1,4 +1,4 @@
-(ns plugin.testcase.modification
+(ns plugin.testcase.EditorModification
   (:gen-class :prefix test-
               :state state
               :init init

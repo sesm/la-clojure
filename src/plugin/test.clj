@@ -41,7 +41,7 @@
          before# ~(nth form 2)
          after# ~(nth form 3)]
      (try (.doTest
-            (plugin.testcase.modification.
+            (plugin.testcase.EditorModification.
               (fn [this# params#]
                 (invoke-action action# params#))
               (fn [this#]
@@ -64,7 +64,7 @@
          before# ~(nth form 2)
          after# ~(nth form 3)]
      (try (.doTest
-            (plugin.testcase.modification.
+            (plugin.testcase.EditorModification.
               (fn [this# params#]
                 (do-typing-action character# params#))
               (fn [this#]
@@ -86,7 +86,7 @@
   `(let [before# ~(nth form 1)
          after# ~(nth form 2)]
      (try (.doTest
-            (plugin.testcase.modification.
+            (plugin.testcase.EditorModification.
               (fn [this# params#]
                 (reformat params#))
               (fn [this#]
