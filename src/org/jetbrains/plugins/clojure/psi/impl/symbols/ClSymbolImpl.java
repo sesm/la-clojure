@@ -41,6 +41,8 @@ import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
+import org.jetbrains.plugins.clojure.repl.REPL;
+import org.jetbrains.plugins.clojure.repl.actions.RunActionBase;
 
 import javax.swing.*;
 import java.util.Arrays;
@@ -309,15 +311,22 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
     if (isReferenceTo(element)) return this;
     final PsiFile file = getContainingFile();
     if (element instanceof PsiClass && (file instanceof ClojureFile)) {
-      // todo test me!!
       final PsiClass clazz = (PsiClass) element;
-      final Application application = ApplicationManager.getApplication();
-      application.runWriteAction(new Runnable() {
-        public void run() {
-          final ClNs ns = ((ClojureFile) file).findOrCreateNamespaceElement();
-          ns.addImportForClass(ClSymbolImpl.this, clazz);
-        }
-      });
+      REPL repl = file.getCopyableUserData(REPL.REPL_KEY);
+      if (repl == null) {
+        // Import into current file
+        final Application application = ApplicationManager.getApplication();
+        application.runWriteAction(new Runnable() {
+          public void run() {
+            final ClNs ns = ((ClojureFile) file).findOrCreateNamespaceElement();
+            ns.addImportForClass(ClSymbolImpl.this, clazz);
+          }
+        });
+      } else {
+        // Import into REPL session
+        String command = "(import " + clazz.getQualifiedName() + ')';
+        RunActionBase.executeCommand(getProject(), command);
+      }
       return this;
     }
     return this;

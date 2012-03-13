@@ -31,7 +31,7 @@ public abstract class RunActionBase extends AnAction
 {
   private static final Logger LOG = Logger.getInstance(RunActionBase.class.getName());
 
-  protected static void executeCommand(Project project, String command)
+  public static void executeCommand(Project project, String command)
   {
     REPL activeRepl = findActiveRepl(project);
     LOG.assertTrue(activeRepl != null);
