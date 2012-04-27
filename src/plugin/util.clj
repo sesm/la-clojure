@@ -18,7 +18,7 @@
   `(.runReadAction
      (ApplicationManager/getApplication)
      (proxy [Computable] []
-            (compute [] ~@body))))
+       (compute [] ~@body))))
 
 (defmacro safely
   "Allows safe Java method calls. If the target is nil returns nil, otherwise returns

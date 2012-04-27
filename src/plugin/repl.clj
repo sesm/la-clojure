@@ -74,9 +74,7 @@
 
 (defn create-repl [project module console-view working-dir]
   (let [active (atom false)
-        client-state (atom {#'*ns* (create-ns 'user)
-
-                            })]
+        client-state (atom {#'*ns* (create-ns 'user)})]
     (proxy [REPLBase] [console-view project]
       (start []
         (swap! active (fn [atom] true)))
