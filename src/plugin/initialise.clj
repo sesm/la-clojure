@@ -2,7 +2,11 @@
   (:require plugin.formatting
             plugin.typing
             plugin.annotator
-            plugin.repl))
+            plugin.repl
+            plugin.resolve.core
+            plugin.resolve.lists
+            plugin.resolve.files
+            plugin.resolve.namespaces))
 
 (defn initialise-all []
   (plugin.formatting/initialise)

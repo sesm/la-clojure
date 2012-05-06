@@ -1,23 +1,20 @@
 package org.jetbrains.plugins.clojure.psi.resolve;
 
-import com.intellij.openapi.util.Condition;
-import com.intellij.openapi.util.Trinity;
+import clojure.tools.nrepl.SafeFn;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.ResolveState;
 import com.intellij.psi.PsiNamedElement;
-import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.psi.scope.PsiScopeProcessor;
+import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.NameHint;
-import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
-import org.jetbrains.plugins.clojure.psi.api.ClListLike;
-import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
-import org.jetbrains.plugins.clojure.psi.api.ClList;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
+import com.intellij.psi.scope.PsiScopeProcessor;
+import com.intellij.psi.util.PsiTreeUtil;
 
 /**
  * @author ilyas
  */
 public abstract class ResolveUtil {
+
+  private static SafeFn punt;
+  private static final Object lock = new Object();
 
   public static boolean treeWalkUp(PsiElement place, PsiScopeProcessor processor) {
     PsiElement lastParent = null;
@@ -62,4 +59,16 @@ public abstract class ResolveUtil {
     return elements;
   }
 
+  public static boolean processDeclarations(PsiElement element, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
+    SafeFn safeFn;
+    synchronized (lock) {
+      if (punt == null)
+      {
+        punt = SafeFn.find("plugin.resolve.core", "punt");
+      }
+      safeFn = punt;
+    }
+    Object ret = safeFn.sInvoke(element, processor, state, lastParent, place);
+    return ((Boolean) ret).booleanValue();
+  }
 }

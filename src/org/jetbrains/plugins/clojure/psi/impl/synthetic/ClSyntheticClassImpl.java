@@ -5,6 +5,7 @@ import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
+import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.impl.ClKeywordImpl;
@@ -48,15 +49,22 @@ public class ClSyntheticClassImpl extends LightElement implements ClSyntheticCla
 
   @Override
   public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    for (PsiMethod method : getAllMethods()) {
+    if (!ResolveUtil.processDeclarations(this, processor, state, lastParent, place)) {
+      return false;
+    }
+    return super.processDeclarations(processor, state, lastParent, place);
+  }
+
+  public static boolean processDeclarations(ClSyntheticClassImpl clazz, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    for (PsiMethod method : clazz.getAllMethods()) {
       if (!processor.execute(method, state)) return false;
     }
 
-    for (PsiField field : getAllFields()) {
+    for (PsiField field : clazz.getAllFields()) {
       if (!processor.execute(field, state)) return false;
     }
     
-    return super.processDeclarations(processor, state, lastParent, place);
+    return true;
   }
 
   public ClSyntheticClassImpl(@NotNull ClojureFile file) {

@@ -58,9 +58,9 @@ public class NamespaceUtil {
 
           for (PsiElement elem : elems) {
             if (elem instanceof PsiNamedElement &&
-                    ((PsiNamedElement) elem).getName() != null &&
-                    ((PsiNamedElement) elem).getName().length() > 0 &&
-                    suitsByPosition(((PsiNamedElement) elem), ns)) {
+                ((PsiNamedElement) elem).getName() != null &&
+                ((PsiNamedElement) elem).getName().length() > 0 &&
+                suitsByPosition(((PsiNamedElement) elem), ns)) {
               result.add(((PsiNamedElement) elem));
             }
           }
@@ -72,21 +72,17 @@ public class NamespaceUtil {
 
   public static PsiNamedElement[] getDefaultDefinitions(@NotNull Project project) {
     PsiNamedElement[] ret;
-    synchronized (project)
-    {
+    synchronized (project) {
       ret = project.getUserData(DEFAULT_DEFINITIONS_KEY);
-      if (ret != null)
-      {
+      if (ret != null) {
         for (PsiNamedElement namedElement : ret) {
-          if (!namedElement.isValid())
-          {
+          if (!namedElement.isValid()) {
             ret = null;
             break;
           }
         }
       }
-      if (ret == null)
-      {
+      if (ret == null) {
         final ArrayList<PsiNamedElement> res = new ArrayList<PsiNamedElement>();
         for (String ns : DEFAULT_NSES) {
           res.addAll(Arrays.asList(getDeclaredElements(ns, project)));
@@ -131,7 +127,7 @@ public class NamespaceUtil {
     return null;
   }
 
-  private static class MyClSyntheticNamespace extends ClSyntheticNamespace {
+  public static class MyClSyntheticNamespace extends ClSyntheticNamespace {
     private final Project project;
 
     public MyClSyntheticNamespace(Project project, String refName, String synthName, ClNs navigationElement) {
@@ -140,18 +136,22 @@ public class NamespaceUtil {
     }
 
     @Override
-    public boolean
-    processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+      return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
+    }
+
+    public static boolean
+    processDeclarations(MyClSyntheticNamespace namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
 
       PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
 
       if (separator == null || separator.getText().equals(".")) {
         // Add inner namespaces
-        for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, project)) {
-          final String outerName = getQualifiedName();
+        for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, namespace.project)) {
+          final String outerName = namespace.getQualifiedName();
           if (fqn.startsWith(outerName) && !fqn.equals(outerName) &&
               !StringUtil.trimStart(fqn, outerName + ".").contains(".")) {
-            final ClSyntheticNamespace inner = getNamespace(fqn, project);
+            final ClSyntheticNamespace inner = getNamespace(fqn, namespace.project);
             if (!ResolveUtil.processElement(processor, inner)) {
               return false;
             }
@@ -161,7 +161,7 @@ public class NamespaceUtil {
 
       if (separator == null || separator.getText().equals("/")) {
         // Add declared elements
-        for (PsiNamedElement element : getDeclaredElements(getQualifiedName(), getProject())) {
+        for (PsiNamedElement element : getDeclaredElements(namespace.getQualifiedName(), namespace.getProject())) {
           if (!ResolveUtil.processElement(processor, element)) {
             return false;
           }

@@ -250,11 +250,17 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
   @Override
   public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    if (!ResolveUtil.processDeclarations(this, processor, state, lastParent, place)) {
+      return false;
+    }
+    return super.processDeclarations(processor, state, lastParent, place);
+  }
 
+  public static boolean processDeclarations(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
     //Process precedent read forms
-    ResolveUtil.processChildren(this, processor, state, lastParent, place);
+    ResolveUtil.processChildren(file, processor, state, lastParent, place);
 
-    final JavaPsiFacade facade = JavaPsiFacade.getInstance(getProject());
+    final JavaPsiFacade facade = JavaPsiFacade.getInstance(file.getProject());
 
     //Add top-level package names
     final PsiPackage rootPackage = facade.findPackage("");
@@ -262,14 +268,14 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       rootPackage.processDeclarations(processor, state, null, place);
     }
 
-    REPL repl = getCopyableUserData(REPL.REPL_KEY);
+    REPL repl = file.getCopyableUserData(REPL.REPL_KEY);
     if (repl != null) {
       Map<Keyword, Collection<String>> completions = repl.getCompletions();
 
       Collection<String> symbols = completions.get(SYMBOLS_KEYWORD);
       if (symbols != null) {
         for (String symbol : symbols) {
-          if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(getManager(), symbol))) {
+          if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(file.getManager(), symbol))) {
             return false;
           }
         }
@@ -280,7 +286,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         for (String namespace : topLevel(namespaces)) {
           if (!ResolveUtil.processElement(
               processor,
-              new CompletionSyntheticNamespace(repl, PsiManager.getInstance(getProject()), namespace, namespace, namespaces))) {
+              new CompletionSyntheticNamespace(repl, PsiManager.getInstance(file.getProject()), namespace, namespace, namespaces))) {
             return false;
           }
         }
@@ -289,7 +295,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       Collection<String> imports = completions.get(IMPORTS_KEYWORD);
       if (imports != null) {
         for (String fqn : imports) {
-          PsiClass psiClass = facade.findClass(fqn, GlobalSearchScope.allScope(getProject()));
+          PsiClass psiClass = facade.findClass(fqn, GlobalSearchScope.allScope(file.getProject()));
           if (psiClass != null) {
             if (!ResolveUtil.processElement(processor, psiClass)) {
               return false;
@@ -309,33 +315,30 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       }
 
       // Add all symbols from default namespaces
-      for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(getProject())) {
+      for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(file.getProject())) {
         if (PsiTreeUtil.findCommonParent(element, place) != element && !ResolveUtil.processElement(processor, element)) {
           return false;
         }
       }
 
       //todo Add all namespaces, available in project
-      for (ClSyntheticNamespace ns : NamespaceUtil.getTopLevelNamespaces(getProject())) {
+      for (ClSyntheticNamespace ns : NamespaceUtil.getTopLevelNamespaces(file.getProject())) {
         if (!ResolveUtil.processElement(processor, ns)) {
           return false;
         }
       }
     }
 
-    return super.processDeclarations(processor, state, lastParent, place);
+    return true;
   }
 
   public static Collection<String> topLevel(Collection<String> namespaces) {
     Collection<String> ret = new HashSet<String>();
     for (String namespace : namespaces) {
       int index = namespace.indexOf('.');
-      if (index > 0)
-      {
+      if (index > 0) {
         ret.add(namespace.substring(0, index));
-      }
-      else
-      {
+      } else {
         ret.add(namespace);
       }
     }
@@ -358,7 +361,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     return ret;
   }
 
-  private static class CompletionSyntheticNamespace extends ClSyntheticNamespace {
+  public static class CompletionSyntheticNamespace extends ClSyntheticNamespace {
     private final REPL repl;
     private final Collection<String> namespaces;
 
@@ -369,24 +372,28 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     }
 
     @Override
-    public boolean
-    processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-      final String qualifiedName = getQualifiedName();
+    public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+      return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
+    }
+
+    public static boolean
+    processDeclarations(CompletionSyntheticNamespace namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+      final String qualifiedName = namespace.getQualifiedName();
       PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
 
       if ((separator == null) || separator.getText().equals(".")) {
-        for (String namespace : nextLevel(namespaces, qualifiedName)) {
-          if (!ResolveUtil.processElement(processor, new CompletionSyntheticNamespace(repl, getManager(), namespace, qualifiedName + '.' + namespace, namespaces))) {
+        for (String ns : nextLevel(namespace.namespaces, qualifiedName)) {
+          if (!ResolveUtil.processElement(processor, new CompletionSyntheticNamespace(namespace.repl, namespace.getManager(), ns, qualifiedName + '.' + ns, namespace.namespaces))) {
             return false;
           }
         }
       }
 
       if ((separator == null) || separator.getText().equals("/")) {
-        Collection<String> symbolsInNS = repl.getSymbolsInNS(qualifiedName);
+        Collection<String> symbolsInNS = namespace.repl.getSymbolsInNS(qualifiedName);
         if (symbolsInNS != null) {
           for (String symbol : symbolsInNS) {
-            if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(getManager(), symbol))) {
+            if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(namespace.getManager(), symbol))) {
               return false;
             }
           }

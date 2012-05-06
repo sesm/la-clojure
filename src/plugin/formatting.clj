@@ -139,6 +139,7 @@
                   :fn              fn-parameters,
                   :defrecord       2,
                   :deftype         2,
+                  :defprotocol     1,
                   :extend-type     1,
                   :reify           1,
                   :proxy           2,

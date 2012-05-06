@@ -21,8 +21,6 @@ import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListBaseImpl;
 import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
-import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveProcessor;
-import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
@@ -84,8 +82,12 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
 
   @Override
   public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    final JavaPsiFacade facade = JavaPsiFacade.getInstance(getProject());
-    for (PsiElement element : getChildren()) {
+    return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
+  }
+
+  public static boolean processDeclarations(ClNsImpl namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    final JavaPsiFacade facade = JavaPsiFacade.getInstance(namespace.getProject());
+    for (PsiElement element : namespace.getChildren()) {
       if (element instanceof ClList) {
         ClList directive = (ClList) element;
         final PsiElement first = directive.getFirstNonLeafElement();
@@ -93,13 +95,13 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
           return false;
         }
         final String headText = first.getText();
-        if (processImports(processor, place, facade, directive, headText)) {
+        if (namespace.processImports(processor, place, facade, directive, headText)) {
           return false;
         }
-        if (processUses(processor, place, facade, directive, headText)) {
+        if (namespace.processUses(processor, place, facade, directive, headText)) {
           return false;
         }
-        if (processRequires(processor, place, facade, directive, headText)) {
+        if (namespace.processRequires(processor, place, facade, directive, headText)) {
           return false;
         }
       }

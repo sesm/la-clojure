@@ -49,7 +49,7 @@ public class ListDeclarations {
   private static final String DOT = ".";
 
   private static final Set<String> LOCAL_BINDINGS = new HashSet<String>(Arrays.asList(
-      LET, WITH_OPEN, WITH_LOCAL_VARS, WHEN_LET, WHEN_FIRST, FOR, IF_LET, LOOP, FN
+      LET, WITH_OPEN, WITH_LOCAL_VARS, WHEN_LET, WHEN_FIRST, FOR, IF_LET, LOOP
   ));
 
   public static boolean get(PsiScopeProcessor processor,
@@ -237,10 +237,11 @@ public class ListDeclarations {
 
   private static boolean processFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
     final PsiElement second = list.getSecondNonLeafElement();
-    if ((second instanceof ClSymbol) && place != second && !ResolveUtil.processElement(processor, ((ClSymbol) second)))
-      return false;
 
     if (PsiTreeUtil.findCommonParent(place, list) == list) {
+      if ((second instanceof ClSymbol) && place != second && !ResolveUtil.processElement(processor, ((ClSymbol) second)))
+        return false;
+
       ClVector paramVector = list.findFirstChildByClass(ClVector.class);
       if (paramVector == null && lastParent instanceof ClList) {
         paramVector = ((ClList) lastParent).findFirstChildByClass(ClVector.class);
