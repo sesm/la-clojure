@@ -9,14 +9,14 @@
 (extend-type ClNs
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (ClNsImpl/processDeclarations this processor state last-parent place)))
+    (not (ClNsImpl/processDeclarations this processor state last-parent place))))
 
 (extend-type org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace/processDeclarations this processor state last-parent place)))
+    (not (org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace/processDeclarations this processor state last-parent place))))
 
 (extend-type org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state last-parent place)))
+    (not (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state last-parent place))))

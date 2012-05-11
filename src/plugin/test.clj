@@ -3,7 +3,7 @@
   (:import (com.intellij.testFramework LightPlatformCodeInsightTestCase)
            (com.intellij.openapi.actionSystem ActionManager AnActionEvent)
            (com.intellij.ide DataManager)
-           (com.intellij.psi PsiDocumentManager)
+           (com.intellij.psi PsiDocumentManager PsiReference)
            (com.intellij.openapi.editor.actionSystem EditorActionManager)
            (com.intellij.psi.codeStyle CodeStyleManager)
            (junit.framework AssertionFailedError)))
@@ -60,9 +60,18 @@
 (defn fail [& messages]
   (throw (AssertionFailedError. (apply str messages))))
 
+(defn check-self-resolution [element]
+  (if (and (instance? PsiReference element)
+           (some #(= element (.getElement %))
+                 (seq (.multiResolve element false))))
+    (fail (.getText element) ":" (.getTextOffset element) " resolves to self"))
+  (doseq [child (.getChildren element)]
+    (check-self-resolution child)))
+
 (defn check-resolve [text params]
   (let [[text tags] (re-pos #"<[^ >]+>" text)
         file ((:create-file params) "check-resolve.clj" text)]
+    (check-self-resolution file)
     (doseq [entry tags]
       (let [offset (key entry)
             item (val entry)]
@@ -90,9 +99,12 @@
               (= "/" item)
               (if-not (empty? offsets)
                 (fail ref-text
+                      ":"
+                      offset
                       " should not resolve but resolves to "
                       (count offsets)
-                      " item(s)")))))))))
+                      " item(s): "
+                      offsets)))))))))
 
 (defmethod assert-expr 'editor-action-result? [msg form]
   `(let [action# ~(nth form 1)

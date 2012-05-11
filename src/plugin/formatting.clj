@@ -155,7 +155,8 @@
                   :doseq           1,
                   :dotimes         1,
                   :catch           2,
-                  :locking         1})
+                  :locking         1,
+                  :case            1})
 
 (defn num-parameters [^ASTNode node]
   (let [head-token ^ASTNode (first (significant-elements node))

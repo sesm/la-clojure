@@ -10,9 +10,9 @@
 (extend-type ClojureFile
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (ClojureFileImpl/processDeclarations this processor state last-parent place)))
+    (not (ClojureFileImpl/processDeclarations this processor state last-parent place))))
 
 (extend-type ClSyntheticClass
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (ClSyntheticClassImpl/processDeclarations this processor state last-parent place)))
+    (not (ClSyntheticClassImpl/processDeclarations this processor state last-parent place))))

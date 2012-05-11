@@ -17,7 +17,8 @@
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (org.jetbrains.plugins.clojure.psi.impl ClMetaForm))
-  (:use [plugin.util :only [with-logging]]))
+  (:require [plugin.psi :as psi]
+            [plugin.util :as util]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -42,17 +43,6 @@
          (instantiators (.getHeadText parent)))
     false))
 
-(defn significant? [element]
-  (not (or (nil? element)
-           (instance? LeafPsiElement element)
-           (instance? PsiWhiteSpace element)
-           (instance? PsiComment element)
-           (instance? ClMetadata element)
-           (instance? ClMetaForm element))))
-
-(defn significant-children [element]
-  (filter significant? (.getChildren element)))
-
 (defn ancestor?
   ([ancestor element]
    (ancestor? ancestor element true))
@@ -73,8 +63,8 @@
                                               (and (instance? ClList element)
                                                    (local-bindings (.getHeadText ^ClList element))))
                                             true)]
-    (let [params (second (significant-children let-block))
-          definitions (take-nth 2 (significant-children params))]
+    (let [params (second (psi/significant-children let-block))
+          definitions (take-nth 2 (psi/significant-children params))]
       (some #(ancestor? % element) definitions))))
 
 (defn should-resolve? [^ClSymbol element]
@@ -204,5 +194,5 @@
     (ClojureLanguage/getInstance)
     (reify Annotator
       (annotate [this element holder]
-        (with-logging
+        (util/with-logging
           (annotate element holder))))))

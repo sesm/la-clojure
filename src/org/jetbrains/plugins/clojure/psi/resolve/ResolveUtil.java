@@ -69,6 +69,6 @@ public abstract class ResolveUtil {
       safeFn = punt;
     }
     Object ret = safeFn.sInvoke(element, processor, state, lastParent, place);
-    return ((Boolean) ret).booleanValue();
+    return !((Boolean) ret).booleanValue();
   }
 }

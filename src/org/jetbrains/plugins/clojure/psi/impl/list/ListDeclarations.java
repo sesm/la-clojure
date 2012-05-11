@@ -4,7 +4,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
@@ -38,12 +37,9 @@ public class ListDeclarations {
 
   public static final String NS = "ns";
 
-  public static final String DEFN = "defn";
-  public static final String DEFN_ = "defn-";
   public static final String IMPORT = "import";
   private static final String MEMFN = "memfn";
   public static final String USE = "use";
-  public static final String REFER = "refer";
   public static final String REQUIRE = "require";
 
   private static final String DOT = ".";
@@ -59,13 +55,11 @@ public class ListDeclarations {
                             ClList list,
                             @Nullable String headText) {
     if (headText == null) return true;
-    if (headText.equals(FN)) return processFnDeclaration(processor, list, place, lastParent);
     if (headText.equals(IMPORT)) return processImportDeclaration(processor, list, place);
     if (headText.equals(MEMFN)) return processMemFnDeclaration(processor, list, place);
     if (headText.equals(DOT)) return processDotDeclaration(processor, list, place, lastParent);
     if (headText.equals(LOOP)) return processLoopDeclaration(processor, list, place, lastParent);
     if (headText.equals(DECLARE)) return processDeclareDeclaration(processor, list, place, lastParent);
-    if (LOCAL_BINDINGS.contains(headText)) return processLetDeclaration(processor, list, place);
     return true;
   }
 
@@ -220,42 +214,6 @@ public class ListDeclarations {
       }
     }
     return false;
-  }
-
-  private static boolean processLetDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
-    if (PsiTreeUtil.findCommonParent(place, list) == list) {
-      final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getOddSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      return true;
-    }
-    return true;
-  }
-
-  private static boolean processFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
-    final PsiElement second = list.getSecondNonLeafElement();
-
-    if (PsiTreeUtil.findCommonParent(place, list) == list) {
-      if ((second instanceof ClSymbol) && place != second && !ResolveUtil.processElement(processor, ((ClSymbol) second)))
-        return false;
-
-      ClVector paramVector = list.findFirstChildByClass(ClVector.class);
-      if (paramVector == null && lastParent instanceof ClList) {
-        paramVector = ((ClList) lastParent).findFirstChildByClass(ClVector.class);
-      }
-
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getAllSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      return true;
-    }
-    return true;
-
   }
 
   public static boolean isLocal(PsiElement element) {
