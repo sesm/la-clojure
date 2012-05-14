@@ -1,23 +1,27 @@
 (ns plugin.resolve.lists
   (:import (org.jetbrains.plugins.clojure.psi.impl.list ListDeclarations)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClVector)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
-           (com.intellij.psi PsiNamedElement))
+           (com.intellij.psi PsiNamedElement PsiElement)
+           (org.jetbrains.plugins.clojure.psi.impl ClMetaForm)
+           (com.intellij.openapi.diagnostic Logger))
   (:require [plugin.resolve.core :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
 
 ;(set! *warn-on-reflection* true)
 
+(def ^Logger logger (Logger/getInstance "plugin.resolve.lists"))
+
 (def local-binding-forms #{"let" "with-open" "with-local-vars" "when-let" "when-first"
                            "for" "if-let" "loop"})
 
 ; Note that we use "true" to indicate "stop searching", not "continue searching"
 
-(defn elem [element]
+(defn elem [^PsiElement element]
   (str (.getText element) ":" (.getTextOffset element)))
 
 (defn process-element [processor element place]
@@ -30,17 +34,21 @@
     (or (process-element processor (first elements) place)
         (recur processor (next elements) place))))
 
-(defn process-params [processor params place]
+(defn process-params [processor ^ClListLike params ^PsiElement place last-parent]
   ;(println "params: "  (.getText params)  (elem place))
-  (or (psi/contains? params place)
-      (process-elements processor (seq (.getAllSymbols params)) place)))
+  (if (psi/contains? params place)
+    (not (instance? ClMetaForm (.getParent place)))
+    (process-elements processor (seq (.getAllSymbols params)) place)))
 
 (defn third [coll]
   (first (rest (rest coll))))
 
+(defn fourth [coll]
+  (first (rest (rest (rest coll)))))
+
 (defn offset-in [element ancestor]
   (loop [offset 0
-         current element]
+         ^PsiElement current element]
     (if (= current ancestor)
       offset
       (recur (+ offset (.getStartOffsetInParent current))
@@ -49,24 +57,29 @@
 (defn process-fn [processor list place last-parent]
   (if (psi/contains? list place)
     (let [children (psi/significant-children list)
-          second (second children)]
+          second-item (second children)]
       ;(println (.getText list) ":"  (elem place) (.getText second))
       (or
         ; Check fn name
-        (and (instance? ClSymbol second)
-             (not (= place second))
-             (process-element processor second place))
+        (and (instance? ClSymbol second-item)
+             (not (= place second-item))
+             (process-element processor second-item place))
         ; Check fn params
-        (if-let [params (cond (instance? ClVector second) second
-                              (instance? ClVector (third children)) (third children)
+        (if-let [params (cond (instance? ClVector second-item) second-item
+                              (and
+                                (instance? ClSymbol (second children))
+                                (instance? ClVector (third children))) (third children)
+                              (and
+                                (instance? ClSymbol (second children))
+                                (instance? ClLiteral (third children))
+                                (instance? ClVector (fourth children))) (fourth children)
                               :else nil)]
-          (process-params processor params place))
+          (process-params processor params place last-parent))
         ; Check fn params for multi-arity fn
         (and (instance? ClList last-parent)
              (let [params (first (psi/significant-children last-parent))]
                (and (instance? ClVector params)
-                    (process-params processor params place))))
-        :else false))))
+                    (process-params processor params place last-parent))))))))
 
 (defn process-let [processor list place last-parent]
   (if (psi/contains? list place)
@@ -87,6 +100,12 @@
                                                         definitions))
                                        place)))))))))
 
+(defn process-defn [processor list place ^PsiElement last-parent]
+  (if (and (not (nil? last-parent))
+           (= (.getParent last-parent) list))
+    (process-fn processor list place last-parent)
+    (process-element processor list place)))
+
 (extend-type ClList
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
@@ -102,4 +121,6 @@
 (extend-type ClDef
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (not (ClDefImpl/processDeclarations this processor state last-parent place))))
+    (if (process-defn processor this place last-parent)
+      true
+      false)))

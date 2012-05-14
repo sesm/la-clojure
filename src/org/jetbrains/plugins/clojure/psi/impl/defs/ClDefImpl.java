@@ -77,37 +77,6 @@ public class ClDefImpl extends ClListBaseImpl<ClDefStub> implements ClDef, StubB
     return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
   }
 
-  public static boolean processDeclarations(ClDefImpl def, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    // Do not resolve identifier
-    if (lastParent != null && lastParent.getParent() == def && lastParent instanceof ClSymbol) return true;
-    //process parameters
-    if (lastParent != null && lastParent.getParent() == def) {
-      final ClVector paramVector = def.findChildByClass(ClVector.class);
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getAllSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      // for recursive functions
-      if (def.getNameSymbol() != null && lastParent != def.getNameSymbol() && !ResolveUtil.processElement(processor, def.getNameSymbol())) return false;
-
-      // overloaded function
-      else if (lastParent instanceof ClList) {
-        ClList list = (ClList) lastParent;
-        final ClVector params = list.findFirstChildByClass(ClVector.class);
-        if (params != null) {
-          for (ClSymbol symbol : params.getAllSymbols()) {
-            if (!ResolveUtil.processElement(processor, symbol)) return false;
-          }
-        }
-      }
-
-      return true;
-    } else {
-      return ResolveUtil.processElement(processor, def);
-    }
-  }
-
   @Override
   public ItemPresentation getPresentation() {
     return new ItemPresentation() {

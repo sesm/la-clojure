@@ -4,7 +4,7 @@
            (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
-           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment)
+           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult)
            (org.jetbrains.plugins.clojure.psi.resolve ClojureResolveResult)
            (org.jetbrains.plugins.clojure.highlighter ClojureSyntaxHighlighter)
            (com.intellij.codeInsight.intention IntentionAction)
@@ -40,7 +40,7 @@
   (if-let [parent (.getParent element)]
     (and (instance? ClList element)
          (instance? ClList parent)
-         (instantiators (.getHeadText parent)))
+         (instantiators (.getHeadText ^ClList parent)))
     false))
 
 (defn ancestor?
@@ -73,7 +73,7 @@
     (cond
       ; names of def/defn etc
       (and (instance? ClDef parent)
-           (= element (.getNameSymbol parent))) false
+           (= element (.getNameSymbol ^ClDef parent))) false
       ; parameters of implementation methods
       (and (instance? ClVector parent)
            (impl-method? grandparent)
@@ -181,7 +181,7 @@
            (should-resolve? element)) (annotate-unresolved element holder)
       (.isQualified element) (if-let [target ^ClojureResolveResult (first (filter #(resolves-to? % PsiClass) (seq result)))]
                                (annotate-fqn element (.getElement target) holder))
-      (some #(= element (.getElement %)) (seq result)) (annotate-selfresolve element holder))))
+      (some #(= element (.getElement ^ResolveResult %)) (seq result)) (annotate-selfresolve element holder))))
 
 (defn annotate [element holder]
   (cond
