@@ -1,6 +1,7 @@
 package org.jetbrains.plugins.clojure.psi.resolve;
 
 import clojure.tools.nrepl.SafeFn;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.ResolveState;
@@ -62,13 +63,21 @@ public abstract class ResolveUtil {
   public static boolean processDeclarations(PsiElement element, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
     SafeFn safeFn;
     synchronized (lock) {
-      if (punt == null)
-      {
+      if (punt == null) {
         punt = SafeFn.find("plugin.resolve.core", "punt");
       }
       safeFn = punt;
     }
-    Object ret = safeFn.sInvoke(element, processor, state, lastParent, place);
+
+    Object ret;
+    try {
+      ret = safeFn.sInvoke(element, processor, state, lastParent, place);
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ProcessCanceledException) {
+        throw (ProcessCanceledException) e.getCause();
+      }
+      throw e;
+    }
     return !((Boolean) ret).booleanValue();
   }
 }

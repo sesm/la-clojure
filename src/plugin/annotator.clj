@@ -1,7 +1,7 @@
 (ns plugin.annotator
   (:import (com.intellij.lang.annotation Annotator AnnotationHolder)
            (com.intellij.openapi.diagnostic Logger)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
            (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult)
@@ -30,9 +30,11 @@
                       "%" "%1" "%2" "%3" "%4" "%5" "%6" "%7" "%8" "%9" "%&" "&"})
 
 (def local-bindings #{"let", "with-open", "with-local-vars", "when-let", 
-                      "when-first", "for", "if-let", "loop", "fn", "doseq"})
+                      "when-first", "for", "if-let", "loop", "doseq"})
 
 (def instantiators #{"proxy" "reify" "definterface" "deftype" "defrecord"})
+
+(def defn-names #{"defn" "defn-" "definline" "defmacro"})
 
 (defn impl-method?
   "Checks to see if an element is a method implementation for proxy et al"
@@ -67,13 +69,57 @@
           definitions (take-nth 2 (psi/significant-children params))]
       (some #(ancestor? % element) definitions))))
 
+(defn let-binding? [^ClSymbol element]
+  (loop [current element
+         parent (.getParent element)
+         grand-parent (util/safely (.getParent parent))]
+    (cond
+      (nil? grand-parent) false
+      (and (instance? ClList grand-parent)
+           (instance? ClVector parent)
+           (local-bindings (.getHeadText grand-parent))
+           (even? (psi/significant-offset current))) true
+      :else (recur parent grand-parent (.getParent grand-parent)))))
+
+; TODO duplicated from lists.clj
+(defn third [coll]
+  (first (rest (rest coll))))
+
+(defn fourth [coll]
+  (first (rest (rest (rest coll)))))
+
+(defn fn-arg? [^ClSymbol element]
+  (loop [current element
+         parent (.getParent element)
+         grandparent (util/safely (.getParent parent))]
+    (cond
+      (nil? grandparent) false
+      (and (instance? ClList grandparent)
+           (instance? ClVector parent)
+           (let [head-text (.getHeadText grandparent)
+                 offset (psi/significant-offset parent)
+                 children (psi/significant-children grandparent)]
+             (or (and (= "fn" head-text)
+                      (= (if (instance? ClSymbol (second children)) 2 1) offset))
+                 (and (defn-names head-text)
+                      (= (if (instance? ClLiteral (third children)) 3 2) offset))
+                 (if-let [great-grandparent (.getParent grandparent)]
+                   (and (instance? ClList great-grandparent)
+                        (= 0 (psi/significant-offset parent))
+                        (defn-names (.getHeadText great-grandparent))))))) true
+      :else (recur parent grandparent (.getParent grandparent)))))
+
 (defn should-resolve? [^ClSymbol element]
   (let [parent (.getParent element)
-        grandparent (.getParent parent)]
+        grandparent (util/safely (.getParent parent))]
     (cond
       ; names of def/defn etc
       (and (instance? ClDef parent)
            (= element (.getNameSymbol ^ClDef parent))) false
+      ; let-bound variables
+      (let-binding? element) false
+      ; fn args
+      (fn-arg? element) false
       ; parameters of implementation methods
       (and (instance? ClVector parent)
            (impl-method? grandparent)

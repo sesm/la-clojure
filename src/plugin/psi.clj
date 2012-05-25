@@ -16,6 +16,14 @@
 (defn significant-children [element]
   (filter significant? (.getChildren element)))
 
+(defn significant-offset [element]
+  (loop [offset 0
+         current (.getPrevSibling element)]
+    (cond
+      (nil? current) offset
+      (significant? current) (recur (inc offset) (.getPrevSibling current))
+      :else (recur offset (.getPrevSibling current)))))
+
 (defn common-parent [first second]
   (PsiTreeUtil/findCommonParent first second))
 

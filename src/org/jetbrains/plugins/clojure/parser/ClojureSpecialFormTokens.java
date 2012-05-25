@@ -12,7 +12,7 @@ public class ClojureSpecialFormTokens {
   public static final String tDEF = "def";
   public static final String tDEFN = "defn";
   public static final String tDEFN_DASH = "defn-";
-  public static final String tDEFINLINE = "defninline";
+  public static final String tDEFINLINE = "definline";
   public static final String tDEFMACRO = "defmacro";
   public static final String tDEFMETHOD= "defmethod";
   public static final String tDEFMULTI= "defmulti";
@@ -26,6 +26,4 @@ public class ClojureSpecialFormTokens {
         tDEF, tDEFN, tDEFN_DASH, tDEFMACRO, tDEFMETHOD, tDEFMULTI, tDEFONCE, tDEFSTRUCT, tDEFINLINE
     ));
   }
-
-
 }

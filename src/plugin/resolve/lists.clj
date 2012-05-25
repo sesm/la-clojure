@@ -17,7 +17,7 @@
 (def ^Logger logger (Logger/getInstance "plugin.resolve.lists"))
 
 (def local-binding-forms #{"let" "with-open" "with-local-vars" "when-let" "when-first"
-                           "for" "if-let" "loop"})
+                           "for" "if-let" "loop" "doseq"})
 
 ; Note that we use "true" to indicate "stop searching", not "continue searching"
 
