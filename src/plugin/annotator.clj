@@ -4,7 +4,7 @@
            (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
-           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult)
+           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult PsiManager)
            (org.jetbrains.plugins.clojure.psi.resolve ClojureResolveResult)
            (org.jetbrains.plugins.clojure.highlighter ClojureSyntaxHighlighter)
            (com.intellij.codeInsight.intention IntentionAction)
@@ -16,7 +16,9 @@
            (org.jetbrains.plugins.clojure.parser ClojureSpecialFormTokens)
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
-           (org.jetbrains.plugins.clojure.psi.impl ClMetaForm))
+           (org.jetbrains.plugins.clojure.psi.impl ClMetaForm)
+           (com.intellij.codeInsight.daemon.impl.actions AddImportAction)
+           (com.intellij.codeInsight.daemon DaemonCodeAnalyzer))
   (:require [plugin.psi :as psi]
             [plugin.util :as util]))
 
@@ -171,7 +173,14 @@
                           (isQualified [^ClSymbol reference]
                             (.isQualified reference))
                           (hasUnresolvedImportWhichCanImport [file name] false)
-                          (isAccessible [class reference] true)))
+                          (isAccessible [class reference] true)
+                          (createAddImportAction [classes project editor]
+                            (proxy [AddImportAction] [project element editor classes]
+                              (bindReference [ref targetClass]
+                                (.bindToElement ref targetClass)
+                                (.dropResolveCaches (.getManager element))
+                                (.restart (DaemonCodeAnalyzer/getInstance project)
+                                          (.getContainingFile element)))))))
           true)))))
 
 (defn annotate-unresolved [^ClSymbol element ^AnnotationHolder holder]
