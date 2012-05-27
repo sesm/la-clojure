@@ -31,6 +31,15 @@
                        ClojureElementTypes/DEFMETHOD
                        ClojureElementTypes/NS})
 
+(def modifiers #{ClojureTokenTypes/SHARP
+                 ClojureTokenTypes/UP
+                 ClojureTokenTypes/SHARPUP
+                 ClojureTokenTypes/TILDA
+                 ClojureTokenTypes/AT
+                 ClojureTokenTypes/TILDAAT
+                 ClojureTokenTypes/QUOTE
+                 ClojureTokenTypes/BACKQUOTE})
+
 (defn meta-form? [element] (= ClojureElementTypes/META_FORM element))
 (defn symbol-token? [element] (= ClojureElementTypes/SYMBOL element))
 (defn keyword-token? [element] (= ClojureElementTypes/KEYWORD element))

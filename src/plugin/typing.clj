@@ -83,7 +83,7 @@
         needs-whitespace-before (looking-back-at highlighter
                                                  (fn [token] (not (or (whitespace token)
                                                                       (opening-braces token)
-                                                                      (= ClojureTokenTypes/SHARP token))))
+                                                                      (modifiers token))))
                                                  offset)
         needs-whitespace-after (looking-at highlighter
                                            (fn [token] (not (or (whitespace token)
