@@ -1,4 +1,5 @@
 (ns plugin.psi
+  (:refer-clojure :exclude [contains?])
   (:import (org.jetbrains.plugins.clojure.psi.impl ClMetaForm)
            (org.jetbrains.plugins.clojure.psi.api ClMetadata)
            (com.intellij.psi PsiComment PsiWhiteSpace)
