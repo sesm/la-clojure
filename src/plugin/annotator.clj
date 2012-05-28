@@ -27,7 +27,7 @@
 (def ^Logger logger (Logger/getInstance "plugin.annotator"))
 
 (def implicit-names #{"def" "new" "throw" "ns" "in-ns" "if" "do" "let"
-                      "quote" "var" "fn" "loop" "recur" "try"
+                      "quote" "var" "fn" "loop" "recur" "try" "catch" "finally"
                       "monitor-enter" "monitor-exit" "." ".." "set!"
                       "%" "%1" "%2" "%3" "%4" "%5" "%6" "%7" "%8" "%9" "%&" "&"})
 

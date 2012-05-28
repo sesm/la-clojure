@@ -151,6 +151,7 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
       return false;
     }
 
+    // TODO this is wrong in the (use ...) case - returns "use" as a symbol
     for (ClSymbol symbol : directive.getAllSymbols()) {
       for (PsiNamedElement element : NamespaceUtil.getDeclaredElements(symbol.getNameString(), directive.getProject())) {
         if (element != null && !ResolveUtil.processElement(processor, element)) {

@@ -25,6 +25,7 @@ import java.util.Set;
 
 /**
  * @author ilyas
+ * TODO should this implement PsiReference?
 */
 public class ClKeywordImpl extends ClojureBaseElementImpl<ClKeywordStub> implements ClKeyword, PsiReference, StubBasedPsiElement<ClKeywordStub> {
   public ClKeywordImpl(ASTNode node) {
