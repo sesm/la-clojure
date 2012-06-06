@@ -1,6 +1,5 @@
 package org.jetbrains.plugins.clojure.findUsages;
 
-import com.intellij.lang.cacheBuilder.DefaultWordsScanner;
 import com.intellij.lang.cacheBuilder.WordsScanner;
 import com.intellij.lang.findUsages.FindUsagesProvider;
 import com.intellij.psi.PsiElement;
@@ -15,12 +14,12 @@ import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 /**
  * @author ilyas
  */
-public class ClojureFindUsagesProvider implements FindUsagesProvider{
+public class ClojureFindUsagesProvider implements FindUsagesProvider {
 
   @Nullable
   public WordsScanner getWordsScanner() {
-    return new DefaultWordsScanner(new ClojureFlexLexer(),
-            ClojureTokenTypes.IDENTIFIERS, ClojureTokenTypes.COMMENTS, ClojureTokenTypes.STRINGS);
+    return new ClojureWordsScanner(new ClojureFlexLexer(),
+        ClojureTokenTypes.IDENTIFIERS, ClojureTokenTypes.COMMENTS, ClojureTokenTypes.STRINGS);
   }
 
   public boolean canFindUsagesFor(@NotNull PsiElement psiElement) {
