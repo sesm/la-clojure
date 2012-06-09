@@ -16,7 +16,6 @@ import javax.swing.*;
  * @author ilyas
  */
 public class ClojureCodeStylePanel extends CodeStyleAbstractPanel {
-  private final CodeStyleSettings mySettings;
   private JPanel myPanel;
   private JCheckBox alignCheckBox;
   private JTabbedPane myTabbedPane;
@@ -25,7 +24,6 @@ public class ClojureCodeStylePanel extends CodeStyleAbstractPanel {
 
   protected ClojureCodeStylePanel(CodeStyleSettings settings) {
     super(settings);
-    mySettings = settings;
     ClojureCodeStyleSettings css = settings.getCustomSettings(ClojureCodeStyleSettings.class);
     setSettings(css);
     installPreviewPanel(myPreviewPanel);

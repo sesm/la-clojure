@@ -21,7 +21,6 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.openapi.util.Pair;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.navigation.ItemPresentation;
 
 import javax.swing.*;
@@ -107,10 +106,6 @@ public class ClSyntheticClassImpl extends LightElement implements ClSyntheticCla
       public String getLocationString() {
         String pn = myFile.getPackageName();
         return "(" + (pn.equals("") ? "<default package>" : pn) + ") in " + myFile.getName();
-      }
-
-      public TextAttributesKey getTextAttributesKey() {
-        return null;
       }
 
       public Icon getIcon(boolean open) {

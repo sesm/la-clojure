@@ -4,7 +4,6 @@ import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
 import com.intellij.openapi.util.Iconable;
@@ -45,7 +44,6 @@ import org.jetbrains.plugins.clojure.repl.REPL;
 import org.jetbrains.plugins.clojure.repl.actions.RunActionBase;
 
 import javax.swing.*;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -145,11 +143,6 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
       public Icon getIcon(boolean open) {
         return ClSymbolImpl.this.getIcon(Iconable.ICON_FLAG_VISIBILITY | Iconable.ICON_FLAG_READ_STATUS);
       }
-
-      @Nullable
-      public TextAttributesKey getTextAttributesKey() {
-        return null;
-      }
     };
   }
   
@@ -166,11 +159,11 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
         return resolveJavaMethodReference(symbol, null, false);
       }
 
-      ResolveProcessor processor = new SymbolResolveProcessor(StringUtil.trimEnd(name, "."), symbol, incompleteCode, nameString.endsWith("."));
+      ResolveProcessor processor = new SymbolResolveProcessor(StringUtil.trimEnd(name, "."), nameString.endsWith("."));
       resolveImpl(symbol, processor);
 
       if (nameString.contains(".")) {
-        ResolveProcessor nsProcessor = new SymbolResolveProcessor(nameString, symbol, incompleteCode, false);
+        ResolveProcessor nsProcessor = new SymbolResolveProcessor(nameString, false);
         resolveNamespace(symbol, nsProcessor);
       }
 

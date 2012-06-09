@@ -2,7 +2,6 @@ package org.jetbrains.plugins.clojure.psi.impl.symbols;
 
 import com.intellij.codeInsight.TailType;
 import com.intellij.codeInsight.lookup.LookupItem;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
@@ -25,8 +24,6 @@ import java.util.*;
  * @author ilyas
  */
 public class CompleteSymbol {
-  public static Logger logger = Logger.getInstance(CompleteSymbol.class);
-
   public static Key<PsiElement> SEPARATOR = Key.create("SEPARATOR");
 
   public static Object[] getVariants(ClSymbol symbol) {

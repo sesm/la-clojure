@@ -7,7 +7,6 @@ import com.intellij.debugger.engine.CompoundPositionManager;
 import com.intellij.debugger.engine.DebugProcess;
 import com.intellij.debugger.engine.DebugProcessImpl;
 import com.intellij.debugger.requests.ClassPrepareRequestor;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.OrderRootType;
 import com.intellij.openapi.roots.ProjectRootManager;
@@ -47,8 +46,6 @@ import java.util.List;
  * limitations under the License.
  */
 public class ClojurePositionManager implements PositionManager {
-  private static final Logger LOG = Logger.getInstance("#com.intellij.debugger.engine.PositionManagerImpl");
-
   private final DebugProcess myDebugProcess;
 
   public ClojurePositionManager(DebugProcess debugProcess) {

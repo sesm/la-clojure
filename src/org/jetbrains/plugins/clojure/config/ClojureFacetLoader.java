@@ -10,9 +10,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ClojureFacetLoader implements ApplicationComponent {
 
-  public static final String PLUGIN_MODULE_ID = "PLUGIN_MODULE";
-
-
   public static ClojureFacetLoader getInstance() {
     return ApplicationManager.getApplication().getComponent(ClojureFacetLoader.class);
   }

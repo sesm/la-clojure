@@ -18,14 +18,10 @@ import java.util.Set;
 public class SymbolResolveProcessor extends ResolveProcessor implements NameHint {
 
   private final Set<PsiElement> myProcessedElements = new HashSet<PsiElement>();
-  private final PsiElement myPlace;
-  private final boolean incompleteCode;
   private final boolean onlyJava;
 
-  public SymbolResolveProcessor(String myName, PsiElement myPlace, boolean incompleteCode, boolean onlyJava) {
+  public SymbolResolveProcessor(String myName, boolean onlyJava) {
     super(myName);
-    this.myPlace = myPlace;
-    this.incompleteCode = incompleteCode;
     this.onlyJava = onlyJava;
   }
 
@@ -35,7 +31,7 @@ public class SymbolResolveProcessor extends ResolveProcessor implements NameHint
     if (onlyJava && !(element instanceof PsiClass)) return true;
     if (element instanceof PsiNamedElement && !myProcessedElements.contains(element)) {
       PsiNamedElement namedElement = (PsiNamedElement) element;
-      boolean isAccessible = isAccessible(namedElement);
+      boolean isAccessible = isAccessible();
       myCandidates.add(new ClojureResolveResultImpl(namedElement, isAccessible));
       myProcessedElements.add(namedElement);
       return !ListDeclarations.isLocal(element);
@@ -56,15 +52,11 @@ public class SymbolResolveProcessor extends ResolveProcessor implements NameHint
     return null;
   }
 
-  public PsiElement getPlace() {
-    return myPlace;
-  }
-
   public String getName(ResolveState resolveState) {
     return myName;
   }
 
-  protected boolean isAccessible(PsiNamedElement namedElement) {
+  protected boolean isAccessible() {
     //todo implement me
     return true;
   }

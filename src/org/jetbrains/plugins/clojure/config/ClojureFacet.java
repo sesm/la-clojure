@@ -17,9 +17,7 @@ package org.jetbrains.plugins.clojure.config;
 
 import com.intellij.facet.*;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.plugins.clojure.settings.ClojureProjectSettings;
 
 /**
  * @author ilyas
@@ -29,11 +27,6 @@ public class ClojureFacet extends Facet<ClojureFacetConfiguration> {
 
   public static final String FACET_TYPE_ID_STRING = "clojure";
   public final static FacetTypeId<ClojureFacet> ID = new FacetTypeId<ClojureFacet>(FACET_TYPE_ID_STRING);
-
-  public ClojureFacet(@NotNull Module module) {
-    this(FacetTypeRegistry.getInstance().findFacetType(FACET_TYPE_ID_STRING), module, "Clojure", new ClojureFacetConfiguration(), null);
-  }
-
 
   public ClojureFacet(final FacetType facetType, final Module module, final String name, final ClojureFacetConfiguration configuration, final Facet underlyingFacet) {
     super(facetType, module, name, configuration, underlyingFacet);
@@ -46,15 +39,6 @@ public class ClojureFacet extends Facet<ClojureFacetConfiguration> {
   @Override
   public void initFacet() {
     super.initFacet();
-
-    Module module = getModule();
-    Project project = module.getProject();
-    ClojureProjectSettings settings = ClojureProjectSettings.getInstance(project);
-
-  }
-
-  public String getReplClass() {
-    return getConfiguration().getState().myReplClass;
   }
 
   public String getJvmOptions() {

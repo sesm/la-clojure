@@ -10,13 +10,10 @@ import com.intellij.openapi.components.ApplicationComponent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.project.ProjectManagerAdapter;
-import com.intellij.refactoring.rename.RenameInputValidatorRegistry;
 import com.intellij.util.Function;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.debugger.ClojurePositionManager;
-import org.jetbrains.plugins.clojure.refactoring.rename.ClojureRenameInputValidator;
-import org.jetbrains.plugins.clojure.refactoring.rename.ClojureSymbolPattern;
 
 import java.util.Set;
 

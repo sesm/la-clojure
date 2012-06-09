@@ -60,12 +60,9 @@ public interface ClojureTokenTypes {
 
   IElementType TRUE = new ClojureElementType("true");
   IElementType FALSE = new ClojureElementType("false");
-  TokenSet BOOLEAN_LITERAL = TokenSet.create(TRUE, FALSE, NIL);
   TokenSet LITERALS = TokenSet.create(STRING_LITERAL, WRONG_STRING_LITERAL,
       INTEGER_LITERAL, LONG_LITERAL, BIG_INT_LITERAL, FLOAT_LITERAL, DOUBLE_LITERAL, BIG_DECIMAL_LITERAL, RATIO, 
       CHAR_LITERAL, TRUE, FALSE, NIL);
-
-  TokenSet READABLE_TEXT = TokenSet.create(STRING_LITERAL, LINE_COMMENT, WRONG_STRING_LITERAL);
 
   IElementType COLON_SYMBOL = new ClojureElementType("key");  // :foo
   // Symbol parts

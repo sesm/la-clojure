@@ -42,7 +42,6 @@ import java.util.Arrays;
  */
 public class ClojurePsiUtil {
   public static final String JAVA_LANG = "java.lang";
-  public static final String CLOJURE_LANG = "clojure.lang";
 
   public static final Set<String> DEFINITION_FROM_NAMES = new HashSet<String>();
 
@@ -156,11 +155,6 @@ public class ClojurePsiUtil {
       parent = parent.getParent();
     }
     return parents;
-  }
-
-  private static boolean isParameterSymbol(ClSymbol symbol) {
-    //todo implement me!
-    return false;
   }
 
   private static boolean anyOf(char c, String s) {

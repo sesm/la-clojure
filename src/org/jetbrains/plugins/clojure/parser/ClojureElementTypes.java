@@ -36,7 +36,6 @@ import org.jetbrains.plugins.clojure.psi.ClStubElementType;
 public interface ClojureElementTypes extends ClojureTokenTypes {
   final IStubFileElementType FILE = new ClStubFileElementType();
 
-  final IElementType TOPLIST = new ClojureElementType("toplist");
   final IElementType LIST = new ClojureElementType("list");
   final IElementType VECTOR = new ClojureElementType("vector");
   final IElementType MAP = new ClojureElementType("map");
@@ -55,26 +54,14 @@ public interface ClojureElementTypes extends ClojureTokenTypes {
   final IElementType SYMBOL = new ClojureElementType("symbol");
   final IElementType IMPLICIT_ARG = new ClojureElementType("function argument");
 
-  final IElementType BINDINGS = new ClojureElementType("bindings");
-  final IElementType REST = new ClojureElementType("rest");
-  final IElementType AS = new ClojureElementType("as");
-
-  final IElementType EXPRESSION = new ClojureElementType("expression");
   final IElementType QUOTED_FORM = new ClojureElementType("quoted expression");
   final IElementType BACKQUOTED_EXPRESSION = new ClojureElementType("backquoted expression");
 
   final IElementType SHARP_EXPRESSION = new ClojureElementType("pound expression");
-  final IElementType META_FORM = new ClojureElementType("up expression");
-  final IElementType METADATA = new ClojureElementType("poundup expression");
+  final IElementType METADATA = new ClojureElementType("metadata expression");
   final IElementType TILDA_EXPRESSION = new ClojureElementType("tilda expression");
   final IElementType AT_EXPRESSION = new ClojureElementType("at expression");
   final IElementType TILDAAT_EXPRESSION = new ClojureElementType("tildaat expression");
-
-
-  TokenSet LIST_LIKE_FORMS = TokenSet.create(LIST, VECTOR, MAP, SET, DEF, DEFMETHOD, NS);
-
-  TokenSet BRACES = TokenSet.create(LEFT_CURLY, LEFT_PAREN, LEFT_SQUARE,
-      RIGHT_CURLY, RIGHT_PAREN, RIGHT_SQUARE);
 
   TokenSet MODIFIERS = TokenSet.create(SHARP, UP, SHARPUP, TILDA, AT, TILDAAT, QUOTE, BACKQUOTE);
 }

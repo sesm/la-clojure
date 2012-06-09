@@ -8,7 +8,7 @@
   (and (non-empty? node)
        (let [element (.getElementType node)]
          (not (or (whitespace element)
-                  (meta-form? element)
+                  (metadata? element)
                   (comments element))))))
 
 (defn significant? [^ASTNode node]

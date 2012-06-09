@@ -255,15 +255,14 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
     PsiBuilder.Marker mark = builder.mark();
     builder.advanceLexer();
     parseExpression(builder);
-    mark.done(META_FORM);
+    mark.done(METADATA);
   }
 
   /**
-   * Enter: Lexer is pointed at ^
+   * Enter: Lexer is pointed at #^
    * Exit: Lexer is pointed immediately after closing }
    */
   private void parseMetadata(PsiBuilder builder) {
-    //todo add expression with metadata
     if (builder.getTokenType() != SHARPUP) internalError(ClojureBundle.message("expected.sharp.cup"));
     PsiBuilder.Marker mark = builder.mark();
     builder.advanceLexer();
@@ -398,31 +397,5 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
     if (CREATE_NS.equals(text)) marker.done(ClojureElementTypes.CREATE_NS);
     else if (IN_NS.equals(text)) marker.done(ClojureElementTypes.IN_NS);
     else marker.done(ClojureElementTypes.NS);
-  }
-
-
-
-  /**
-   * Enter: Lexer is pointed at the opening left square
-   * Exit: Lexer is pointed immediately after the closing right paren, or at the end-of-file
-   */
-  private void parseBindings(PsiBuilder builder) {
-    if (builder.getTokenType() != LEFT_SQUARE) internalError(ClojureBundle.message("expected.lsquare"));
-
-    PsiBuilder.Marker marker = markAndAdvance(builder);
-    for (IElementType token = builder.getTokenType(); token != RIGHT_SQUARE && token != null; token = builder.getTokenType()) {
-      parseExpression(builder); // variables being defined, values or metadata
-    }
-    advanceLexerOrEOF(builder);
-    marker.done(BINDINGS);
-  }
-
-  /**
-   * Enter: Lexer is pointed after the 'let'
-   * Exit: Lexer is pointed immediately after the closing right paren, or at the end-of-file
-   */
-  private void parseList(PsiBuilder builder, PsiBuilder.Marker marker) {
-    parseExpressions(RIGHT_PAREN, builder);
-    marker.done(LIST);
   }
 }

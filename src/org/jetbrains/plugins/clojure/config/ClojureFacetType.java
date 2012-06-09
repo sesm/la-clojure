@@ -3,7 +3,6 @@ package org.jetbrains.plugins.clojure.config;
 import com.intellij.facet.Facet;
 import com.intellij.facet.FacetModel;
 import com.intellij.facet.FacetType;
-import com.intellij.facet.FacetTypeRegistry;
 import com.intellij.facet.autodetecting.DetectedFacetPresentation;
 import com.intellij.facet.autodetecting.FacetDetector;
 import com.intellij.facet.autodetecting.FacetDetectorRegistry;
@@ -71,12 +70,6 @@ public class ClojureFacetType extends FacetType<ClojureFacet, ClojureFacetConfig
     };
 
     registry.registerUniversalDetector(ClojureFileType.CLOJURE_FILE_TYPE, filter, detector);
-  }
-
-  public static ClojureFacetType getInstance() {
-    final ClojureFacetType facetType = (ClojureFacetType) FacetTypeRegistry.getInstance().findFacetType(ClojureFacet.ID);
-    assert facetType != null;
-    return facetType;
   }
 
   private class ClojureFacetDetector extends FacetDetector<VirtualFile, ClojureFacetConfiguration> {

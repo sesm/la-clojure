@@ -1,7 +1,5 @@
 package org.jetbrains.plugins.clojure.psi.stubs.elements;
 
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.IndexSink;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubInputStream;
@@ -33,10 +31,6 @@ public class ClKeywordElementType extends ClStubElementType<ClKeywordStub, ClKey
   public ClKeywordStub deserialize(StubInputStream dataStream, StubElement parentStub) throws IOException {
     StringRef ref = dataStream.readName();
     return new ClKeywordStubImpl(parentStub, ref, this);
-  }
-
-  public PsiElement createElement(ASTNode node) {
-    return new ClKeywordImpl(node);
   }
 
   public ClKeyword createPsi(ClKeywordStub stub) {

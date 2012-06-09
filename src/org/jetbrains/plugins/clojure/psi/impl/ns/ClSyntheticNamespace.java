@@ -1,7 +1,6 @@
 package org.jetbrains.plugins.clojure.psi.impl.ns;
 
 import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.util.Iconable;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
@@ -156,11 +155,6 @@ public class ClSyntheticNamespace extends LightElement implements PsiPackage {
       @Nullable
       public Icon getIcon(boolean open) {
         return ClSyntheticNamespace.this.getIcon(Iconable.ICON_FLAG_VISIBILITY | Iconable.ICON_FLAG_READ_STATUS);
-      }
-
-      @Nullable
-      public TextAttributesKey getTextAttributesKey() {
-        return null;
       }
     };
   }

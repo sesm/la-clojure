@@ -81,7 +81,6 @@ public abstract class ClListBaseImpl<T extends NamedStub> extends ClojureBaseEle
     return findChildByType(ClojureTokenTypes.RIGHT_PAREN);
   }
 
-
   public ClSymbol[] getAllSymbols() {
     return findChildrenByClass(ClSymbol.class);
   }

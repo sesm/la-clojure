@@ -19,8 +19,6 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
-import org.jetbrains.plugins.clojure.utils.ClojureNamesUtil;
-import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.config.ClojureFacetType;
 import org.jetbrains.plugins.clojure.config.ClojureFacet;
 
@@ -118,27 +116,4 @@ public abstract class NewClojureActionBase extends CreateElementActionBase {
   protected String getErrorTitle() {
     return CommonBundle.getErrorTitle();
   }
-
-  protected void checkBeforeCreate(String newName, PsiDirectory directory) throws IncorrectOperationException {
-    checkCreateFile(directory, newName);
-  }
-
-  public static void checkCreateFile(@NotNull PsiDirectory directory, String name) throws IncorrectOperationException {
-    final String trimmedName = StringUtil.trimEnd(name, CLOJURE_EXTENSION);
-    if (!ClojureNamesUtil.isIdentifier(trimmedName)) {
-      throw new IncorrectOperationException(ClojureBundle.message("0.is.not.an.identifier", name));
-    }
-
-    String fileName = trimmedName + "." + CLOJURE_EXTENSION;
-    directory.checkCreateFile(fileName);
-
-    PsiNameHelper helper = JavaPsiFacade.getInstance(directory.getProject()).getNameHelper();
-    PsiPackage aPackage = JavaDirectoryService.getInstance().getPackage(directory);
-    String qualifiedName = aPackage == null ? null : aPackage.getQualifiedName();
-    if (!StringUtil.isEmpty(qualifiedName) && !helper.isQualifiedName(qualifiedName)) {
-      throw new IncorrectOperationException("Cannot create class in invalid package: '" + qualifiedName + "'");
-    }
-  }
-
 }
-

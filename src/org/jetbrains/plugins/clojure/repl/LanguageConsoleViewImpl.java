@@ -16,7 +16,6 @@
 package org.jetbrains.plugins.clojure.repl;
 
 import com.intellij.execution.impl.ConsoleViewImpl;
-import com.intellij.lang.Language;
 import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;

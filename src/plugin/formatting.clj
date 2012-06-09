@@ -242,13 +242,13 @@
              wrap (if (brace? element) nil (:wrap params))]
          (if (or (comments element)
                  (whitespace element)
-                 (meta-form? element))
+                 (metadata? element))
            (recur (rest children)
                   child-params
                   (conj result (create-block child
                                              (cond
                                                (whitespace element) nil
-                                               (meta-form? element) (:alignment params)
+                                               (metadata? element) (:alignment params)
                                                :else (:child params))
                                              (:indent params)
                                              wrap

@@ -2,7 +2,6 @@ package org.jetbrains.plugins.clojure.psi.impl.defs;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.util.Iconable;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
@@ -94,11 +93,6 @@ public class ClDefImpl extends ClListBaseImpl<ClDefStub> implements ClDef, StubB
       @Nullable
       public Icon getIcon(boolean open) {
         return ClDefImpl.this.getIcon(Iconable.ICON_FLAG_VISIBILITY | Iconable.ICON_FLAG_READ_STATUS);
-      }
-
-      @Nullable
-      public TextAttributesKey getTextAttributesKey() {
-        return null;
       }
     };
   }

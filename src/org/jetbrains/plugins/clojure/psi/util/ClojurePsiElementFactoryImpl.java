@@ -14,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClListLike;
-import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
@@ -80,11 +79,6 @@ public class ClojurePsiElementFactoryImpl extends ClojurePsiFactory {
   public ClList createListFromText(@NotNull String text) {
     return (ClList)createSymbolNodeFromText("(" + text + ")").getPsi();
 
-  }
-
-  @Override
-  public ClVector createVectorFromText(@NotNull String text) {
-    return (ClVector)createSymbolNodeFromText("[" + text + "]").getPsi();
   }
 
   @Override

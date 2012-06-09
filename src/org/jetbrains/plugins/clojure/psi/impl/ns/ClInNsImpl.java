@@ -8,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.api.ClQuotedForm;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
-import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
 
 /**

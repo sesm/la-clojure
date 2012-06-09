@@ -16,11 +16,7 @@
 package org.jetbrains.plugins.clojure.config.ui;
 
 import com.intellij.facet.Facet;
-import com.intellij.facet.ui.FacetEditorContext;
 import com.intellij.facet.ui.FacetEditorTab;
-import com.intellij.facet.ui.FacetValidatorsManager;
-import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.ConfigurationException;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -34,23 +30,14 @@ import javax.swing.*;
  */
 public class ClojureFacetSettingsTab extends FacetEditorTab {
 
-  public static final Logger LOG = Logger.getInstance("org.jetbrains.plugins.clojure.config.ui.ClojureFacetTab");
-
-  private Module myModule;
   private JPanel myPanel;
   private JTextField myJvmOpts;
   private JTextField myReplOpts;
   private JTextField myReplClass;
   private JPanel myReplPanel;
-  private FacetEditorContext myEditorContext;
-  private FacetValidatorsManager myValidatorsManager;
   private final ClojureModuleSettings mySettings;
 
-  public ClojureFacetSettingsTab(FacetEditorContext editorContext, FacetValidatorsManager validatorsManager, ClojureModuleSettings settings) {
-    myModule = editorContext.getModule();
-    myEditorContext = editorContext;
-    myValidatorsManager = validatorsManager;
-
+  public ClojureFacetSettingsTab(ClojureModuleSettings settings) {
     mySettings = settings;
 
     myJvmOpts.setText(mySettings.myJvmOpts);

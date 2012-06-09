@@ -23,10 +23,8 @@ import com.intellij.openapi.util.InvalidDataException;
 import com.intellij.openapi.util.JDOMExternalizer;
 import com.intellij.openapi.util.WriteExternalException;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.config.ClojureConfigUtil;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
@@ -162,35 +160,6 @@ public class ClojureScriptRunConfiguration extends ModuleBasedConfiguration {
     }
   }
 
-  private boolean isJarFromJRE(String path, Module module) {
-    if (path == null) return false;
-    OrderEntry[] entries = ModuleRootManager.getInstance(module).getOrderEntries();
-    for (OrderEntry entry : entries) {
-      if (entry instanceof JdkOrderEntry) {
-        JdkOrderEntry jdkEntry = (JdkOrderEntry) entry;
-        for (VirtualFile file : jdkEntry.getFiles(OrderRootType.CLASSES)) {
-          if (file.getPresentableUrl().equals(path)) return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  public StringBuffer getClearClassPathString(JavaParameters params, final Module module) {
-    List<String> list = params.getClassPath().getPathList();
-    Sdk jdk = params.getJdk();
-    StringBuffer buffer = new StringBuffer();
-    if (jdk != null) {
-      for (String libPath : list) {
-        if (!isJarFromJRE(libPath, module) /*&& !isJarFromClojureLib(libPath, module)*/) {
-          buffer.append(libPath).append(File.pathSeparator);
-        }
-      }
-    }
-    //buffer.append(CLOJURE_SDK);
-    return buffer;
-  }
-
   private void configureScript(JavaParameters params) {
     // add script
     params.getProgramParametersList().add(scriptPath);
@@ -263,11 +232,6 @@ public class ClojureScriptRunConfiguration extends ModuleBasedConfiguration {
     }
     return state;
 
-  }
-
-  @Nullable
-  private VirtualFile findScriptFile() {
-    return VirtualFileManager.getInstance().findFileByUrl("file://" + scriptPath);
   }
 
   public void setScriptPath(String path) {

@@ -1,7 +1,5 @@
 package org.jetbrains.plugins.clojure.psi.stubs.elements.ns;
 
-import com.intellij.lang.ASTNode;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.util.io.StringRef;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
@@ -16,10 +14,6 @@ import org.jetbrains.plugins.clojure.psi.stubs.impl.ClNsStubImpl;
 public class ClNsElementType extends ClNsElementTypeBase {
   public ClNsElementType() {
     super("ns");
-  }
-
-  public PsiElement createElement(ASTNode node) {
-    return new ClNsImpl(node);
   }
 
   public ClNs createPsi(ClNsStub stub) {

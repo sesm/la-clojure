@@ -12,8 +12,6 @@ import com.intellij.psi.PsiNamedElement;
  */
 public interface ClSymbol extends ClojurePsiElement, PsiPolyVariantReference, PsiNamedElement {
 
-  final ClSymbol[] EMPTY_ARRAY = new ClSymbol[0];
-
   @NotNull
   String getNameString();
 

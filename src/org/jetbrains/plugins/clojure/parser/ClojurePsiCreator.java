@@ -29,7 +29,6 @@ public class ClojurePsiCreator {
     if (elementType == ClojureElementTypes.MAP_ENTRY) return new ClMapEntryImpl(node);
 
     if (elementType == ClojureElementTypes.QUOTED_FORM) return new ClQuotedFormImpl(node);
-    if (elementType == ClojureElementTypes.META_FORM) return new ClMetaForm(node);
     if (elementType == ClojureElementTypes.METADATA) return new ClMetadataImpl(node);
 
     if (elementType == ClojureElementTypes.SYMBOL) return new ClSymbolImpl(node);
@@ -42,7 +41,6 @@ public class ClojurePsiCreator {
     if (elementType == ClojureElementTypes.IN_NS) return new ClInNsImpl(node);
     if (elementType == ClojureElementTypes.CREATE_NS) return new ClCreateNsImpl(node);
 
-    if (elementType == ClojureElementTypes.BINDINGS) return new ClBindings(node);
     if (elementType == ClojureElementTypes.KEYWORD) return new ClKeywordImpl(node);
     if (elementType == ClojureElementTypes.LITERAL) return new ClLiteralImpl(node);
     if (elementType == ClojureElementTypes.BACKQUOTED_EXPRESSION) return new ClBackQuotedExpression(node);

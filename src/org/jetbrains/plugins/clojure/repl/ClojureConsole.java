@@ -41,9 +41,6 @@ import org.jetbrains.plugins.clojure.settings.ClojureProjectSettings;
 import org.jetbrains.plugins.clojure.utils.Editors;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 public class ClojureConsole extends LanguageConsoleImpl {

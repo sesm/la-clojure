@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClListLike;
-import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 
 /**
@@ -32,8 +31,6 @@ public abstract class ClojurePsiFactory {
   public abstract ClojureFile createClojureFileFromText(@NotNull String text);
 
   public abstract ClList createListFromText(@NotNull String text);
-
-  public abstract ClVector createVectorFromText(@NotNull String text);
 
   @Nullable
   public abstract ClListLike findOrCreateJavaImportForClass(PsiClass clazz, ClList importClause);

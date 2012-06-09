@@ -9,7 +9,6 @@ import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.TextRange;
 import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.ClojureIcons;
-import org.jetbrains.plugins.clojure.psi.util.ClojurePsiElementFactoryImpl;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 
 /**

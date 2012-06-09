@@ -3,7 +3,6 @@ package org.jetbrains.plugins.clojure.psi.stubs.impl;
 import com.intellij.psi.stubs.PsiFileStubImpl;
 import com.intellij.psi.tree.IStubFileElementType;
 import com.intellij.util.io.StringRef;
-import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClFileStub;

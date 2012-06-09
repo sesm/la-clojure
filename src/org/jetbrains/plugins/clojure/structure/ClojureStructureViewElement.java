@@ -6,7 +6,6 @@ import com.intellij.psi.PsiNamedElement;
 import com.intellij.ide.structureView.StructureViewTreeElement;
 import com.intellij.navigation.NavigationItem;
 import com.intellij.navigation.ItemPresentation;
-import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.util.Iconable;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
@@ -73,10 +72,6 @@ public class ClojureStructureViewElement implements StructureViewTreeElement {
           return ((ClDef) myElement).getPresentationText();
         }
         return ((PsiNamedElement) myElement).getName();
-      }
-
-      public TextAttributesKey getTextAttributesKey() {
-        return null;
       }
 
       public String getLocationString() {

@@ -231,15 +231,6 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
     return addFreshImportClause();
   }
 
-  public ClList findImportClause() {
-    return findImportClause(null);
-  }
-
-  @NotNull
-  public ClList findOrCreateImportClause() {
-    return findOrCreateImportClause(null);
-  }
-
   public ClListLike addImportForClass(PsiElement place, PsiClass clazz) {
     commitDocument();
     final ClojurePsiFactory factory = ClojurePsiFactory.getInstance(getProject());

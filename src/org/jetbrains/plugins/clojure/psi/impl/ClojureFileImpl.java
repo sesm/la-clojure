@@ -118,14 +118,6 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
   }
 
-  public String getNamespaceSuffix() {
-    final String ns = getNamespace();
-    if (ns != null) {
-      return ns.substring(ns.lastIndexOf(".") + 1);
-    }
-    return null;
-  }
-
   protected PsiFileImpl clone() {
     final ClojureFileImpl clone = (ClojureFileImpl) super.clone();
     clone.myContext = myContext;
@@ -180,18 +172,6 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       lastChild = lastChild.getPrevSibling();
     }
     return lastChild;
-  }
-
-  public <T> T findFirstChildByClass(Class<T> aClass) {
-    PsiElement element = getFirstChild();
-    while (element != null && !aClass.isInstance(element)) {
-      element = element.getNextSibling();
-    }
-    return (T) element;
-  }
-
-  public PsiElement getSecondNonLeafElement() {
-    return null;
   }
 
   public void setContext(PsiElement context) {

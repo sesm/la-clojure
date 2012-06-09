@@ -5,7 +5,6 @@ import com.intellij.concurrency.JobUtil;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.SyntaxHighlighterColors;
 import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
 import com.intellij.openapi.editor.event.DocumentEvent;
@@ -152,18 +151,6 @@ public class ClojureBraceHighlightingHandler {
     }
 
     highlighters.add(highlighter);
-  }
-
-  private void highlightComment(int offset, int length) {
-    final TextAttributes attributes = SyntaxHighlighterColors.LINE_COMMENT.getDefaultAttributes();
-
-    RangeHighlighter highlighter =
-        myEditor.getMarkupModel().addRangeHighlighter(
-            offset, offset + length, HighlighterLayer.LAST + 1, attributes, HighlighterTargetArea.EXACT_RANGE);
-    highlighter.setGreedyToLeft(false);
-    highlighter.setGreedyToRight(false);
-    registerHighlighter(highlighter);
-
   }
 
   private void highlightBrace(int rBraceOffset, TextAttributes attributes) {

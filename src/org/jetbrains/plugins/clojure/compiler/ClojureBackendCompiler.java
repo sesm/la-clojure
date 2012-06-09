@@ -306,11 +306,6 @@ public class ClojureBackendCompiler extends ExternalCompiler {
     printer.print(")\n");
   }
 
-  private static void printNicePrinter(PrintStream printer) {
-    printer.println("(defn intellij-nice-printer [arr]\n" +
-        "  (reduce (fn [x y] (str (.toString x) \"^^\" y)) (. java.util.Arrays asList arr)))");
-  }
-
   public void compileFinished() {
     FileUtil.asyncDelete(myTempFiles);
   }

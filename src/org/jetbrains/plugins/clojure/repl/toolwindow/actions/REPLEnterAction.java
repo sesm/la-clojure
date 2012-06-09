@@ -3,7 +3,6 @@ package org.jetbrains.plugins.clojure.repl.toolwindow.actions;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler;
-import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler;
 import com.intellij.openapi.project.DumbAware;
 import org.jetbrains.plugins.clojure.repl.REPL;
 

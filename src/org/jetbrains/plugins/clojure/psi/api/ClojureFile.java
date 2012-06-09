@@ -11,8 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 
-import javax.naming.OperationNotSupportedException;
-
 /**
  * @author ilyas
  */
@@ -44,7 +42,4 @@ public interface ClojureFile extends PsiFile, ClojurePsiElement, PsiFileWithStub
 
   @Nullable
   String getNamespacePrefix();
-
-  @Nullable
-  String getNamespaceSuffix();
 }

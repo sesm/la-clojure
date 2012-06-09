@@ -47,10 +47,6 @@ public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements C
       ClojureTokenTypes.LINE_COMMENT
   );
 
-  static final TokenSet sBAD_CHARACTERS = TokenSet.create(
-      ClojureTokenTypes.BAD_CHARACTER
-  );
-
   static final TokenSet sLITERALS = TokenSet.create(ClojureTokenTypes.TRUE, ClojureTokenTypes.FALSE, ClojureTokenTypes.NIL);
 
   static final TokenSet sSTRINGS = ClojureTokenTypes.STRINGS;

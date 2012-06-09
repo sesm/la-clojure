@@ -2,7 +2,6 @@ package org.jetbrains.plugins.clojure.debugger.fragments;
 
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
@@ -12,8 +11,6 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.openapi.project.Project;
 import com.intellij.testFramework.LightVirtualFile;
 
-import javax.naming.OperationNotSupportedException;
-
 /**
  * @author ilyas
  */
@@ -21,7 +18,6 @@ public class ClojureCodeFragment extends ClojureFileImpl implements JavaCodeFrag
   private PsiType myThisType;
   private PsiType mySuperType;
   private ExceptionHandler myExceptionHandler;
-  private IntentionFilterOwner.IntentionActionsFilter myFilter;
   private GlobalSearchScope myScope;
 
   public ClojureCodeFragment(Project project, CharSequence text) {
@@ -73,14 +69,6 @@ public class ClojureCodeFragment extends ClojureFileImpl implements JavaCodeFrag
 
   public boolean importClass(PsiClass aClass) {
     return false;
-  }
-
-  public void setIntentionActionsFilter(IntentionFilterOwner.IntentionActionsFilter filter) {
-    myFilter = filter;
-  }
-
-  public IntentionFilterOwner.IntentionActionsFilter getIntentionActionsFilter() {
-    return myFilter;
   }
 
   public void forceResolveScope(GlobalSearchScope scope) {

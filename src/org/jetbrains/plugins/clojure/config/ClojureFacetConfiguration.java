@@ -28,13 +28,9 @@ import org.jetbrains.plugins.clojure.config.ui.ClojureFacetSettingsTab;
 public class ClojureFacetConfiguration implements FacetConfiguration, PersistentStateComponent<ClojureModuleSettings> {
   private final ClojureModuleSettings mySettings = new ClojureModuleSettings();
 
-  public String getDisplayName() {
-    return "Clojure";
-  }
-
   public FacetEditorTab[] createEditorTabs(FacetEditorContext editorContext, FacetValidatorsManager validatorsManager) {
     return new FacetEditorTab[]{
-        new ClojureFacetSettingsTab(editorContext, validatorsManager, mySettings)
+        new ClojureFacetSettingsTab(mySettings)
     };
   }
 
