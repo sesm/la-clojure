@@ -11,7 +11,7 @@
            (com.intellij.psi.tree TokenSet)
            (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
            (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes))
-  (:use [plugin.util :only [safely]]
+  (:use [plugin.util :only [safely with-command]]
         [plugin.tokens]))
 
 ;(set! *warn-on-reflection* true)
@@ -107,20 +107,22 @@
                        (.getEnd highlighter))))))
 
 (defn process-key [project ^Editor editor psi-file char-typed]
-  (let [is-string (inside-string? editor)
-        is-comment (inside-comment? editor)]
-    (if (or is-string is-comment)
-      (if (and is-string (= char-typed \"))
-        (let [string (PsiUtilBase/getElementAtCaret editor)
-              offset (offset editor)
-              end-offset (.getEndOffset (.getTextRange string))]
-          (if (= offset (dec end-offset))
-            (.moveToOffset (.getCaretModel editor) end-offset)
-            (insert editor "\\\"")))
-        (insert editor (str char-typed)))
-      (if (contains? #{\( \[ \{ \"} char-typed)
-        (open-matched editor char-typed)
-        (close-matched editor char-typed)))))
+  (with-command
+    project "" nil
+    (let [is-string (inside-string? editor)
+          is-comment (inside-comment? editor)]
+      (if (or is-string is-comment)
+        (if (and is-string (= char-typed \"))
+          (let [string (PsiUtilBase/getElementAtCaret editor)
+                offset (offset editor)
+                end-offset (.getEndOffset (.getTextRange string))]
+            (if (= offset (dec end-offset))
+              (.moveToOffset (.getCaretModel editor) end-offset)
+              (insert editor "\\\"")))
+          (insert editor (str char-typed)))
+        (if (contains? #{\( \[ \{ \"} char-typed)
+          (open-matched editor char-typed)
+          (close-matched editor char-typed))))))
 
 (defrecord ClojureTypedHandler [^TypedActionHandler previous]
   TypedActionHandler

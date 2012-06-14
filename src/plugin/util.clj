@@ -8,7 +8,9 @@
            (com.intellij.openapi.vfs VirtualFileManager)
            (com.intellij.openapi.fileEditor FileEditorManager)
            (com.intellij.psi PsiManager PsiFileFactory)
-           (com.intellij.psi.util PsiUtilBase)))
+           (com.intellij.psi.util PsiUtilBase)
+           (com.intellij.psi.impl.source.tree LeafPsiElement)
+           (com.intellij.openapi.command CommandProcessor)))
 
 (def ^Logger logger (Logger/getInstance "plugin.util"))
 
@@ -17,8 +19,18 @@
   [& body]
   `(.runReadAction
      (ApplicationManager/getApplication)
-     (proxy [Computable] []
-       (compute [] ~@body))))
+     (reify Computable
+       (compute [this] ~@body))))
+
+(defmacro with-command
+  "Runs body inside a command."
+  [project name group-id & body]
+  `(.executeCommand
+     (CommandProcessor/getInstance)
+     (reify Runnable
+       (run [this] ~@body))
+     ~name
+     ~group-id))
 
 (defmacro safely
   "Allows safe Java method calls. If the target is nil returns nil, otherwise returns
@@ -61,4 +73,7 @@
 
 (defn element []
   (let [editor (.getEditor (first (all-editors (first (open-projects)))))]
-    (PsiUtilBase/getElementAtCaret editor)))
+    (let [element (PsiUtilBase/getElementAtCaret editor)]
+      (if (instance? LeafPsiElement element)
+        (.getParent element)
+        element))))
