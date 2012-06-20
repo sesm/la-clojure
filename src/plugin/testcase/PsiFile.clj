@@ -6,7 +6,7 @@
               :constructors {[clojure.lang.IFn] []}
               :methods [[testImpl [] void]
                         [doTest [] void]]
-              :exposes-methods {createFile        superCreateFile})
+              :exposes-methods {createFile superCreateFile})
   (:import [com.intellij.testFramework PsiTestCase]
            (com.intellij.openapi.vfs JarFileSystem LocalFileSystem)))
 
@@ -34,6 +34,6 @@
                                                 (.superCreateFile this file-name text))
                                 :clojure-core load-clojure-core}))
 
-                                (defn test-doTest [this]
-                                  (.setName this "testImpl")
-                                  (.runBare this))
+(defn test-doTest [this]
+  (.setName this "testImpl")
+  (.runBare this))

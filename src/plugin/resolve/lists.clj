@@ -1,12 +1,11 @@
 (ns plugin.resolve.lists
   (:import (org.jetbrains.plugins.clojure.psi.impl.list ListDeclarations)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
            (com.intellij.psi PsiNamedElement PsiElement)
-           (org.jetbrains.plugins.clojure.psi.impl ClMetaForm)
            (com.intellij.openapi.diagnostic Logger))
   (:require [plugin.resolve.core :as resolve]
             [plugin.psi :as psi]
@@ -37,7 +36,7 @@
 (defn process-params [processor ^ClListLike params ^PsiElement place last-parent]
   ;(println "params: "  (.getText params)  (elem place))
   (if (psi/contains? params place)
-    (not (instance? ClMetaForm (.getParent place)))
+    (not (instance? ClMetadata (.getParent place)))
     (process-elements processor (seq (.getAllSymbols params)) place)))
 
 (defn third [coll]

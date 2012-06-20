@@ -16,7 +16,6 @@
            (org.jetbrains.plugins.clojure.parser ClojureSpecialFormTokens)
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
-           (org.jetbrains.plugins.clojure.psi.impl ClMetaForm)
            (com.intellij.codeInsight.daemon.impl.actions AddImportAction)
            (com.intellij.codeInsight.daemon DaemonCodeAnalyzer))
   (:require [plugin.psi :as psi]
@@ -31,7 +30,7 @@
                       "monitor-enter" "monitor-exit" "." ".." "set!"
                       "%" "%1" "%2" "%3" "%4" "%5" "%6" "%7" "%8" "%9" "%&" "&"})
 
-(def local-bindings #{"let", "with-open", "with-local-vars", "when-let", 
+(def local-bindings #{"let", "with-open", "with-local-vars", "when-let",
                       "when-first", "for", "if-let", "loop", "doseq"})
 
 (def instantiators #{"proxy" "reify" "definterface" "deftype" "defrecord"})

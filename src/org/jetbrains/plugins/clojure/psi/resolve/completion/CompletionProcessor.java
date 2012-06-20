@@ -9,7 +9,7 @@ import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcess
  */
 public class CompletionProcessor extends SymbolResolveProcessor {
 
-  public CompletionProcessor(PsiElement myPlace) {
+  public CompletionProcessor() {
     super(null, false);
   }
 

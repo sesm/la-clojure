@@ -7,7 +7,6 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
-import org.jetbrains.plugins.clojure.psi.api.ClKeyword;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClQuotedForm;
 import org.jetbrains.plugins.clojure.psi.api.ClVector;
@@ -154,27 +153,6 @@ public class ListDeclarations {
         final ClojurePsiElement element = quotedForm.getQuotedElement();
         if (element instanceof ClList) {
           if (processImportList(((ClList) element), processor, place, facade)) return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  private static boolean processNamespaceDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
-    final PsiElement[] children = list.getChildren();
-    final Project project = list.getProject();
-    final JavaPsiFacade facade = JavaPsiFacade.getInstance(project);
-    for (PsiElement child : children) {
-      if (child instanceof ClList) {
-        ClList clList = (ClList) child;
-        final PsiElement first = clList.getFirstNonLeafElement();
-        if (first instanceof ClKeyword && ":import".equals(first.getText())) {
-          for (PsiElement importExpr : clList.getChildren()) {
-            if (importExpr instanceof ClList) {
-              ClList importList = (ClList) importExpr;
-              if (!processImportList(importList, processor, place, facade)) return false;
-            }
-          }
         }
       }
     }

@@ -30,7 +30,7 @@ public class CompleteSymbol {
     Collection<Object> variants = new ArrayList<Object>();
 
     ClSymbol qualifier = symbol.getQualifierSymbol();
-    final CompletionProcessor processor = new CompletionProcessor(symbol);
+    final CompletionProcessor processor = new CompletionProcessor();
     if (qualifier == null) {
       ResolveUtil.treeWalkUp(symbol, processor);
     } else {

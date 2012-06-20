@@ -7,7 +7,7 @@
   </module-components>
 
   <name>La Clojure</name>
-  <id>org.intellij.clojure</id>
+  <id>org.intellij.clojure.redux</id>
   <description>Provides Clojure language support: syntax and error highlighting, completion, navigation and
     refactorings
   </description>
@@ -73,8 +73,6 @@
     <lang.namesValidator language="Clojure"
                          implementationClass="org.jetbrains.plugins.clojure.refactoring.rename.ClojureNameValidator"/>
     <referencesSearch implementation="org.jetbrains.plugins.clojure.findUsages.ClojureReferenceSearcher"/>
-    <lang.documentationProvider language="Clojure"
-                                implementationClass="org.jetbrains.plugins.clojure.documentation.ClojureDocumentationProvider"/>
     <renamePsiElementProcessor
         implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>
 

@@ -148,11 +148,3 @@
                       (:previous handler)
                       handler)]
     (.setupHandler typed-action (ClojureTypedHandler. new-handler))))
-
-; For REPL use
-(defn restore-handler []
-  (let [action-manager (EditorActionManager/getInstance)
-        typed-action (.getTypedAction action-manager)
-        handler (.getHandler typed-action)]
-    (if (instance? ClojureTypedHandler handler)
-      (.setupHandler typed-action (:previous handler)))))

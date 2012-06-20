@@ -3,7 +3,6 @@ package org.jetbrains.plugins.clojure.psi.impl.defs;
 import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.util.Iconable;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.StubBasedPsiElement;
@@ -16,9 +15,7 @@ import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.ClojureIcons;
-import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
-import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
-import org.jetbrains.plugins.clojure.psi.api.*;
+import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListBaseImpl;
@@ -26,7 +23,6 @@ import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClDefStub;
 
 import javax.swing.*;
-import java.util.ArrayList;
 
 /**
  * @author ilyas
@@ -107,64 +103,6 @@ public class ClDefImpl extends ClListBaseImpl<ClDefStub> implements ClDef, StubB
     return buffer.toString();
   }
 
-  public String getDocString() {
-    PsiElement element = getSecondNonLeafElement();
-    if (element == null) return null;
-    element = element.getNextSibling();
-    while (element != null && isWrongElement(element)) {
-      element = element.getNextSibling();
-    }
-    // For doc String
-    final String s = processString(element);
-    if (s != null) return s;
-
-    final ClMetadata meta = getMeta();
-    if (meta == null) return null;
-    return processMetadata(meta);
-  }
-
-  private String processString(PsiElement element) {
-    if (element instanceof ClLiteral && element.getFirstChild().getNode().getElementType() == ClojureTokenTypes.STRING_LITERAL) {
-      final String rawText = element.getText();
-      final String str = StringUtil.trimStart(StringUtil.trimEnd(rawText, "\""), "\"");
-      return str.replace("\n  ", "\n").replace("\n","<br/>");
-    }
-    return null;
-  }
-
-  private String processMetadata(@NotNull ClMetadata meta) {
-    final StringBuffer buffer = new StringBuffer();
-    final ClojurePsiElement args = meta.getValue("arglists");
-    if (args != null) {
-      if (args instanceof ClQuotedForm) {
-        ClQuotedForm form = (ClQuotedForm) args;
-        if (form.getQuotedElement() instanceof ClList) {
-          ClList list = (ClList) form.getQuotedElement();
-          final ArrayList<String> chunks = new ArrayList<String>();
-          if (list != null) {
-            for (PsiElement element : list.getChildren()) {
-              if (element instanceof ClVector) {
-                chunks.add(element.getText());
-              }
-            }
-          }
-          buffer.append("Arguments:\n");
-          for (String chunk : chunks) {
-            buffer.append("<b>").append(chunk.trim()).append("</b>").append("\n");
-          }
-          buffer.append("<br/>");
-        }
-      }
-    }
-
-    final ClojurePsiElement value = meta.getValue("doc");
-    if (value != null) {
-      buffer.append(processString(value));
-    }
-    return buffer.toString();
-  }
-
-
   @Override
   public Icon getIcon(int flags) {
     return ClojureIcons.FUNCTION;
@@ -188,15 +126,6 @@ public class ClDefImpl extends ClListBaseImpl<ClDefStub> implements ClDef, StubB
   public String getParameterString() {
     final ClVector params = findChildByClass(ClVector.class);
     return params == null ? "" : params.getText();
-  }
-
-  public ClMetadata getMeta() {
-    for (PsiElement element : getChildren()) {
-      if (element instanceof ClMetadata) {
-        return (ClMetadata) element;
-      }
-    }
-    return null;
   }
 
   public String getMethodInfo() {
