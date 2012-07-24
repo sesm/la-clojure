@@ -5,7 +5,7 @@
            (com.intellij.openapi.editor.actionSystem TypedActionHandler EditorActionManager)
            (com.intellij.openapi.editor.highlighter HighlighterIterator)
            (com.intellij.openapi.actionSystem PlatformDataKeys)
-           (com.intellij.psi PsiElement)
+           (com.intellij.psi PsiElement PsiDocumentManager)
            (com.intellij.psi.util PsiUtilBase)
            (org.jetbrains.plugins.clojure.file ClojureFileType)
            (com.intellij.psi.tree TokenSet)
@@ -79,15 +79,23 @@
 
 (defn open-matched [^Editor editor char-typed]
   (let [offset (offset editor)
-        highlighter (highlighter-iterator editor offset)
-        needs-whitespace-before (looking-back-at highlighter
-                                                 (fn [token] (not (or (whitespace token)
-                                                                      (opening-braces token)
-                                                                      (modifiers token))))
-                                                 offset)
-        needs-whitespace-after (looking-at highlighter
-                                           (fn [token] (not (or (whitespace token)
-                                                                (closing-braces token)))))]
+        selection-model (.getSelectionModel editor)
+        start (if (.hasSelection selection-model)
+                (.getSelectionStart selection-model)
+                offset)
+        end (if (.hasSelection selection-model)
+              (.getSelectionEnd selection-model)
+              offset)
+        needs-whitespace-before (looking-back-at (highlighter-iterator editor start)
+                                                 (fn [token]
+                                                   (not (or (whitespace token)
+                                                            (opening-braces token)
+                                                            (modifiers token))))
+                                                 start)
+        needs-whitespace-after (looking-at (highlighter-iterator editor end)
+                                           (fn [token]
+                                             (not (or (whitespace token)
+                                                      (closing-braces token)))))]
     (if needs-whitespace-before (insert editor " "))
     (insert editor (str char-typed))
     (if needs-whitespace-after (insert-after editor " "))
@@ -109,6 +117,8 @@
 (defn process-key [project ^Editor editor psi-file char-typed]
   (with-command
     project "" nil
+    (.commitDocument (PsiDocumentManager/getInstance project)
+                     (.getDocument editor))
     (let [is-string (inside-string? editor)
           is-comment (inside-comment? editor)]
       (if (or is-string is-comment)
