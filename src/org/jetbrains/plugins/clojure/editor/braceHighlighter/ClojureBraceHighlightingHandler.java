@@ -1,7 +1,7 @@
 package org.jetbrains.plugins.clojure.editor.braceHighlighter;
 
 import com.intellij.concurrency.Job;
-import com.intellij.concurrency.JobUtil;
+import com.intellij.concurrency.JobLauncher;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.editor.Editor;
@@ -64,7 +64,7 @@ public class ClojureBraceHighlightingHandler {
   static void lookForInjectedAndHighlightInOtherThread(@NotNull final Editor editor, @NotNull final Alarm alarm, @NotNull final Processor<ClojureBraceHighlightingHandler> processor) {
     final Project project = editor.getProject();
     if (project == null) return;
-    JobUtil.submitToJobThread(Job.DEFAULT_PRIORITY, new Runnable() {
+    JobLauncher.getInstance().submitToJobThread(Job.DEFAULT_PRIORITY, new Runnable() {
       public void run() {
         if (isReallyDisposed(editor, project)) return;
         ApplicationManager.getApplication().invokeLater(new DumbAwareRunnable() {
