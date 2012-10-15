@@ -1,19 +1,12 @@
 package org.jetbrains.plugins.clojure;
 
-import clojure.lang.*;
-import com.intellij.debugger.DebuggerManager;
-import com.intellij.debugger.PositionManager;
-import com.intellij.debugger.engine.DebugProcess;
+import clojure.lang.RT;
+import clojure.lang.Var;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.ApplicationComponent;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManager;
-import com.intellij.openapi.project.ProjectManagerAdapter;
-import com.intellij.util.Function;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.plugins.clojure.debugger.ClojurePositionManager;
 
 import java.util.Set;
 
@@ -84,15 +77,15 @@ public class ClojureLoader implements ApplicationComponent {
 
   public static void loadClojure() {
 
-    ProjectManager.getInstance().addProjectManagerListener(new ProjectManagerAdapter() {
-      public void projectOpened(final Project project) {
-        DebuggerManager.getInstance(project).registerPositionManagerFactory(new Function<DebugProcess, PositionManager>() {
-          public PositionManager fun(DebugProcess debugProcess) {
-            return new ClojurePositionManager(debugProcess);
-          }
-        });
-      }
-    });
+//    ProjectManager.getInstance().addProjectManagerListener(new ProjectManagerAdapter() {
+//      public void projectOpened(final Project project) {
+//        DebuggerManager.getInstance(project).registerPositionManagerFactory(new Function<DebugProcess, PositionManager>() {
+//          public PositionManager fun(DebugProcess debugProcess) {
+//            return new ClojurePositionManager(debugProcess);
+//          }
+//        });
+//      }
+//    });
 
   }
 

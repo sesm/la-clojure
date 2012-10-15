@@ -5,7 +5,6 @@ import com.intellij.lexer.Lexer;
 import com.intellij.openapi.editor.HighlighterColors;
 import com.intellij.openapi.editor.SyntaxHighlighterColors;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
-import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
@@ -14,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.lexer.ClojureFlexLexer;
 import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -104,7 +102,7 @@ public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements C
   @NonNls
   static final String CHAR_ID = "Clojure Character";
 
-  public static final TextAttributes ATOM_ATTRIB = HighlighterColors.TEXT.getDefaultAttributes().clone();
+//  public static final TextAttributes ATOM_ATTRIB = HighlighterColors.TEXT.getDefaultAttributes();
 
 
   // Registering TextAttributes
@@ -120,9 +118,9 @@ public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements C
     TextAttributesKey.createTextAttributesKey(CHAR_ID, SyntaxHighlighterColors.STRING.getDefaultAttributes());
     TextAttributesKey.createTextAttributesKey(BAD_CHARACTER_ID, HighlighterColors.BAD_CHARACTER.getDefaultAttributes());
 
-    final Color deepBlue = SyntaxHighlighterColors.KEYWORD.getDefaultAttributes().getForegroundColor();
-    ATOM_ATTRIB.setForegroundColor(deepBlue);
-    TextAttributesKey.createTextAttributesKey(ATOM_ID, ATOM_ATTRIB);
+//    final Color deepBlue = SyntaxHighlighterColors.KEYWORD.getDefaultAttributes().getForegroundColor();
+//    ATOM_ATTRIB.setForegroundColor(deepBlue);
+//    TextAttributesKey.createTextAttributesKey(ATOM_ID, ATOM_ATTRIB);
   }
 
   public static TextAttributesKey LINE_COMMENT = TextAttributesKey.createTextAttributesKey(LINE_COMMENT_ID);

@@ -1,6 +1,6 @@
 package org.jetbrains.plugins.clojure.findUsages;
 
-import com.intellij.concurrency.JobUtil;
+import com.intellij.concurrency.JobLauncher;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadActionProcessor;
 import com.intellij.openapi.diagnostic.Logger;
@@ -13,13 +13,23 @@ import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.Condition;
 import com.intellij.openapi.util.NullableComputable;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.*;
+import com.intellij.psi.PsiBinaryFile;
+import com.intellij.psi.PsiBundle;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiLock;
+import com.intellij.psi.PsiManager;
+import com.intellij.psi.PsiNamedElement;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.impl.PsiManagerEx;
-import com.intellij.psi.impl.cache.impl.IndexCacheManagerImpl;
 import com.intellij.psi.impl.cache.impl.id.IdIndex;
 import com.intellij.psi.impl.cache.impl.id.IdIndexEntry;
 import com.intellij.psi.impl.search.LowLevelSearchUtil;
-import com.intellij.psi.search.*;
+import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.LocalSearchScope;
+import com.intellij.psi.search.SearchScope;
+import com.intellij.psi.search.TextOccurenceProcessor;
+import com.intellij.psi.search.UsageSearchContext;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.util.CommonProcessors;
 import com.intellij.util.Processor;
@@ -31,7 +41,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -111,11 +127,22 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
       PsiElement[] scopeElements = scope.getScope();
       final boolean ignoreInjectedPsi = scope.isIgnoreInjectedPsi();
 
-      return JobUtil.invokeConcurrentlyUnderProgress(Arrays.asList(scopeElements), progress, false, new Processor<PsiElement>() {
-        public boolean process(PsiElement scopeElement) {
-          return processElementsWithWordInScopeElement(scopeElement, processor, text, caseSensitively, ignoreInjectedPsi, progress);
-        }
-      });
+      return JobLauncher.getInstance().invokeConcurrentlyUnderProgress(Arrays.asList(scopeElements),
+                                                                       progress,
+                                                                       false,
+                                                                       new Processor<PsiElement>()
+                                                                       {
+                                                                         public boolean process(PsiElement scopeElement)
+                                                                         {
+                                                                           return processElementsWithWordInScopeElement(
+                                                                             scopeElement,
+                                                                             processor,
+                                                                             text,
+                                                                             caseSensitively,
+                                                                             ignoreInjectedPsi,
+                                                                             progress);
+                                                                         }
+                                                                       });
     }
   }
 
@@ -189,7 +216,7 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
     return ContainerUtil.process(collectProcessor.getResults(), new ReadActionProcessor<VirtualFile>() {
       @Override
       public boolean processInReadAction(VirtualFile virtualFile) {
-        return !IndexCacheManagerImpl.shouldBeFound(scope, virtualFile, index) || processor.process(virtualFile);
+        return !index.shouldBeFound(scope, virtualFile) || processor.process(virtualFile);
       }
     });
   }
@@ -214,7 +241,7 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
       final AtomicBoolean pceThrown = new AtomicBoolean(false);
 
       final int size = files.size();
-      boolean completed = JobUtil.invokeConcurrentlyUnderProgress(files, progress, false, new Processor<VirtualFile>() {
+      boolean completed = JobLauncher.getInstance().invokeConcurrentlyUnderProgress(files, progress, false, new Processor<VirtualFile>() {
         public boolean process(final VirtualFile vfile) {
           final PsiFile file = ApplicationManager.getApplication().runReadAction(new Computable<PsiFile>() {
             public PsiFile compute() {

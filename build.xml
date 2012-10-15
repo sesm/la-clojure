@@ -120,7 +120,7 @@
     <javac2 srcdir="${project.dir}"
             destdir="${project.dest}"
             debug="true"
-            includeantruntime="false">
+            includeantruntime="true">
       <classpath refid="base.path"/>
       <include name="src/**/*.java"/>
       <include name="src/**/*.form"/>
