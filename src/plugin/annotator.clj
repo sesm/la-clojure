@@ -1,7 +1,8 @@
 (ns plugin.annotator
   (:import (com.intellij.lang.annotation Annotator AnnotationHolder)
            (com.intellij.openapi.diagnostic Logger)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral ClQuotedForm)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral ClQuotedForm
+                                                  ClKeyword)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
            (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult PsiManager PsiReference)
@@ -11,13 +12,14 @@
            (com.intellij.psi.search PsiShortNamesCache)
            (com.intellij.codeInsight.daemon.impl.quickfix ImportClassFixBase)
            (com.intellij.lang LanguageAnnotators)
-           (org.jetbrains.plugins.clojure ClojureLanguage)
+           (org.jetbrains.plugins.clojure ClojureLanguage ClojureBundle)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.parser ClojureSpecialFormTokens)
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (com.intellij.codeInsight.daemon.impl.actions AddImportAction)
-           (com.intellij.codeInsight.daemon DaemonCodeAnalyzer))
+           (com.intellij.codeInsight.daemon DaemonCodeAnalyzer)
+           (com.intellij.codeInspection ProblemHighlightType))
   (:require [plugin.psi :as psi]
             [plugin.util :as util]))
 
@@ -238,10 +240,22 @@
                                (annotate-fqn element (.getElement target) holder))
       (some #(= element (.getElement ^ResolveResult %)) (seq result)) (annotate-selfresolve element holder))))
 
+(defn check-keyword-text-consistency [^ClKeyword element ^AnnotationHolder holder]
+  (let [text (.getText element)
+        index (.getLastIndexOf text "/")]
+    (if (or (and (<= 0 index)
+                 (= \: (.charAt text (dec index))))
+            (.endsWith text "::")
+            (-> (.substring text 1)
+                (.contains "::")))
+      (let [annotation (.createErrorAnnotation holder element (ClojureBundle/message "invalid.token" text))]
+        (.setHighlightType annotation ProblemHighlightType/GENERIC_ERROR_OR_WARNING)))))
+
 (defn annotate [element holder]
   (cond
     (instance? ClList element) (annotate-list element holder)
-    (instance? ClSymbol element) (annotate-symbol element holder)))
+    (instance? ClSymbol element) (annotate-symbol element holder)
+    (instance? ClKeyword element) (check-keyword-text-consistency element holder)))
 
 (defn initialise []
   (.addExplicitExtension
