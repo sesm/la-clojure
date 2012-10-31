@@ -1,0 +1,15 @@
+<component name="ArtifactManager">
+  <artifact name="ClojurePlugin">
+    <output-path>$PROJECT_DIR$/out/artifacts/Clojure</output-path>
+    <root id="root">
+      <element id="directory" name="lib">
+        <element id="archive" name="clojure-intellij-plugin.jar">
+          <element id="directory" name="META-INF">
+            <element id="dir-copy" path="$PROJECT_DIR$/META-INF" />
+          </element>
+          <element id="module-output" name="clojure-plugin" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

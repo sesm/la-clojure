@@ -7,7 +7,7 @@
   </module-components>
 
   <name>La Clojure</name>
-  <id>org.intellij.clojure.redux</id>
+  <id>org.intellij.clojure</id>
   <description>Provides Clojure language support: syntax and error highlighting, completion, navigation and
     refactorings
   </description>
@@ -16,8 +16,10 @@
   <vendor logo="/org/jetbrains/plugins/clojure/icons/clojure_icon_16x16.png" url="http://www.jetbrains.com">JetBrains
     Inc.
   </vendor>
-  <!--<idea-version since-build="SINCE_IDEA" until-build="UNTIL_IDEA"/>-->
-  <idea-version since-build="123.1" until-build="123.9999"/>
+
+  <idea-version since-build="122.578" until-build="122.9999"/>
+
+  <depends optional="true" config-file="copyright.xml">com.intellij.copyright</depends>
 
   <extensions defaultExtensionNs="com.intellij">
     <errorHandler implementation="com.intellij.diagnostic.ITNReporter"/>
@@ -29,10 +31,10 @@
     <lang.parserDefinition language="Clojure" implementationClass="org.jetbrains.plugins.clojure.parser.ClojureParserDefinition"/>
     <lang.foldingBuilder language="Clojure" implementationClass="org.jetbrains.plugins.clojure.ClojureFoldingBuilder"/>
     <lang.psiStructureViewFactory language="Clojure" implementationClass="org.jetbrains.plugins.clojure.structure.ClojureStructureViewBuilderFactory"/>
+    <lang.formatter language="Clojure" implementationClass="org.jetbrains.plugins.clojure.formatter.ClojureFormattingModelBuilder"/>
     <codeStyleSettingsProvider implementation="org.jetbrains.plugins.clojure.formatter.codeStyle.ClojureCodeStyleSettingsProvider"/>
     <lang.findUsagesProvider language="Clojure" implementationClass="org.jetbrains.plugins.clojure.findUsages.ClojureFindUsagesProvider"/>
     <consoleFilterProvider implementation="org.jetbrains.plugins.clojure.runner.console.ClojureConsoleFilterProvider"/>
-    <completion.contributor language="Clojure" implementationClass="org.jetbrains.plugins.clojure.completion.ClojureCompletionContributor"/>
     <compiler.makeDependencyProcessor implementation="org.jetbrains.plugins.clojure.compiler.ClojureDependencyProcessor"/>
     <configurationType implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationType"/>
     <configurationProducer implementation="org.jetbrains.plugins.clojure.runner.ClojureScriptRunConfigurationProducer"/>
@@ -40,6 +42,7 @@
     <renameInputValidator implementation="org.jetbrains.plugins.clojure.refactoring.rename.ClojureRenameInputValidator"/>
     <fileTypeIndentOptionsProvider implementation="org.jetbrains.plugins.clojure.formatter.ClojureIndentOptionsProvider"/>
     <quoteHandler fileType="Clojure" className="org.jetbrains.plugins.clojure.editor.ClojureQuoteHandler"/>
+    <annotator language="Clojure" implementationClass="org.jetbrains.plugins.clojure.annotator.ClojureAnnotator"/>
     <debuggerClassFilterProvider implementation="org.jetbrains.plugins.clojure.debugger.filters.ClojureDebugClassesFilterProvider"/>
     <gotoSymbolContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToSymbolContributor"/>
     <gotoClassContributor implementation="org.jetbrains.plugins.clojure.gotoclass.ClojureGoToClassContributor"/>
@@ -61,6 +64,8 @@
     <!-- <unscrambleSupport implementation="org.jetbrains.plugins.clojure.debugger.ClojureUnscrambler"/> -->
     <compilerSettingsFactory implementation="org.jetbrains.plugins.clojure.compiler.ClojureCompilerSettingsFactory"/>
     <frameworkSupport implementation="org.jetbrains.plugins.clojure.config.ClojureFacetSupportProvider"/>
+    <applicationService serviceInterface="org.jetbrains.plugins.clojure.settings.ClojureApplicationSettings"
+                        serviceImplementation="org.jetbrains.plugins.clojure.settings.ClojureApplicationSettings"/>
 
     <projectService serviceInterface="org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory"
                     serviceImplementation="org.jetbrains.plugins.clojure.psi.util.ClojurePsiElementFactoryImpl"/>
@@ -73,14 +78,10 @@
     <lang.namesValidator language="Clojure"
                          implementationClass="org.jetbrains.plugins.clojure.refactoring.rename.ClojureNameValidator"/>
     <referencesSearch implementation="org.jetbrains.plugins.clojure.findUsages.ClojureReferenceSearcher"/>
+    <lang.documentationProvider language="Clojure"
+                                implementationClass="org.jetbrains.plugins.clojure.documentation.ClojureDocumentationProvider"/>
     <renamePsiElementProcessor
         implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>
-
-    <toolWindow id="REPL" secondary="true" icon="/org/jetbrains/plugins/clojure/icons/clojure_icon_16x16.png"
-                anchor="right" factoryClass="org.jetbrains.plugins.clojure.repl.toolwindow.REPLToolWindowFactory"/>
-    <editorActionHandler action="EditorEnter"
-                         implementationClass="org.jetbrains.plugins.clojure.repl.toolwindow.actions.REPLEnterAction"
-                         order="FIRST"/>
     <debugger.positionManagerFactory implementation="org.jetbrains.plugins.clojure.debugger.ClojurePositionManagerFactory"/>
 
   </extensions>
@@ -92,9 +93,6 @@
     <component>
       <implementation-class>org.jetbrains.plugins.clojure.config.ClojureFacetLoader</implementation-class>
       <interface-class>org.jetbrains.plugins.clojure.config.ClojureFacetLoader</interface-class>
-    </component>
-    <component>
-      <implementation-class>org.jetbrains.plugins.clojure.repl.REPLComponent</implementation-class>
     </component>
   </application-components>
 
@@ -133,7 +131,7 @@
 
       <action id="org.jetbrains.plugins.clojure.repl.actions.LoadClojureFileInConsoleAction"
               class="org.jetbrains.plugins.clojure.repl.actions.LoadClojureFileInConsoleAction"
-              text="Load file in REPL">
+              text="Load file to REPL">
         <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift L"/>
       </action>
 
@@ -156,54 +154,66 @@
       </action>
 
       <add-to-group group-id="ToolsMenu" anchor="last"/>
-      <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+
     </group>
 
     <!-- Structural Editing -->
 
-    <!--<group id="ClojureStructuralEditingActionGroup"-->
-           <!--class="org.jetbrains.plugins.clojure.editor.ClojureEditorActionGroup"-->
-           <!--text="Clojure Editor" description="Clojure" popup="true">-->
+    <group id="ClojureStructuralEditingActionGroup"
+           class="org.jetbrains.plugins.clojure.editor.ClojureEditorActionGroup"
+           text="Clojure Editor" description="Clojure" popup="true">
 
-      <!--<action id="org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"-->
-              <!--class="org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"-->
-              <!--text="Barf Backwards" description="Spit out the first element in the current s-expression">-->
-        <!--<keyboard-shortcut keymap="$default" first-keystroke="meta shift 9"/>-->
-      <!--</action>-->
+      <action id="org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"
+              class="org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"
+              text="Barf Backwards" description="Spit out the first element in the current s-expression">
+        <keyboard-shortcut keymap="$default" first-keystroke="meta shift 9"/>
+      </action>
 
-      <!--<action id="org.jetbrains.plugins.clojure.actions.editor.BarfForwardsAction"-->
-              <!--class="org.jetbrains.plugins.clojure.actions.editor.BarfForwardsAction"-->
-              <!--text="Barf Forwards" description="Spit out the last element in the current s-expression">-->
-        <!--<keyboard-shortcut keymap="$default" first-keystroke="meta shift 0"/>-->
-      <!--</action>-->
+      <action id="org.jetbrains.plugins.clojure.actions.editor.BarfForwardsAction"
+              class="org.jetbrains.plugins.clojure.actions.editor.BarfForwardsAction"
+              text="Barf Forwards" description="Spit out the last element in the current s-expression">
+        <keyboard-shortcut keymap="$default" first-keystroke="meta shift 0"/>
+      </action>
 
-      <!--<add-to-group group-id="EditMenu" anchor="last"/>-->
+      <action id="org.jetbrains.plugins.clojure.actions.editor.SlurpBackwardsAction"
+              class="org.jetbrains.plugins.clojure.actions.editor.SlurpBackwardsAction"
+              text="Slurp Backwards" description="Swallow the element preceeding the current s-expression">
+        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift 9"/>
+      </action>
 
-    <!--</group>-->
+      <action id="org.jetbrains.plugins.clojure.actions.editor.SlurpForwardsAction"
+              class="org.jetbrains.plugins.clojure.actions.editor.SlurpForwardsAction"
+              text="Slurp Forwards" description="Swallow the element following the current s-expression">
+        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift 0"/>
+      </action>
 
-    <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            text="Start Clojure Console"
+      <action id="org.jetbrains.plugins.clojure.actions.editor.SpliceAction"
+              class="org.jetbrains.plugins.clojure.actions.editor.SpliceAction"
+              text="Splice S-Expression" description="Splice the current s-expression into it’s parent">
+        <keyboard-shortcut keymap="$default" first-keystroke="alt meta S"/>
+      </action>
+
+      <add-to-group group-id="EditMenu" anchor="last"/>
+
+    </group>
+
+    <action id="org.jetbrains.plugins.clojure.actions.RunClojureConsoleAction"
+            class="org.jetbrains.plugins.clojure.actions.RunClojureConsoleAction" text="Start Clojure Console"
             description="Runs Clojure REPL">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
+      <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift F10"/>
     </action>
 
-    <action id="Clojure.REPL.Execute.Immediately"
+    <action id="Clojure.Console.Execute"
             class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Execute Current Statement">
-      <keyboard-shortcut keymap="$default" first-keystroke="control ENTER"/>
+            text="Execute Current Clojure Statement">
+      <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
     </action>
 
-    <action id="Clojure.REPL.History.Previous"
+    <action id="Clojure.Console.Execute.Immediately"
             class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Select Previous History Item">
-      <keyboard-shortcut keymap="$default" first-keystroke="control UP"/>
-    </action>
-
-    <action id="Clojure.REPL.History.Next"
-            class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Select Next History Item">
-      <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>
+            text="Execute Current Clojure Statement">
+      <keyboard-shortcut keymap="$default" first-keystroke="shift ENTER"/>
     </action>
 
   </actions>

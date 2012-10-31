@@ -1,6 +1,7 @@
-clojure-intellij-plugin.iws
+.idea/workspace.xml
 out
 dist
 jflex.log
+lib/*SDK
 *~
 logs
