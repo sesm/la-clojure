@@ -30,13 +30,13 @@ public class ClojureCompilerProjectComponent implements ProjectComponent {
     compilerManager.addCompilableFileType(ClojureFileType.CLOJURE_FILE_TYPE);
 
     ClojureCompilerSettings settings = ClojureCompilerSettings.getInstance(myProject);
-    for (ClojureCompiler compiler : CompilerManager.getInstance(myProject).getCompilers(ClojureCompiler.class)) {
-      compilerManager.removeCompiler(compiler);
-    }
-    if (settings.CLOJURE_BEFORE) {
-      Set<FileType> inputSet = new HashSet<FileType>(Arrays.asList(ClojureFileType.CLOJURE_FILE_TYPE, StdFileTypes.JAVA));
-      Set<FileType> outputSet = new HashSet<FileType>(Arrays.asList(StdFileTypes.JAVA, StdFileTypes.CLASS));
-      compilerManager.addTranslatingCompiler(new ClojureCompiler(myProject), inputSet, outputSet);
+    if (settings.getState().CLOJURE_BEFORE) {
+      for (ClojureCompiler compiler : CompilerManager.getInstance(myProject).getCompilers(ClojureCompiler.class)) {
+        CompilerManager.getInstance(myProject).removeCompiler(compiler);
+      }
+      HashSet<FileType> inputSet = new HashSet<FileType>(Arrays.asList(ClojureFileType.CLOJURE_FILE_TYPE, StdFileTypes.JAVA));
+      HashSet<FileType> outputSet = new HashSet<FileType>(Arrays.asList(StdFileTypes.JAVA, StdFileTypes.CLASS));
+      CompilerManager.getInstance(myProject).addTranslatingCompiler(new ClojureCompiler(myProject), inputSet, outputSet);
     } else {
       compilerManager.addTranslatingCompiler(new ClojureCompiler(myProject),
           new HashSet<FileType>(Arrays.asList(ClojureFileType.CLOJURE_FILE_TYPE, StdFileTypes.CLASS)),

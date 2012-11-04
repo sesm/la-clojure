@@ -26,6 +26,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.clojure.build.ClojureBuilder;
+import org.jetbrains.plugins.clojure.config.ClojureFacet;
+import org.jetbrains.plugins.clojure.config.ClojureFacetType;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 
 /**
@@ -38,7 +42,7 @@ public class ClojureUtils
   public static final String CLOJURE_NOTIFICATION_GROUP = "Clojure";
   public static final String CLOJURE_REPL = "clojure.lang.Repl";
   @NonNls
-  public static final String CLOJURE_MAIN = "clojure.main";
+  public static final String CLOJURE_MAIN = ClojureBuilder.CLOJURE_MAIN;
   @NonNls
   public static final String REPL_MAIN = "clojure.tools.nrepl.main";
 

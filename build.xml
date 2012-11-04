@@ -1,12 +1,13 @@
 <project name="Build Clojure plugin for IntelliJ IDEA" default="deploy.plugin">
-  <!-- Properties file -->
-  <property file="clojure.properties"/>
+  <!-- Properties file -->  
+   <property file="clojure.properties"/>
 
   <property name="jdk.home" value="${java.home}"/>
   <property name="project.dir" value="${basedir}"/>
   <property name="src.dir" value="${project.dir}/src"/>
   <property name="project.lib" value="${project.dir}/lib"/>
   <property name="project.dest" value="${project.dir}/out/production/clojure-plugin"/>
+  <property name="jps.dest" value="${project.dir}/out/production/clojure-jps-plugin"/>
   <property name="test.dest" value="${project.dir}/out/test/clojure-plugin"/>
   <property name="test.dist" value="${project.dir}/test_dist"/>
   <property name="main.dist" value="${project.dir}/dist"/>
@@ -97,7 +98,7 @@
     </java>
   </target>
 
-  <target name="make.java">
+  <target name="make.java" depends="make.lexer, unzip.last.successful.IDEA.build">
     <!-- Read SINCE and UNTIL properties -->
     <loadfile property="idea.build" srcFile="${idea.home}/build.txt" failonerror="true"/>
     <!--Copy descriptor-->
@@ -116,12 +117,27 @@
 
     <taskdef name="javac2" classname="com.intellij.ant.Javac2" classpathref="idea.classpath"/>
 
+    <javac2 srcdir="${project.dir}"
+            destdir="${jps.dest}"
+            debug="true">
+      <classpath>
+        <path refid="base.path"/>
+      </classpath>
+      <include name="jps-plugin/src/**/*.java"/>
+    </javac2>
+
+    <copy todir="${jps.dest}/META-INF">
+      <fileset dir="${project.dir}/jps-plugin/src/META-INF"/>
+    </copy>
+
     <!--Compile project Java files-->
     <javac2 srcdir="${project.dir}"
             destdir="${project.dest}"
-            debug="true"
-            includeantruntime="true">
-      <classpath refid="base.path"/>
+            debug="true">
+      <classpath>
+        <path refid="base.path"/>
+        <path path="${jps.dest}"/>
+      </classpath>
       <include name="src/**/*.java"/>
       <include name="src/**/*.form"/>
     </javac2>
@@ -183,6 +199,10 @@
       </manifest>
     </jar>
 
+    <jar destfile="${project.dir}/tempjar/clojure-plugin/lib/clojure-jps-plugin.jar">
+      <fileset dir="${jps.dest}" includes="**/*"/>
+    </jar>
+
     <copy todir="${project.dir}/tempjar/clojure-plugin/lib">
       <fileset dir="${clojure.lib}">
         <include name="clojure-1.4.0.jar"/>
@@ -228,10 +248,6 @@
       </classpath>
       <include name="test/**/*.java"/>
     </javac>
-
-    <!--<copy toDir="${project.lib}/testdata">-->
-    <!--<fileset dir="${base.dir}/testdata"/>-->
-    <!--</copy>-->
 
   </target>
 

@@ -4,12 +4,6 @@
     <facet type="Clojure" name="Clojure">
       <configuration />
     </facet>
-    <facet type="scala" name="Scala">
-      <configuration>
-        <option name="compilerLibraryLevel" value="Project" />
-        <option name="compilerLibraryName" value="scala.sdk" />
-      </configuration>
-    </facet>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
@@ -38,6 +32,7 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="module" module-name="clojure-jps-plugin" />
   </component>
 </module>
 
