@@ -242,7 +242,7 @@
 
 (defn check-keyword-text-consistency [^ClKeyword element ^AnnotationHolder holder]
   (let [text (.getText element)
-        index (.getLastIndexOf text "/")]
+        index (.lastIndexOf text "/")]
     (if (or (and (<= 0 index)
                  (= \: (.charAt text (dec index))))
             (.endsWith text "::")

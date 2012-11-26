@@ -307,6 +307,12 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
           return false;
         }
       }
+
+      // Process all uses and imports
+      if (ImportOwner.processImports(file, processor, place, facade)) {
+        return false;
+      }
+
     }
 
     return true;

@@ -33,6 +33,8 @@ public class ListDeclarations {
   public static final String LOOP = "loop";
   public static final String DECLARE = "declare";
   public static final String FN = "fn";
+  public static final String DEFN = "defn";
+  public static final String DEFN_ = "defn-";
 
   public static final String NS = "ns";
 

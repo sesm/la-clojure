@@ -18,6 +18,7 @@ import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClListLike;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
+import org.jetbrains.plugins.clojure.psi.impl.ImportOwner;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListBaseImpl;
 import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
@@ -87,25 +88,7 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
 
   public static boolean processDeclarations(ClNsImpl namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
     final JavaPsiFacade facade = JavaPsiFacade.getInstance(namespace.getProject());
-    for (PsiElement element : namespace.getChildren()) {
-      if (element instanceof ClList) {
-        ClList directive = (ClList) element;
-        final PsiElement first = directive.getFirstNonLeafElement();
-        if (first == null) {
-          return false;
-        }
-        final String headText = first.getText();
-        if (namespace.processImports(processor, place, facade, directive, headText)) {
-          return false;
-        }
-        if (namespace.processUses(processor, place, facade, directive, headText)) {
-          return false;
-        }
-        if (namespace.processRequires(processor, place, facade, directive, headText)) {
-          return false;
-        }
-      }
-    }
+    if (ImportOwner.processImports(namespace, processor, place, facade)) return false;
     return true;
   }
 
