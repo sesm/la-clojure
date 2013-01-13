@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import static org.jetbrains.plugins.clojure.editor.braceHighlighter.ClojureBraceAttributes.CLOJURE_BRACE_ATTRIBUTES;
+
 /**
  * @author ilyas
  */
@@ -125,7 +127,7 @@ public class ClojureBraceHighlightingHandler {
       while (!iterator.atEnd() && iterator.getEnd() <= endOffset) {
 
         if (ClojureTokenTypes.LEFT_PAREN.equals(iterator.getTokenType())) {
-          final TextAttributes attributes = ClojureBraceAttributes.CLOJURE_BRACE_ATTRIBUTES[level % ClojureBraceAttributes.CLOJURE_BRACE_ATTRIBUTES.length];
+          final TextAttributes attributes = ClojureBraceAttributes.getBraceAttributes(level, scheme.getDefaultBackground());
 
           myColorStack.push(attributes);
           final int start = iterator.getStart();
