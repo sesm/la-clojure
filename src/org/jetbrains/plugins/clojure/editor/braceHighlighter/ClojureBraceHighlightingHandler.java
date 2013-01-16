@@ -32,8 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import static org.jetbrains.plugins.clojure.editor.braceHighlighter.ClojureBraceAttributes.CLOJURE_BRACE_ATTRIBUTES;
-
 /**
  * @author ilyas
  */

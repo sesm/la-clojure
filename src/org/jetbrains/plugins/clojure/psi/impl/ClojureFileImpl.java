@@ -9,35 +9,38 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
+import com.intellij.psi.impl.source.PsiFileImpl;
+import com.intellij.psi.impl.source.tree.LeafPsiElement;
+import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.psi.scope.PsiScopeProcessor;
-import com.intellij.psi.impl.source.tree.LeafPsiElement;
-import com.intellij.psi.impl.source.PsiFileImpl;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.NonNls;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
+import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
-import org.jetbrains.plugins.clojure.psi.impl.symbols.CompleteSymbol;
+import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
+import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
+import org.jetbrains.plugins.clojure.psi.impl.synthetic.ClSyntheticClassImpl;
+import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
+import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
-import org.jetbrains.plugins.clojure.psi.impl.synthetic.ClSyntheticClassImpl;
-import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
-import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
-import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
-import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.repl.REPL;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * User: peter
@@ -403,4 +406,49 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     }
   }
 
+  /*public void addImportForClass(PsiClass clazz) {
+    final String qualifiedName = clazz.getQualifiedName();
+    final ClNs namespaceElement = getNamespaceElement();
+    PsiElement child = getFirstChild();
+    if (namespaceElement != null) {
+      child = namespaceElement.getNextSibling();
+    }
+    final int i = qualifiedName.lastIndexOf('.');
+    if (i == -1) {
+      addNewImportForPath(qualifiedName);
+      return;
+    }
+    final ArrayList<ClList> lists = new ArrayList<ClList>();
+    while (true) {
+      if (child instanceof ClList) {
+        ClList list = (ClList) child;
+        final String name = list.getFirstSymbol().getName();
+        if (name.equals(ListDeclarations.IMPORT)) {
+          lists.add(list);
+        } else {
+          break;
+        }
+      } else if (!isWrongElement(child)) {
+        break;
+      }
+      child = child.getNextSibling();
+    }
+
+    if (lists.isEmpty()) {
+      addNewImportForPath(qualifiedName);
+      return;
+    }
+
+    addNewImportForPath(qualifiedName); //todo: find appropriate import and add it here, then replace import
+  }
+
+  private void addNewImportForPath(String path) {
+    final ClList importList = ClojurePsiFactory.getInstance(getProject()).createListFromText("(import " + path + ")");
+    final ClNs namespaceElement = getNamespaceElement();
+    if (namespaceElement != null) {
+      addAfter(importList, namespaceElement);
+    } else {
+      add(importList);
+    }
+  }*/
 }

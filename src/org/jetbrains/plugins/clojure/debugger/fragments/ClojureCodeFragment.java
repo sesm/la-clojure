@@ -99,4 +99,8 @@ public class ClojureCodeFragment extends ClojureFileImpl implements JavaCodeFrag
   public PsiElement setClassName(@NonNls String s) {
     return null;
   }
+
+  public void addImportForClass(PsiClass clazz) {
+    //todo:
+  }
 }
