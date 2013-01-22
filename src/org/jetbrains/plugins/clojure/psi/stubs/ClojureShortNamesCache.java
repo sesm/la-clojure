@@ -1,27 +1,26 @@
 package org.jetbrains.plugins.clojure.psi.stubs;
 
-import com.intellij.psi.search.PsiShortNamesCache;
-import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.FilenameIndex;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.stubs.StubIndex;
-import com.intellij.util.Processor;
-import com.intellij.util.containers.HashSet;
-import com.intellij.util.containers.ContainerUtil;
-import com.intellij.util.Function;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
-import org.jetbrains.annotations.NotNull;
+import com.intellij.psi.*;
+import com.intellij.psi.search.FilenameIndex;
+import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.PsiShortNamesCache;
+import com.intellij.psi.stubs.StubIndex;
+import com.intellij.util.Function;
+import com.intellij.util.Processor;
+import com.intellij.util.containers.ContainerUtil;
+import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.NonNls;
-import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureClassNameIndex;
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.compiler.ClojureCompilerSettings;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
+import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureClassNameIndex;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 
-import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * @author ilyas
@@ -30,8 +29,25 @@ public class ClojureShortNamesCache extends PsiShortNamesCache {
 
   Project myProject;
 
+  public static ClojureShortNamesCache getInstance(Project project) {
+    return new ClojureShortNamesCache(project);
+  }
+
   public ClojureShortNamesCache(Project project) {
     myProject = project;
+  }
+
+  public ClNs[] getNsByQualifiedName(String qualifiedName, GlobalSearchScope scope) {
+    final Collection<? extends PsiElement> clNses = StubIndex.getInstance().get(ClojureNsNameIndex.KEY, qualifiedName, myProject, scope);
+    ArrayList<ClNs> result = new ArrayList<ClNs>();
+    for (PsiElement clNs : clNses) {
+      if (clNs instanceof ClNs) {
+        if (((ClNs) clNs).getName().equals(qualifiedName)) {
+          result.add((ClNs) clNs);
+        }
+      }
+    }
+    return result.toArray(new ClNs[result.size()]);
   }
 
 
