@@ -18,18 +18,19 @@ import java.util.Set;
 public class SymbolResolveProcessor extends ResolveProcessor implements NameHint {
 
   private final Set<PsiElement> myProcessedElements = new HashSet<PsiElement>();
-  private final boolean onlyJava;
+  private final PsiElement myPlace;
+  private final boolean incompleteCode;
 
-  public SymbolResolveProcessor(String myName, boolean onlyJava) {
-    super(myName);
-    this.onlyJava = onlyJava;
+  public SymbolResolveProcessor(String myName, PsiElement myPlace, boolean incompleteCode, ResolveKind[] kinds) {
+    super(myName, kinds);
+    this.myPlace = myPlace;
+    this.incompleteCode = incompleteCode;
   }
 
 
   public boolean execute(PsiElement element, ResolveState resolveState) {
-    // todo add resolve kinds
-    if (onlyJava && !(element instanceof PsiClass)) return true;
     if (element instanceof PsiNamedElement && !myProcessedElements.contains(element)) {
+      if (!kindMatches((PsiNamedElement) element)) return true;
       PsiNamedElement namedElement = (PsiNamedElement) element;
       boolean isAccessible = isAccessible();
       myCandidates.add(new ClojureResolveResultImpl(namedElement, isAccessible));
