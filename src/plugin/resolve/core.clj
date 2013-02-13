@@ -1,4 +1,5 @@
-(ns plugin.resolve.core)
+(ns plugin.resolve.core
+  (:import (org.jetbrains.plugins.clojure.psi.api ClQuotedForm)))
 
 ;(set! *warn-on-reflection* true)
 
@@ -9,3 +10,8 @@
   (if (satisfies? Resolvable element)
     (process-declarations element processor state last-parent place)
     true))
+
+(extend-type ClQuotedForm
+  Resolvable
+  (process-declarations [this processor state last-parent place]
+    false))

@@ -1,7 +1,7 @@
 (ns plugin.annotator
   (:import (com.intellij.lang.annotation Annotator AnnotationHolder)
            (com.intellij.openapi.diagnostic Logger)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral ClQuotedForm)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
            (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult PsiManager)
@@ -127,6 +127,7 @@
            ;(= parent (.getSecondNonLeafElement grandparent)) TODO - some need third, eg proxy
            ) false
       (local-def? element) false
+      (not (nil? (PsiTreeUtil/getParentOfType element ClQuotedForm))) false
       :else true)))
 
 (defn annotate-list [^ClList element ^AnnotationHolder holder]
