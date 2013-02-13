@@ -10,7 +10,7 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkType;
 import com.intellij.openapi.projectRoots.Sdk;
-import com.intellij.openapi.projectRoots.SdkType;
+import com.intellij.openapi.projectRoots.SdkTypeId;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.roots.ModuleSourceOrderEntry;
 import com.intellij.openapi.roots.OrderEntry;
@@ -54,7 +54,7 @@ public class REPLUtil
 
     Sdk sdk = params.getJdk();
     assert sdk != null;
-    SdkType type = sdk.getSdkType();
+    SdkTypeId type = sdk.getSdkType();
     String executablePath = ((JavaSdkType) type).getVMExecutablePath(sdk);
 
     Map<String, String> envParams = new HashMap<String, String>();

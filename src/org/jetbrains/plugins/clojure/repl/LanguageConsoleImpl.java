@@ -20,9 +20,17 @@ import com.intellij.ide.DataManager;
 import com.intellij.ide.impl.TypeSafeDataProviderAdapter;
 import com.intellij.lang.Language;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.DataKey;
+import com.intellij.openapi.actionSystem.DataSink;
+import com.intellij.openapi.actionSystem.IdeActions;
+import com.intellij.openapi.actionSystem.TypeSafeDataProvider;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.editor.*;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.EditorFactory;
+import com.intellij.openapi.editor.EditorSettings;
+import com.intellij.openapi.editor.ScrollingModel;
 import com.intellij.openapi.editor.actions.EditorActionUtil;
 import com.intellij.openapi.editor.colors.EditorColors;
 import com.intellij.openapi.editor.colors.EditorColorsScheme;
@@ -37,7 +45,12 @@ import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.TextAttributes;
-import com.intellij.openapi.fileEditor.*;
+import com.intellij.openapi.fileEditor.FileEditor;
+import com.intellij.openapi.fileEditor.FileEditorManager;
+import com.intellij.openapi.fileEditor.FileEditorManagerAdapter;
+import com.intellij.openapi.fileEditor.FileEditorManagerListener;
+import com.intellij.openapi.fileEditor.OpenFileDescriptor;
+import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
 import com.intellij.openapi.fileEditor.impl.EditorWindow;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
@@ -242,18 +255,23 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     return myTitle;
   }
 
-  public void printToHistory(String text, TextAttributes attributes)
+  public void printToHistory(final String text, final TextAttributes attributes)
   {
-    text = StringUtil.convertLineSeparators(text);
-    Document history = myHistoryViewer.getDocument();
-    MarkupModel markupModel = DocumentMarkupModel.forDocument(history, myProject, true);
-    int offset = history.getTextLength();
-    appendToHistoryDocument(history, text);
-    markupModel.addRangeHighlighter(offset,
-                                    history.getTextLength(),
-                                    HighlighterLayer.SYNTAX,
-                                    attributes,
-                                    HighlighterTargetArea.EXACT_RANGE);
+    ApplicationManager.getApplication().invokeLater(new Runnable()
+    {
+      public void run()
+      {
+        Document history = myHistoryViewer.getDocument();
+        MarkupModel markupModel = DocumentMarkupModel.forDocument(history, myProject, true);
+        int offset = history.getTextLength();
+        appendToHistoryDocument(history, StringUtil.convertLineSeparators(text));
+        markupModel.addRangeHighlighter(offset,
+                                        history.getTextLength(),
+                                        HighlighterLayer.SYNTAX,
+                                        attributes,
+                                        HighlighterTargetArea.EXACT_RANGE);
+      }
+    });
   }
 
   protected void appendToHistoryDocument(@NotNull Document history, @NotNull String text)

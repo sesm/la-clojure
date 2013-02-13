@@ -99,7 +99,7 @@ public class ClojureProcessREPL extends REPLBase {
     processHandler.startNotify();
 
     SafeFn waitForAck = SafeFn.find(REPLComponent.NREPL_NS, WAIT_FOR_ACK);
-    Integer maybePort = (Integer) waitForAck.sInvoke(Long.valueOf(PROCESS_WAIT_TIME));
+    Number maybePort = (Number) waitForAck.sInvoke(Long.valueOf(PROCESS_WAIT_TIME));
 
     if (maybePort == null) {
       stop();
