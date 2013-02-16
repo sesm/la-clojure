@@ -12,20 +12,20 @@ import org.jetbrains.plugins.clojure.psi.stubs.api.ClFileStub;
  */
 public class ClFileStubImpl extends PsiFileStubImpl<ClojureFile> implements ClFileStub {
   private final StringRef myPackageName;
-  private final StringRef myName;
+  private final StringRef myClassName;
   private final boolean isClassDefinition;
 
   public ClFileStubImpl(ClojureFile file) {
     super(file);
     myPackageName = StringRef.fromString(file.getPackageName());
     isClassDefinition = file.isClassDefiningFile();
-    myName = StringRef.fromString(isClassDefinition ? file.getClassName() : null);
+    myClassName = StringRef.fromString(file.getClassName());
   }
 
   public ClFileStubImpl(StringRef packName, StringRef name, boolean isScript) {
     super(null);
     myPackageName = packName;
-    myName = name;
+    myClassName = name;
     this.isClassDefinition = isScript;
   }
 
@@ -37,8 +37,8 @@ public class ClFileStubImpl extends PsiFileStubImpl<ClojureFile> implements ClFi
     return myPackageName;
   }
 
-  public StringRef getName() {
-    return myName;
+  public StringRef getClassName() {
+    return myClassName;
   }
 
   public boolean isClassDefinition() {
