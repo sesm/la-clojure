@@ -1,6 +1,11 @@
 package org.jetbrains.plugins.clojure.psi.impl.list;
 
 import com.intellij.lang.ASTNode;
+import com.intellij.psi.stubs.EmptyStub;
+import com.intellij.psi.stubs.IStubElementType;
+import com.intellij.psi.stubs.NamedStub;
+import com.intellij.psi.scope.PsiScopeProcessor;
+import com.intellij.psi.ResolveState;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.PsiScopeProcessor;
@@ -12,10 +17,14 @@ import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 /**
  * @author ilyas
 */
-public class ClListImpl extends ClListBaseImpl<NamedStub> implements ClList {
+public class ClListImpl extends ClListBaseImpl<EmptyStub> {
 
   public ClListImpl(ASTNode node) {
     super(node);
+  }
+
+  public ClListImpl(EmptyStub stub, @NotNull IStubElementType nodeType) {
+    super(stub, nodeType);
   }
 
   @Override
