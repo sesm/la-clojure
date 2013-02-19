@@ -13,7 +13,10 @@ import com.intellij.psi.impl.source.PsiFileImpl;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.PsiElementProcessor;
+import com.intellij.psi.stubs.PsiFileStub;
 import com.intellij.psi.stubs.StubElement;
+import com.intellij.psi.stubs.StubTree;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
@@ -22,8 +25,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
+import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
+import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
@@ -41,6 +47,7 @@ import org.jetbrains.plugins.clojure.repl.REPL;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -188,6 +195,31 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     if (context != null) {
       myContext = context;
     }
+  }
+
+  public List<ClDef> getFileDefinitions() {
+    final List<ClDef> result = new ArrayList<ClDef>();
+    StubTree stubTree = getStubTree();
+    if (stubTree != null) {
+      for (StubElement<?> element : stubTree.getPlainList()) {
+        if (element.getStubType() == ClojureElementTypes.DEF || element.getStubType() == ClojureElementTypes.DEFMETHOD) {
+          PsiElement psi = element.getPsi();
+          if (psi instanceof ClDef) {
+            result.add((ClDef) psi);
+          }
+        }
+      }
+    } else {
+      PsiTreeUtil.processElements(this, new PsiElementProcessor() {
+        public boolean execute(@NotNull PsiElement element) {
+          if (element instanceof ClDef) {
+            result.add((ClDef) element);
+          }
+          return true;
+        }
+      });
+    }
+    return result;
   }
 
   public boolean isClassDefiningFile() {

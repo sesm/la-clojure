@@ -8,8 +8,6 @@ import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.stubs.StubIndex;
-import com.intellij.psi.util.PsiElementFilter;
-import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
@@ -50,19 +48,9 @@ public class NamespaceUtil {
       if (nsFqn.equals(ns.getName())) {
         final PsiFile file = ns.getContainingFile();
         if (file instanceof ClojureFile) {
-          ClojureFile clf = (ClojureFile) file;
-          final PsiElement[] elems = PsiTreeUtil.collectElements(clf, new PsiElementFilter() {
-            public boolean isAccepted(PsiElement element) {
-              return element instanceof ClDef;
-            }
-          });
-
-          for (PsiElement elem : elems) {
-            if (elem instanceof PsiNamedElement) {
-              String name = ((PsiNamedElement) elem).getName();
-              if (name != null && name.length() > 0 && suitsByPosition(((PsiNamedElement) elem), ns)) {
-                result.add(((PsiNamedElement) elem));
-              }
+          for (ClDef elem : ((ClojureFile) file).getFileDefinitions()) {
+            if (StringUtil.isNotEmpty(elem.getName()) && ns.getTextOffset() < elem.getTextOffset()) {
+              result.add(elem);
             }
           }
         }
@@ -93,13 +81,6 @@ public class NamespaceUtil {
       }
     }
     return ret;
-  }
-
-  private static boolean suitsByPosition(PsiNamedElement candidate, ClNs ns) {
-    final Trinity<PsiElement, PsiElement, PsiElement> tr = ClojurePsiUtil.findCommonParentAndLastChildren(ns, candidate);
-    final PsiElement nsParent = tr.getSecond();
-    final PsiElement candParent = tr.getThird();
-    return ClojurePsiUtil.lessThan(nsParent, candParent);
   }
 
   public static ClSyntheticNamespace[] getTopLevelNamespaces(@NotNull Project project) {
