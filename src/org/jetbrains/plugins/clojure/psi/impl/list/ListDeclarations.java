@@ -1,17 +1,18 @@
 package org.jetbrains.plugins.clojure.psi.impl.list;
 
-import com.intellij.openapi.project.Project;
-import com.intellij.psi.*;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiNamedElement;
+import com.intellij.psi.ResolveResult;
+import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.PsiScopeProcessor;
-import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
-import org.jetbrains.plugins.clojure.psi.api.ClQuotedForm;
 import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
+import org.jetbrains.plugins.clojure.psi.impl.ImportOwner;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.impl.symbols.ClSymbolImpl;
@@ -59,7 +60,10 @@ public class ListDeclarations {
                             ClList list,
                             @Nullable String headText) {
     if (headText == null) return true;
-    if (headText.equals(IMPORT)) return processImportDeclaration(processor, list, place);
+    if (headText.equals(FN)) return processFnDeclaration(processor, list, place, lastParent);
+    if (headText.equals(IMPORT)) return ImportOwner.processImports(processor, place, list, headText);
+    if (headText.equals(USE)) return ImportOwner.processUses(processor, place, list, headText);
+    if (headText.equals(REQUIRE)) return ImportOwner.processRequires(processor, place, list, headText);
     if (headText.equals(MEMFN)) return processMemFnDeclaration(processor, list, place);
     if (headText.equals(DOT)) return processDotDeclaration(processor, list, place, lastParent);
     if (headText.equals(LOOP)) return processLoopDeclaration(processor, list, place, lastParent);
@@ -171,64 +175,40 @@ public class ListDeclarations {
     return true;
   }
 
-  private static boolean processImportDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
-    final PsiElement[] children = list.getChildren();
-    final Project project = list.getProject();
-    final JavaPsiFacade facade = JavaPsiFacade.getInstance(project);
 
-    for (PsiElement child : children) {
-      if (child instanceof ClSymbol) {
-        ClSymbol symbol = (ClSymbol) child;
-        final String symbolName = symbol.getNameString();
-        final PsiClass clazz = facade.findClass(symbolName, GlobalSearchScope.allScope(project));
-        if (clazz != null && !ResolveUtil.processElement(processor, clazz)) {
-          return false;
-        }
-      } else if (child instanceof ClQuotedForm) {
-        // process import of form (import '(java.util List Set))
-        ClQuotedForm quotedForm = (ClQuotedForm) child;
-        final ClojurePsiElement element = quotedForm.getQuotedElement();
-        if (element instanceof ClList) {
-          if (processImportList(((ClList) element), processor, place, facade)) return false;
+  private static boolean processLetDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
+    if (PsiTreeUtil.findCommonParent(place, list) == list) {
+      final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
+      if (paramVector != null) {
+        for (ClSymbol symbol : paramVector.getOddSymbols()) {
+          if (!ResolveUtil.processElement(processor, symbol)) return false;
         }
       }
+      return true;
     }
     return true;
   }
 
+  private static boolean processFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
+    final PsiElement second = list.getSecondNonLeafElement();
+    if ((second instanceof ClSymbol) && place != second && !ResolveUtil.processElement(processor, ((ClSymbol) second)))
+      return false;
 
-  private static boolean processImportList(ClList importList, PsiScopeProcessor processor, PsiElement place, JavaPsiFacade facade) {
-    final PsiElement first = importList.getFirstNonLeafElement();
-    if (first instanceof ClSymbol) {
-      final ClSymbol packSym = (ClSymbol) first;
+    if (PsiTreeUtil.findCommonParent(place, list) == list) {
+      ClVector paramVector = list.findFirstChildByClass(ClVector.class);
+      if (paramVector == null && lastParent instanceof ClList) {
+        paramVector = ((ClList) lastParent).findFirstChildByClass(ClVector.class);
+      }
 
-      final PsiPackage pack = facade.findPackage(packSym.getNameString());
-      if (pack != null) {
-        if (place.getParent() == importList && place != packSym) {
-          pack.processDeclarations(processor, ResolveState.initial(), null, place);
-        } else {
-          PsiElement next = packSym.getNextSibling();
-          while (next != null) {
-            if (next instanceof ClSymbol) {
-              ClSymbol clazzSym = (ClSymbol) next;
-              final PsiClass clazz = facade.findClass(pack.getQualifiedName() + "." + clazzSym.getNameString(),
-                  GlobalSearchScope.allScope(importList.getProject()));
-              if (clazz != null) {
-                if (!ResolveUtil.processElement(processor, clazz)) return false;
-                for (PsiMethod method : clazz.getAllMethods()) {
-                  if (!ResolveUtil.processElement(processor, method)) return false;
-                }
-                for (PsiField field : clazz.getAllFields()) {
-                  if (!ResolveUtil.processElement(processor, field)) return false;
-                }
-              }
-            }
-            next = next.getNextSibling();
-          }
+      if (paramVector != null) {
+        for (ClSymbol symbol : paramVector.getAllSymbols()) {
+          if (!ResolveUtil.processElement(processor, symbol)) return false;
         }
       }
+      return true;
     }
-    return false;
+    return true;
+
   }
 
   public static boolean isLocal(PsiElement element) {
