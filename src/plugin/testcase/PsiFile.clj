@@ -8,7 +8,7 @@
                         [doTest [] void]]
               :exposes-methods {createFile superCreateFile})
   (:import [com.intellij.testFramework PsiTestCase]
-           (com.intellij.openapi.vfs JarFileSystem LocalFileSystem)))
+           (com.intellij.openapi.vfs JarFileSystem LocalFileSystem VirtualFile)))
 
 (defn test-init [test-fn]
   [[] (atom {:test test-fn})])
@@ -21,7 +21,7 @@
        (fn []
          (let [lib-dir (.findFileByPath (LocalFileSystem/getInstance)
                                         (str (System/getProperty "plugin.path") "/lib"))
-               clojure-lib (first (filter #(.startsWith (.getName %) "clojure-")
+               clojure-lib (first (filter #(.startsWith (.getName ^VirtualFile %) "clojure-")
                                           (seq (.getChildren lib-dir))))
                clojure-fs (.getJarRootForLocalFile (JarFileSystem/getInstance) clojure-lib)
                core-file (.findFileByRelativePath clojure-fs "clojure/core.clj")]

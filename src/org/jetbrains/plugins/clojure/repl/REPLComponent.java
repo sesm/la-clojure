@@ -13,6 +13,7 @@ import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.net.ServerSocket;
 import java.util.List;
 
@@ -50,13 +51,21 @@ public class REPLComponent implements ApplicationComponent
     {
       Thread.currentThread().setContextClassLoader(loader);
 
-      Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader));
+      StringWriter writer = new StringWriter();
+
+      Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader,
+                                    RT.var("clojure.core", "*warn-on-reflection*"), true,
+                                    RT.ERR, writer));
+
       RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(NREPL_NS_SYMBOL);
       replServerSocket = (ServerSocket) ((List<?>) Var.find(START_SERVER).invoke()).get(0);
       logger.info(ClojureBundle.message("started.local.repl", Integer.valueOf(replServerSocket.getLocalPort())));
 
       RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(INITIALISE_NS_SYMBOL);
       Var.find(INITIALISE).invoke();
+
+      String result = writer.toString();
+      logger.error("Reflection warnings:\n" + result);
     }
     catch (Exception e)
     {
@@ -64,6 +73,7 @@ public class REPLComponent implements ApplicationComponent
     }
     finally
     {
+      Var.popThreadBindings();
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }

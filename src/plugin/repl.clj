@@ -2,21 +2,22 @@
   (:import (org.jetbrains.plugins.clojure.repl.toolwindow.actions NewConsoleActionBase)
            (org.jetbrains.plugins.clojure.repl REPLProviderBase Response)
            (org.jetbrains.plugins.clojure.repl.impl REPLBase)
-           (com.intellij.openapi.actionSystem ActionManager)
+           (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup)
            (java.io Writer PrintWriter StringReader)
-           (clojure.lang LineNumberingPushbackReader)))
+           (clojure.lang LineNumberingPushbackReader)
+           (com.intellij.openapi.diagnostic Logger)))
 
-(defn create-repl-out [buffer]
+(defn ^PrintWriter create-repl-out [buffer]
   (PrintWriter.
     (proxy [Writer] []
       (close []
-        (.flush this))
+        (.flush ^Writer this))
       (write [& [x off len]]
         (locking buffer
           (cond
-            (number? x) (swap! buffer #(.append #^StringBuilder % (char x)))
-            (not off) (swap! buffer #(.append #^StringBuilder % x))
-            off (swap! buffer #(.append #^StringBuilder % x off len)))))
+            (number? x) (swap! buffer #(.append ^StringBuilder % (char x)))
+            (not off) (swap! buffer #(.append ^StringBuilder % x))
+            off (swap! buffer #(.append ^StringBuilder % (str x off len))))))
       (flush []))))
 
 (defn ide-execute [client-state code]
@@ -107,4 +108,4 @@
         presentation (.getTemplatePresentation action)]
     (.setText presentation "Start IDE Clojure Console")
     (.registerAction manager "NewIDERepl" action)
-    (.add tools-menu action)))
+    (.add ^DefaultActionGroup tools-menu action)))

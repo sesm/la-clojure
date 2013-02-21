@@ -4,7 +4,7 @@
            (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral ClQuotedForm)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (com.intellij.openapi.editor.colors CodeInsightColors)
-           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult PsiManager)
+           (com.intellij.psi PsiClass PsiElement PsiFile PsiWhiteSpace PsiComment ResolveResult PsiManager PsiReference)
            (org.jetbrains.plugins.clojure.psi.resolve ClojureResolveResult)
            (org.jetbrains.plugins.clojure.highlighter ClojureSyntaxHighlighter)
            (com.intellij.codeInsight.intention IntentionAction)
@@ -78,7 +78,7 @@
       (nil? grand-parent) false
       (and (instance? ClList grand-parent)
            (instance? ClVector parent)
-           (local-bindings (.getHeadText grand-parent))
+           (local-bindings (.getHeadText ^ClList grand-parent))
            (even? (psi/significant-offset current))) true
       :else (recur parent grand-parent (.getParent grand-parent)))))
 
@@ -97,7 +97,7 @@
       (nil? grandparent) false
       (and (instance? ClList grandparent)
            (instance? ClVector parent)
-           (let [head-text (.getHeadText grandparent)
+           (let [head-text (.getHeadText ^ClList grandparent)
                  offset (psi/significant-offset parent)
                  children (psi/significant-children grandparent)]
              (or (and (= "fn" head-text)
@@ -107,7 +107,7 @@
                  (if-let [great-grandparent (.getParent grandparent)]
                    (and (instance? ClList great-grandparent)
                         (= 0 (psi/significant-offset parent))
-                        (defn-names (.getHeadText great-grandparent))))))) true
+                        (defn-names (.getHeadText ^ClList great-grandparent))))))) true
       :else (recur parent grandparent (.getParent grandparent)))))
 
 (defn should-resolve? [^ClSymbol element]
@@ -176,7 +176,7 @@
                           (isAccessible [class reference] true)
                           (createAddImportAction [classes project editor]
                             (proxy [AddImportAction] [project element editor classes]
-                              (bindReference [ref targetClass]
+                              (bindReference [^PsiReference ref targetClass]
                                 (.bindToElement ref targetClass)
                                 (.dropResolveCaches (.getManager element))
                                 (.restart (DaemonCodeAnalyzer/getInstance project)

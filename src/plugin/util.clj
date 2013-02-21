@@ -6,7 +6,7 @@
            (java.lang.reflect InvocationTargetException)
            (com.intellij.openapi.project ProjectManager)
            (com.intellij.openapi.vfs VirtualFileManager)
-           (com.intellij.openapi.fileEditor FileEditorManager)
+           (com.intellij.openapi.fileEditor FileEditorManager FileEditor TextEditor)
            (com.intellij.psi PsiManager PsiFileFactory)
            (com.intellij.psi.util PsiUtilBase)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
@@ -53,12 +53,12 @@
        (throw e#))))
 
 
-(defn project-manager [] (ProjectManager/getInstance))
-(defn file-manager [] (VirtualFileManager/getInstance))
-(defn editor-manager [project] (FileEditorManager/getInstance project))
+(defn ^ProjectManager project-manager [] (ProjectManager/getInstance))
+(defn ^VirtualFileManager file-manager [] (VirtualFileManager/getInstance))
+(defn ^FileEditorManager editor-manager [project] (FileEditorManager/getInstance project))
 
 (defn open-projects [] (seq (.getOpenProjects (project-manager))))
-(defn psi-manager [project] (PsiManager/getInstance project))
+(defn ^PsiManager psi-manager [project] (PsiManager/getInstance project))
 
 (defn find-file [url] (.findFileByUrl (file-manager) url))
 (defn psi-file [vfile project] (.findFile (psi-manager project) vfile))
@@ -66,13 +66,15 @@
 (defn all-editors [project] (.getAllEditors (editor-manager project)))
 
 ; Mostly useful in the REPL
-(defn make-file [text]
-  (.createFileFromText (PsiFileFactory/getInstance (first (open-projects)))
-                       "dummy-file.clj"
-                       text))
+(defn make-file [^String text]
+  (let [file-factory (PsiFileFactory/getInstance (first (open-projects)))]
+    (.createFileFromText file-factory
+                         "dummy-file.clj"
+                         text)))
 
 (defn element []
-  (let [editor (.getEditor (first (all-editors (first (open-projects)))))]
+  (let [^TextEditor file-editor (first (all-editors (first (open-projects))))
+        editor (.getEditor file-editor)]
     (let [element (PsiUtilBase/getElementAtCaret editor)]
       (if (instance? LeafPsiElement element)
         (.getParent element)

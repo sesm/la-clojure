@@ -67,12 +67,12 @@
 
 (defn tree-seq [^PsiElement element]
   (clojure.core/tree-seq
-    (fn [element] (if (.getFirstChild element) true false))
-    (fn [element] (children element))
+    (fn [^PsiElement element] (if (.getFirstChild element) true false))
+    (fn [^PsiElement element] (children element))
     element))
 
 (defn significant-tree-seq [^PsiElement element]
   (clojure.core/tree-seq
-    (fn [element] (if (.getFirstChild element) true false))
-    (fn [element] (significant-children element))
+    (fn [^PsiElement element] (if (.getFirstChild element) true false))
+    (fn [^PsiElement element] (significant-children element))
     element))

@@ -58,7 +58,7 @@
         (let [children (psi/significant-children after-name)
               head (first children)]
           (if (and (instance? ClSymbol head)
-                   (= "fn" (.getText head)))
+                   (= "fn" (.getText ^ClSymbol head)))
             (let [params (drop-if #(instance? ClSymbol %)
                                   (rest children))]
               (if (instance? ClVector (first params))
@@ -74,7 +74,7 @@
                     namespace "/" name
                     "</b><br/>"
                     (if param-lists
-                      (apply str (map #(str (.getText %) "<br/>") param-lists))
+                      (apply str (map #(str (.getText ^PsiElement %) "<br/>") param-lists))
                       "")
                     "<br/>")
         name-symbol (.getNameSymbol element)
@@ -91,9 +91,10 @@
     (instance? ClDef element) (get-defn-doc element)
     ; TODO formatting bug with let here
     (and (instance? ClSymbol element)
-         (instance? ClDef (.getParent element))) (let [^ClDef parent (.getParent element)]
-                                                       (if (= element (.getNameSymbol parent))
-                                                         (get-defn-doc parent)))))
+         (instance? ClDef (.getParent ^ClSymbol element)))
+    (let [^ClDef parent (.getParent ^ClSymbol element)]
+      (if (= element (.getNameSymbol parent))
+        (get-defn-doc parent)))))
 
 (defn initialise []
   (.addExplicitExtension

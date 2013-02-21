@@ -53,7 +53,8 @@ public class ClojureLoader implements ApplicationComponent {
 
             application.invokeLater(new Runnable() {
               public void run() {
-                Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader));
+                Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader,
+                                              RT.var("clojure.core", "*warn-on-reflection*"), true));
               }
             });
           }

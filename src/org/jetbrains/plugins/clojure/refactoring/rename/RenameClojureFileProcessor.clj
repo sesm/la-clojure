@@ -6,7 +6,9 @@
     :init init)
 
   (:import [org.jetbrains.plugins.clojure.psi.api ClojureFile]
-           [com.intellij.openapi.util.text StringUtil]))
+           [com.intellij.openapi.util.text StringUtil]
+           (com.intellij.refactoring.rename RenamePsiElementProcessor)
+           (com.intellij.psi PsiElement)))
 
 ; :init functions (-init in this case) are unusual, in that they always return a
 ; vector, the first element of which is a vector of arguments for the superclass
@@ -22,7 +24,7 @@
   (let [ns (.getNamespace elem)
         prefix (.getNamespacePrefix elem)]
     (do
-      (.superRenameElement this elem newName usages listener)
+      (.superRenameElement ^RenamePsiElementProcessor this elem newName usages listener)
       (if (not (nil? ns))
         (.setNamespace elem (str prefix "." (StringUtil/trimEnd newName ".clj")))))))
 
