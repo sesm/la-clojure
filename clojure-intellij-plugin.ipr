@@ -17,6 +17,7 @@
   <component name="ClojureCompilerSettings">
     <option name="COMPILE_CLOJURE" value="true" />
     <option name="CLOJURE_BEFORE" value="false" />
+    <option name="COPY_CLJ_SOURCES" value="true" />
   </component>
   <component name="CodeStyleSettingsManager">
     <option name="PER_PROJECT_SETTINGS">
@@ -112,6 +113,10 @@
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false" />
   <component name="EntryPointsManager">
     <entry_points version="2.0" />
+  </component>
+  <component name="ExportToHTMLSettings">
+    <option name="printScope" value="2" />
+    <option name="OUTPUT_DIRECTORY" value="$USER_HOME$/" />
   </component>
   <component name="HighlightingAdvisor">
     <option name="SUGGEST_TYPE_AWARE_HIGHLIGHTING" value="false" />

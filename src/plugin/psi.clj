@@ -1,9 +1,12 @@
 (ns plugin.psi
   (:refer-clojure :exclude [contains? descendants tree-seq])
   (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata)
-           (com.intellij.psi PsiElement PsiComment PsiWhiteSpace)
+           (com.intellij.psi PsiElement PsiComment PsiWhiteSpace SmartPointerManager PsiDocumentManager
+                             SmartPsiElementPointer)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
-           (com.intellij.psi.util PsiTreeUtil)))
+           (com.intellij.psi.util PsiTreeUtil)
+           (com.intellij.psi.codeStyle CodeStyleManager)
+           (clojure.lang IDeref)))
 
 (defn visible?
   "Visible elements are any real program elements - non-leaf,
@@ -52,7 +55,11 @@
   (filter significant? (children element)))
 
 (defn significant-offset [element]
-  (count (filter significant? (prev-siblings element))) )
+  (count (filter significant? (prev-siblings element))))
+
+; TODO make this inline, replace usages
+(defn parent [element]
+  (.getParent element))
 
 (defn common-parent [first second]
   (PsiTreeUtil/findCommonParent first second))
@@ -76,3 +83,16 @@
     (fn [^PsiElement element] (if (.getFirstChild element) true false))
     (fn [^PsiElement element] (significant-children element))
     element))
+
+(defn smart-ptr [element]
+  (let [^SmartPointerManager ptr-manager (SmartPointerManager/getInstance (.getProject element))
+        ^SmartPsiElementPointer ptr (.createSmartPsiElementPointer ptr-manager element)]
+    (reify IDeref
+      (deref [this]
+        (.getElement ptr)))))
+
+(defn commit-all [project]
+  (.commitAllDocuments (PsiDocumentManager/getInstance project)))
+
+(defn reformat [element]
+  (.reformat (CodeStyleManager/getInstance (.getProject element)) element))

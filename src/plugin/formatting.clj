@@ -141,6 +141,7 @@
                   :deftype         2,
                   :defprotocol     1,
                   :extend-type     1,
+                  :extend-protocol 1,
                   :reify           1,
                   :proxy           2,
                   :assoc           1,
@@ -174,7 +175,7 @@
               list-like?
               symbol-head?
               (list-like-parent?
-                (head-text-in? "defrecord" "extend-type" "reify" "deftype" "proxy"))) (application-params 1)
+                (head-text-in? "defrecord" "extend-type" "extend-protocol" "reify" "deftype" "proxy"))) (application-params 1)
     (matches? node
               list-like?
               symbol-head?
