@@ -2,7 +2,7 @@
   (:require plugin.formatting
             plugin.typing
             plugin.annotator
-            plugin.repl
+            plugin.repl.ide
             plugin.resolve.core
             plugin.resolve.lists
             plugin.resolve.files
@@ -14,6 +14,6 @@
   (plugin.formatting/initialise)
   (plugin.typing/initialise)
   (plugin.annotator/initialise)
-  (plugin.repl/initialise)
+  (plugin.repl.ide/initialise)
   (plugin.documentation/initialise)
   (plugin.actions.paredit/initialise))
