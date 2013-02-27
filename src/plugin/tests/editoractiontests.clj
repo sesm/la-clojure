@@ -1,6 +1,6 @@
 (ns plugin.tests.editoractiontests
   (:use [clojure.test :only [deftest is]])
-  (:require plugin.test))
+  (:require [plugin.test :as test]))
 
 ;(deftest barf-backwards-tests
 ;  (is (editor-action-result? "org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"
@@ -18,7 +18,11 @@
                              "(foo (bar baz<caret> quux) zot)"))
   (is (editor-action-result? "plugin.actions.paredit.slurp-backwards"
                              "(a b ((c<caret> d)) e f)"
-                             "(a (b (c<caret> d)) e f)")))
+                             "(a (b (c<caret> d)) e f)"))
+  (is (editor-action-result? "plugin.actions.paredit.slurp-backwards"
+                             (test/lines "(a"
+                                         " (<caret>b c))")
+                             "((a <caret>b c))")))
 
 (deftest slurp-forwards-tests
   (is (editor-action-result? "plugin.actions.paredit.slurp-forwards"
@@ -26,7 +30,11 @@
                              "(foo (bar <caret>baz quux) zot)"))
   (is (editor-action-result? "plugin.actions.paredit.slurp-forwards"
                              "(a b ((c<caret> d)) e f)"
-                             "(a b ((c<caret> d) e) f)")))
+                             "(a b ((c<caret> d) e) f)"))
+  (is (editor-action-result? "plugin.actions.paredit.slurp-forwards"
+                             (test/lines "((a b<caret>)"
+                                         " c)")
+                             "((a b<caret> c))")))
 
 (deftest splice-tests
   (is (editor-action-result? "plugin.actions.paredit.splice"

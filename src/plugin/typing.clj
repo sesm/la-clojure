@@ -11,8 +11,10 @@
            (com.intellij.psi.tree TokenSet)
            (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
            (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes))
-  (:use [plugin.util :only [safely with-command]]
-        [plugin.tokens]))
+  (:use [plugin.util :only [safely with-command]])
+  (:require [plugin.psi :as psi]
+            [plugin.editor :as editor]
+            [plugin.tokens :as tokens]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -20,65 +22,38 @@
 
 (defn not-nil? [x] (not (nil? x)))
 
-(defn offset [^Editor editor]
-  (.getOffset (.getCaretModel editor)))
-
-(defn ^HighlighterIterator highlighter-iterator [^EditorEx editor offset]
-  (.createIterator (.getHighlighter editor) offset))
-
-(defn looking-at [^HighlighterIterator highlighter predicate]
-  (and (not (.atEnd highlighter))
-       (predicate (.getTokenType highlighter))))
-
-(defn looking-back-at [^HighlighterIterator highlighter predicate offset]
-  (if (or (.atEnd highlighter)
-          (= offset (.getStart highlighter)))
-    (do
-      (.retreat highlighter)
-      (let [result (and (not (.atEnd highlighter))
-                        (predicate (.getTokenType highlighter)))]
-        (.advance highlighter)
-        result))
-    (looking-at highlighter predicate)))
-
 (defn inside-string? [^Editor editor]
-  (let [offset (offset editor)
-        highlighter (highlighter-iterator editor offset)]
-    (and (looking-at highlighter strings)
+  (let [offset (editor/offset editor)
+        highlighter (editor/highlighter-iterator editor offset)]
+    (and (editor/looking-at highlighter tokens/strings)
          (< (.getStart highlighter) offset (.getEnd highlighter)))))
 
 (defn inside-comment? [editor]
-  (let [offset (offset editor)
-        highlighter (highlighter-iterator editor offset)]
-    (or (and (looking-at highlighter comments)
+  (let [offset (editor/offset editor)
+        highlighter (editor/highlighter-iterator editor offset)]
+    (or (and (editor/looking-at highlighter tokens/comments)
              (< (.getStart highlighter) offset (.getEnd highlighter)))
         (if (and (> offset 0)
                  (= offset (.getStart highlighter)))
           (do
             (.retreat highlighter)
-            (comments (.getTokenType highlighter)))
+            (tokens/comments (.getTokenType highlighter)))
           false))))
-
-(defn insert [editor string]
-  (EditorModificationUtil/insertStringAtCaret editor string false true))
-
-(defn insert-after [editor string]
-  (EditorModificationUtil/insertStringAtCaret editor string false false))
 
 (def matching-char {\( \), \[ \], \{ \}, \" \"})
 
 (def matching-type {\) ClList, \] ClVector, \} ClMap})
 
 (defn ^PsiElement find-enclosing [^Editor editor type]
-  (loop [psi (PsiUtilBase/getElementAtCaret editor)]
+  (loop [element (PsiUtilBase/getElementAtCaret editor)]
     (cond
-      (nil? psi) nil
-      (and (instance? type psi)
-           (> (offset editor) (.getStartOffset (.getTextRange psi)))) psi
-      :else (recur (.getParent psi)))))
+      (nil? element) nil
+      (and (instance? type element)
+           (> (editor/offset editor) (psi/start-offset element))) element
+      :else (recur (psi/parent element)))))
 
 (defn open-matched [^Editor editor char-typed]
-  (let [offset (offset editor)
+  (let [offset (editor/offset editor)
         selection-model (.getSelectionModel editor)
         start (if (.hasSelection selection-model)
                 (.getSelectionStart selection-model)
@@ -86,33 +61,33 @@
         end (if (.hasSelection selection-model)
               (.getSelectionEnd selection-model)
               offset)
-        needs-whitespace-before (looking-back-at (highlighter-iterator editor start)
-                                                 (fn [token]
-                                                   (not (or (whitespace token)
-                                                            (opening-braces token)
-                                                            (modifiers token))))
-                                                 start)
-        needs-whitespace-after (looking-at (highlighter-iterator editor end)
-                                           (fn [token]
-                                             (not (or (whitespace token)
-                                                      (closing-braces token)))))]
-    (if needs-whitespace-before (insert editor " "))
-    (insert editor (str char-typed))
-    (if needs-whitespace-after (insert-after editor " "))
-    (insert-after editor (str (matching-char char-typed)))))
+        needs-whitespace-before (editor/looking-back-at (editor/highlighter-iterator editor start)
+                                                        (fn [token]
+                                                          (not (or (tokens/whitespace token)
+                                                                   (tokens/opening-braces token)
+                                                                   (tokens/modifiers token))))
+                                                        start)
+        needs-whitespace-after (editor/looking-at (editor/highlighter-iterator editor end)
+                                                  (fn [token]
+                                                    (not (or (tokens/whitespace token)
+                                                             (tokens/closing-braces token)))))]
+    (if needs-whitespace-before (editor/insert editor " "))
+    (editor/insert editor (str char-typed))
+    (if needs-whitespace-after (editor/insert-after editor " "))
+    (editor/insert-after editor (str (matching-char char-typed)))))
 
 (defn close-matched [^Editor editor char-typed]
   (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
-    (let [offset (.getEndOffset (.getTextRange enclosing))
-          highlighter (highlighter-iterator editor offset)]
-      (.moveToOffset (.getCaretModel editor) offset)
+    (let [offset (psi/end-offset enclosing)
+          highlighter (editor/highlighter-iterator editor offset)]
+      (editor/move-to editor offset)
       (if (= offset (.getStart highlighter))
         (.retreat highlighter))
       (.retreat highlighter)
-      (if (looking-at highlighter whitespace)
-        (.deleteString (.getDocument editor)
-                       (.getStart highlighter)
-                       (.getEnd highlighter))))))
+      (if (editor/looking-at highlighter tokens/whitespace)
+        (editor/delete-string editor
+                              (.getStart highlighter)
+                              (.getEnd highlighter))))))
 
 (defn process-key [project ^Editor editor psi-file char-typed]
   (with-command
@@ -124,12 +99,12 @@
       (if (or is-string is-comment)
         (if (and is-string (= char-typed \"))
           (let [string (PsiUtilBase/getElementAtCaret editor)
-                offset (offset editor)
-                end-offset (.getEndOffset (.getTextRange string))]
+                offset (editor/offset editor)
+                end-offset (psi/end-offset string)]
             (if (= offset (dec end-offset))
-              (.moveToOffset (.getCaretModel editor) end-offset)
-              (insert editor "\\\"")))
-          (insert editor (str char-typed)))
+              (editor/move-to editor end-offset)
+              (editor/insert editor "\\\"")))
+          (editor/insert editor (str char-typed)))
         (if (contains? #{\( \[ \{ \"} char-typed)
           (open-matched editor char-typed)
           (close-matched editor char-typed))))))

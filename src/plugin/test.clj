@@ -12,6 +12,8 @@
            (org.jetbrains.plugins.clojure.psi.api ClojureFile)
            (com.intellij.psi.stubs StubTree)))
 
+(defn lines [& strings]
+  (str/join "\n" strings))
 
 (defn invoke-action [action-id params]
   (let [action-manager (ActionManager/getInstance)

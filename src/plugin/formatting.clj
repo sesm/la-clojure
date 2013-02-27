@@ -154,6 +154,7 @@
                   :when            1,
                   :when-not        1,
                   :doseq           1,
+                  :while           1,
                   :dotimes         1,
                   :catch           2,
                   :locking         1,

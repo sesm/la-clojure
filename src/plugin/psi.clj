@@ -4,6 +4,7 @@
            (com.intellij.psi PsiElement PsiComment PsiWhiteSpace SmartPointerManager PsiDocumentManager
                              SmartPsiElementPointer)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
+           (com.intellij.openapi.editor Editor)
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.psi.codeStyle CodeStyleManager)
            (clojure.lang IDeref)))
@@ -23,7 +24,7 @@
   (and (visible? element)
        (not (instance? ClMetadata element))))
 
-(defn next-siblings
+(defn ^PsiElement next-siblings
   "Lazy sequence of the following siblings of element"
   [^PsiElement element]
   (lazy-seq
@@ -58,7 +59,7 @@
   (count (filter significant? (prev-siblings element))))
 
 ; TODO make this inline, replace usages
-(defn parent [element]
+(defn ^PsiElement parent [^PsiElement element]
   (.getParent element))
 
 (defn common-parent [first second]
@@ -84,15 +85,25 @@
     (fn [^PsiElement element] (significant-children element))
     element))
 
-(defn smart-ptr [element]
+(defn smart-ptr [^PsiElement element]
   (let [^SmartPointerManager ptr-manager (SmartPointerManager/getInstance (.getProject element))
         ^SmartPsiElementPointer ptr (.createSmartPsiElementPointer ptr-manager element)]
     (reify IDeref
       (deref [this]
         (.getElement ptr)))))
 
-(defn commit-all [project]
-  (.commitAllDocuments (PsiDocumentManager/getInstance project)))
+(defn commit-document [^Editor editor]
+  (let [project (.getProject editor)
+        manager (PsiDocumentManager/getInstance project)
+        document (.getDocument editor)]
+    (.commitDocument manager document)
+    (.doPostponedOperationsAndUnblockDocument manager document)))
 
-(defn reformat [element]
+(defn reformat [^PsiElement element]
   (.reformat (CodeStyleManager/getInstance (.getProject element)) element))
+
+(defn start-offset [^PsiElement element]
+  (.getStartOffset (.getTextRange element)))
+
+(defn end-offset [^PsiElement element]
+  (.getEndOffset (.getTextRange element)))

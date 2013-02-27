@@ -11,12 +11,15 @@
 (defn create-editor-action [f]
   (proxy [ClojureEditorAction] [(create-handler f)]))
 
-(defn defeditor-action [id text shortcut handler group]
-  (do
-    (-> (create-editor-action handler)
-        (action/set-text text)
-        (action/register-action id group))
-    (if (vector? shortcut)
-      (let [[f s] shortcut]
-        (action/register-shortcut id f s))
-      (action/register-shortcut id shortcut))))
+(defn defeditor-action
+  ([id text shortcut handler]
+   (defeditor-action id text shortcut handler nil))
+  ([id text shortcut handler group]
+   (do
+     (-> (create-editor-action handler)
+         (action/set-text text)
+         (action/register-action id group))
+     (if (vector? shortcut)
+       (let [[f s] shortcut]
+         (action/register-shortcut id f s))
+       (action/register-shortcut id shortcut)))))
