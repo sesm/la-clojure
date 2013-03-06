@@ -1,5 +1,8 @@
 package org.jetbrains.plugins.clojure.psi.resolve;
 
+import com.intellij.openapi.util.Condition;
+import com.intellij.openapi.util.Key;
+import com.intellij.openapi.util.Trinity;
 import clojure.tools.nrepl.SafeFn;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.psi.PsiElement;
@@ -42,11 +45,18 @@ public abstract class ResolveUtil {
   }
 
   public static boolean processElement(PsiScopeProcessor processor, PsiNamedElement namedElement) {
+    return processElement(processor, namedElement, ResolveState.initial());
+  }
+
+  public static boolean processElement(PsiScopeProcessor processor, PsiNamedElement namedElement, ResolveState state) {
     if (namedElement == null) return true;
     NameHint nameHint = processor.getHint(NameHint.KEY);
     String name = nameHint == null ? null : nameHint.getName(ResolveState.initial());
-    if (name == null || name.equals(namedElement.getName())) {
-      return processor.execute(namedElement, ResolveState.initial());
+    String actualName = namedElement.getName();
+    final String renamed = state.get(RENAMED_KEY);
+    if (renamed != null) actualName = renamed;
+    if (name == null || name.equals(actualName)) {
+      return processor.execute(namedElement, state);
     }
     return true;
   }
@@ -59,6 +69,8 @@ public abstract class ResolveUtil {
 
     return elements;
   }
+
+  public static Key<String> RENAMED_KEY = Key.create("clojure.renamed.key");
 
   public static boolean processDeclarations(PsiElement element, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
     SafeFn safeFn;

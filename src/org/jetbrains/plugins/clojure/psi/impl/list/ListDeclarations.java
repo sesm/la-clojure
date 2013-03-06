@@ -45,6 +45,7 @@ public class ListDeclarations {
   public static final String IMPORT = "import";
   private static final String MEMFN = "memfn";
   public static final String USE = "use";
+  public static final String REFER = "refer";
   public static final String REQUIRE = "require";
 
   private static final String DOT = ".";
@@ -63,6 +64,7 @@ public class ListDeclarations {
     if (headText.equals(FN)) return processFnDeclaration(processor, list, place, lastParent);
     if (headText.equals(IMPORT)) return ImportOwner.processImports(processor, place, list, headText);
     if (headText.equals(USE)) return ImportOwner.processUses(processor, place, list, headText);
+    if (headText.equals(REFER)) return ImportOwner.processRefer(processor, place, list, headText);
     if (headText.equals(REQUIRE)) return ImportOwner.processRequires(processor, place, list, headText);
     if (headText.equals(MEMFN)) return processMemFnDeclaration(processor, list, place);
     if (headText.equals(DOT)) return processDotDeclaration(processor, list, place, lastParent);
