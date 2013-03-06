@@ -98,7 +98,7 @@
     </java>
   </target>
 
-  <target name="make.java" depends="make.lexer, unzip.last.successful.IDEA.build">
+  <target name="make.java" depends="unzip.last.successful.IDEA.build">
     <!-- Read SINCE and UNTIL properties -->
     <loadfile property="idea.build" srcFile="${idea.home}/build.txt" failonerror="true"/>
     <!--Copy descriptor-->

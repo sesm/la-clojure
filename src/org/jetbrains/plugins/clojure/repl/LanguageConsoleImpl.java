@@ -15,6 +15,7 @@
  */
 package org.jetbrains.plugins.clojure.repl;
 
+import com.intellij.execution.impl.ConsoleViewUtil;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.ide.DataManager;
 import com.intellij.ide.impl.TypeSafeDataProviderAdapter;
@@ -38,6 +39,7 @@ import com.intellij.openapi.editor.colors.impl.DelegateColorScheme;
 import com.intellij.openapi.editor.event.VisibleAreaEvent;
 import com.intellij.openapi.editor.event.VisibleAreaListener;
 import com.intellij.openapi.editor.ex.EditorEx;
+import com.intellij.openapi.editor.ex.FocusChangeListener;
 import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory;
 import com.intellij.openapi.editor.impl.DocumentMarkupModel;
 import com.intellij.openapi.editor.impl.EditorFactoryImpl;
@@ -45,28 +47,26 @@ import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.TextAttributes;
-import com.intellij.openapi.fileEditor.FileEditor;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.FileEditorManagerAdapter;
-import com.intellij.openapi.fileEditor.FileEditorManagerListener;
-import com.intellij.openapi.fileEditor.OpenFileDescriptor;
-import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
 import com.intellij.openapi.fileEditor.impl.EditorWindow;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.fileEditor.impl.FileEditorManagerImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Splitter;
+import com.intellij.openapi.util.Comparing;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
+import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.PsiDocumentManagerImpl;
 import com.intellij.psi.impl.PsiFileFactoryImpl;
 import com.intellij.psi.impl.PsiManagerEx;
 import com.intellij.testFramework.LightVirtualFile;
 import com.intellij.util.FileContentUtil;
+import com.intellij.util.ObjectUtils;
 import com.intellij.util.ui.UIUtil;
 import com.intellij.util.ui.update.MergingUpdateQueue;
 import org.jetbrains.annotations.NonNls;
@@ -94,6 +94,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
   private final EditorEx myConsoleEditor;
   private final EditorEx myHistoryViewer;
   private final Document myEditorDocument;
+  private final LightVirtualFile myVirtualFile;
   protected PsiFile myFile;
 
   private final Splitter splitter;
@@ -102,23 +103,39 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
 
   private Editor myCurrentEditor;
 
-  private final MergingUpdateQueue myUpdateQueue;
-
   private Editor myFullEditor;
+  private FocusChangeListener myFocusListener = new FocusChangeListener() {
+    public void focusGained(Editor editor) {
+      myCurrentEditor = editor;
+    }
+    public void focusLost(Editor editor) {
+    }
+  };
 
   public LanguageConsoleImpl(Project project, String title, Language language)
   {
     myProject = project;
     myTitle = title;
-    installEditorFactoryListener();
+    myVirtualFile = new LightVirtualFile(title, language, "");
     EditorFactory editorFactory = EditorFactory.getInstance();
-    myEditorDocument = editorFactory.createDocument("");
-    setLanguage(language);
+    // myHistoryFile unused
+    myEditorDocument = FileDocumentManager.getInstance().getDocument(myVirtualFile);
+    reparsePsiFile();
+    assert myEditorDocument != null;
     myConsoleEditor = (EditorEx) editorFactory.createEditor(myEditorDocument, myProject);
-
+    myConsoleEditor.addFocusListener(myFocusListener);
     myCurrentEditor = myConsoleEditor;
     myHistoryViewer =
       (EditorEx) editorFactory.createViewer(((EditorFactoryImpl) editorFactory).createDocument(true), myProject);
+    // myUpdateQueue not required
+
+    // action shortcuts are not yet registered
+    ApplicationManager.getApplication().invokeLater(new Runnable() {
+      public void run() {
+        installEditorFactoryListener();
+      }
+    });
+
     final EditorColorsScheme colorsScheme = myConsoleEditor.getColorsScheme();
     DelegateColorScheme scheme = new DelegateColorScheme(colorsScheme)
     {
@@ -140,28 +157,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     splitter.setSecondComponent(myConsoleEditor.getComponent());
     setupComponents();
 
-    splitter.putClientProperty(DataManager.CLIENT_PROPERTY_DATA_PROVIDER, new TypeSafeDataProviderAdapter(this));
-
-    myUpdateQueue = new MergingUpdateQueue("ConsoleUpdateQueue", 300, true, null);
-    Disposer.register(this, myUpdateQueue);
-  }
-
-  private void setConsoleFilePinned(FileEditorManagerEx fileManager)
-  {
-    if (myFullEditor == null)
-    {
-      return;
-    }
-    EditorWindow editorWindow =
-      EditorWindow.DATA_KEY.getData(DataManager.getInstance().getDataContext(myFullEditor.getComponent()));
-    if (editorWindow == null)
-    {
-      editorWindow = fileManager.getCurrentWindow();
-    }
-    if (editorWindow != null)
-    {
-      editorWindow.setFilePinned(myFile.getVirtualFile(), true);
-    }
+    DataManager.registerDataProvider(splitter, new TypeSafeDataProviderAdapter(this));
   }
 
   private void setupComponents()
@@ -206,6 +202,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
 
   private static void setupEditorDefault(EditorEx editor)
   {
+    ConsoleViewUtil.setupConsoleEditor(editor, false, false);
     editor.getContentComponent().setFocusCycleRoot(false);
     editor.setHorizontalScrollbarVisible(true);
     editor.setVerticalScrollbarVisible(true);
@@ -315,47 +312,34 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
 
   private void installEditorFactoryListener()
   {
-    myProject.getMessageBus()
-      .connect(this)
-      .subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, new FileEditorManagerAdapter()
-      {
-        @Override
-        public void fileOpened(FileEditorManager source, VirtualFile file)
-        {
-          if (file != myFile.getVirtualFile())
-          {
-            return;
-          }
-          if (myConsoleEditor != null)
-          {
-            for (FileEditor fileEditor : source.getAllEditors())
-            {
-              if (!(fileEditor instanceof TextEditor))
-              {
-                continue;
-              }
-              final Editor editor = ((TextEditor) fileEditor).getEditor();
-              registerActionShortcuts(editor.getComponent());
-              editor.getContentComponent().addFocusListener(new FocusListener()
-              {
-                public void focusGained(FocusEvent e)
-                {
-                  myCurrentEditor = editor;
-                }
-
-                public void focusLost(FocusEvent e)
-                {
-                }
-              });
+    FileEditorManagerAdapter fileEditorListener = new FileEditorManagerAdapter() {
+      @Override
+      public void fileOpened(FileEditorManager source, VirtualFile file) {
+        if (!Comparing.equal(file, myFile.getVirtualFile())) return;
+        if (myConsoleEditor != null) {
+          Editor selectedTextEditor = source.getSelectedTextEditor();
+          for (FileEditor fileEditor : source.getAllEditors()) {
+            if (!(fileEditor instanceof TextEditor)) continue;
+            final EditorEx editor = (EditorEx) ((TextEditor) fileEditor).getEditor();
+            editor.addFocusListener(myFocusListener);
+            if (selectedTextEditor == editor) { // already focused
+              myCurrentEditor = editor;
             }
+            registerActionShortcuts(editor.getComponent());
           }
         }
+      }
 
-        @Override
-        public void fileClosed(FileEditorManager source, VirtualFile file)
-        {
-        }
-      });
+      @Override
+      public void fileClosed(FileEditorManager source, VirtualFile file) {}
+    };
+
+    myProject.getMessageBus().connect(this).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
+        fileEditorListener);
+    FileEditorManager editorManager = FileEditorManager.getInstance(getProject());
+    if (editorManager.isFileOpen(myVirtualFile)) {
+      fileEditorListener.fileOpened(editorManager, myVirtualFile);
+    }
   }
 
   protected void registerActionShortcuts(JComponent component)
@@ -376,59 +360,6 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     return myCurrentEditor;
   }
 
-  public void setLanguage(Language language)
-  {
-    PsiFile prevFile = myFile;
-    if (prevFile != null)
-    {
-      VirtualFile file = prevFile.getVirtualFile();
-      assert file instanceof LightVirtualFile;
-      ((LightVirtualFile) file).setValid(false);
-      ((PsiManagerEx) prevFile.getManager()).getFileManager().setViewProvider(file, null);
-    }
-
-    @NonNls String name = getTitle();
-    LightVirtualFile newVFile = new LightVirtualFile(name, language, myEditorDocument.getText());
-    FileDocumentManagerImpl.registerDocument(myEditorDocument, newVFile);
-    myFile =
-      ((PsiFileFactoryImpl) PsiFileFactory.getInstance(myProject)).trySetupPsiForFile(newVFile, language, true, false);
-    if (myFile == null)
-    {
-      throw new AssertionError("file=null, name=" + name + ", language=" + language.getDisplayName());
-    }
-    PsiDocumentManagerImpl.cachePsi(myEditorDocument, myFile);
-    FileContentUtil.reparseFiles(myProject, Collections.<VirtualFile>singletonList(newVFile), false);
-
-    if (prevFile != null)
-    {
-      FileEditorManagerEx editorManager = FileEditorManagerEx.getInstanceEx(getProject());
-      VirtualFile file = prevFile.getVirtualFile();
-      if (file != null && myFullEditor != null)
-      {
-        myFullEditor = null;
-        FileEditor prevEditor = editorManager.getSelectedEditor(file);
-        boolean focusEditor;
-        int offset;
-        if (prevEditor != null)
-        {
-          offset =
-            prevEditor instanceof TextEditor ? ((TextEditor) prevEditor).getEditor().getCaretModel().getOffset() : 0;
-          Component owner = FocusManager.getCurrentManager().getFocusOwner();
-          focusEditor = owner != null && SwingUtilities.isDescendingFrom(owner, prevEditor.getComponent());
-        }
-        else
-        {
-          focusEditor = false;
-          offset = 0;
-        }
-        editorManager.closeFile(file);
-        myFullEditor =
-          editorManager.openTextEditor(new OpenFileDescriptor(getProject(), newVFile, offset), focusEditor);
-        setConsoleFilePinned(editorManager);
-      }
-    }
-  }
-
   public void setInputText(final String query)
   {
     ApplicationManager.getApplication().runWriteAction(new Runnable()
@@ -438,6 +369,13 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
         myConsoleEditor.getDocument().setText(query);
       }
     });
+  }
+
+  private void reparsePsiFile() {
+    myVirtualFile.setContent(myEditorDocument, myEditorDocument.getText(), false);
+    FileContentUtil.reparseFiles(myProject, Collections.<VirtualFile>singletonList(myVirtualFile), false);
+    myFile = ObjectUtils.assertNotNull(PsiManager.getInstance(myProject).findFile(myVirtualFile));
+    PsiDocumentManagerImpl.cachePsi(myEditorDocument, myFile);
   }
 
   private static class ConsoleVisibleAreaListener implements VisibleAreaListener

@@ -1,7 +1,7 @@
 (ns plugin.resolve.namespaces
   (:import (org.jetbrains.plugins.clojure.psi.api.ns ClNs)
            (org.jetbrains.plugins.clojure.psi.impl.ns ClNsImpl NamespaceUtil)
-           (org.jetbrains.plugins.clojure.psi.impl ClojureFileImpl))
+           (org.jetbrains.plugins.clojure.psi.impl ClojureFileImpl ImportOwner))
   (:require [plugin.resolve.core :as resolve]))
 
 ;(set! *warn-on-reflection* true)
@@ -9,7 +9,7 @@
 (extend-type ClNs
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (not (ClNsImpl/processDeclarations this processor state last-parent place))))
+    (not (ImportOwner/processDeclarations this processor place))))
 
 (extend-type org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace
   resolve/Resolvable

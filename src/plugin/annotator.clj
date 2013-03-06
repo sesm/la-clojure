@@ -230,14 +230,25 @@
                       (import-fully-qualified project editor psi-file element target))
                     (startInWriteAction [this] true)))))
 
+(defn has-ns-ancestor [^PsiElement element]
+  (if (nil? element)
+    false
+    (if (instance? ClList element)
+      (let [head-text (.getHeadText ^ClList element)]
+        (if (= "ns" head-text)
+          true
+          (recur (.getContext element))))
+      (recur (.getContext element)))))
+
 (defn annotate-symbol [^ClSymbol element ^AnnotationHolder holder]
   (let [result (.multiResolve element false)]
     (cond
       (and (= 0 (alength result))
            (not (implicit-names (.getText element)))
            (should-resolve? element)) (annotate-unresolved element holder)
-      (.isQualified element) (if-let [target ^ClojureResolveResult (first (filter #(resolves-to? % PsiClass) (seq result)))]
-                               (annotate-fqn element (.getElement target) holder))
+      (and (.isQualified element)
+           (not (has-ns-ancestor element))) (if-let [target ^ClojureResolveResult (first (filter #(resolves-to? % PsiClass) (seq result)))]
+                                              (annotate-fqn element (.getElement target) holder))
       (some #(= element (.getElement ^ResolveResult %)) (seq result)) (annotate-selfresolve element holder))))
 
 (defn check-keyword-text-consistency [^ClKeyword element ^AnnotationHolder holder]

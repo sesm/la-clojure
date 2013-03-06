@@ -211,6 +211,10 @@ public class ClojurePsiUtil {
     if (file == null) { return null; }
 
     PsiElement element = file.findElementAt(editor.getCaretModel().getOffset());
+    return findTopSexpAroundElement(element);
+  }
+
+  public static ClList findTopSexpAroundElement(PsiElement element) {
     ClList sexp = null;
     while (element != null) {
       if (element instanceof ClList) { sexp = (ClList) element; }

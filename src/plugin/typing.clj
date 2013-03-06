@@ -90,24 +90,20 @@
                               (.getEnd highlighter))))))
 
 (defn process-key [project ^Editor editor psi-file char-typed]
-  (with-command
-    project "" nil
-    (.commitDocument (PsiDocumentManager/getInstance project)
-                     (.getDocument editor))
-    (let [is-string (inside-string? editor)
-          is-comment (inside-comment? editor)]
-      (if (or is-string is-comment)
-        (if (and is-string (= char-typed \"))
-          (let [string (PsiUtilBase/getElementAtCaret editor)
-                offset (editor/offset editor)
-                end-offset (psi/end-offset string)]
-            (if (= offset (dec end-offset))
-              (editor/move-to editor end-offset)
-              (editor/insert editor "\\\"")))
-          (editor/insert editor (str char-typed)))
-        (if (contains? #{\( \[ \{ \"} char-typed)
-          (open-matched editor char-typed)
-          (close-matched editor char-typed))))))
+  (let [is-string (inside-string? editor)
+        is-comment (inside-comment? editor)]
+    (if (or is-string is-comment)
+      (if (and is-string (= char-typed \"))
+        (let [string (PsiUtilBase/getElementAtCaret editor)
+              offset (editor/offset editor)
+              end-offset (psi/end-offset string)]
+          (if (= offset (dec end-offset))
+            (editor/move-to editor end-offset)
+            (editor/insert editor "\\\"")))
+        (editor/insert editor (str char-typed)))
+      (if (contains? #{\( \[ \{ \"} char-typed)
+        (open-matched editor char-typed)
+        (close-matched editor char-typed)))))
 
 (defrecord ClojureTypedHandler [^TypedActionHandler previous]
   TypedActionHandler
