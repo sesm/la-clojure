@@ -122,7 +122,8 @@
       ; let-bound variables
       (let-binding? element) false
       ; fn args
-      (fn-arg? element) false
+      (and (fn-arg? element)
+           (not (instance? ClMetadata parent))) false
       ; parameters of implementation methods
       (and (instance? ClVector parent)
            (impl-method? grandparent)
