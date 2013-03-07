@@ -6,11 +6,12 @@
            (java.lang.reflect InvocationTargetException)
            (com.intellij.openapi.project ProjectManager)
            (com.intellij.openapi.vfs VirtualFileManager)
-           (com.intellij.openapi.fileEditor FileEditorManager FileEditor TextEditor)
+           (com.intellij.openapi.fileEditor FileEditorManager FileEditor TextEditor FileDocumentManager)
            (com.intellij.psi PsiManager PsiFileFactory)
            (com.intellij.psi.util PsiUtilBase)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
-           (com.intellij.openapi.command CommandProcessor)))
+           (com.intellij.openapi.command CommandProcessor)
+           (com.intellij.openapi.editor Editor)))
 
 (def ^Logger logger (Logger/getInstance "plugin.util"))
 
@@ -63,7 +64,7 @@
 (defn find-file [url] (.findFileByUrl (file-manager) url))
 (defn psi-file [vfile project] (.findFile (psi-manager project) vfile))
 
-(defn all-editors [project] (.getAllEditors (editor-manager project)))
+(defn all-text-editors [project] (seq (.getAllEditors (editor-manager project))))
 
 ; Mostly useful in the REPL
 (defn make-file [^String text]
@@ -72,9 +73,21 @@
                          "dummy-file.clj"
                          text)))
 
-(defn element []
-  (let [^TextEditor file-editor (first (all-editors (first (open-projects))))
-        editor (.getEditor file-editor)]
+(defn get-file-name [^Editor editor]
+  (safely (.getName (.getFile (FileDocumentManager/getInstance)
+                              (.getDocument editor)))))
+
+(defn find-editor [name-pattern]
+  (let [text-editors (flatten (map all-text-editors (open-projects)))
+        editors (map #(.getEditor ^TextEditor %) text-editors)]
+    (first (filter #(let [name (get-file-name %)]
+                      (if-not (nil? name)
+                        (boolean (re-find name-pattern name))
+                        false))
+                   editors))))
+
+(defn element [name-pattern]
+  (if-let [editor (find-editor name-pattern)]
     (let [element (PsiUtilBase/getElementAtCaret editor)]
       (if (instance? LeafPsiElement element)
         (.getParent element)
