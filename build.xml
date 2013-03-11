@@ -157,7 +157,7 @@
     <echo message="${clojure.files}"/>
   </target>
 
-  <target name="make.clojure" depends="make.java">
+  <target name="make.clojure" >
     <!--Copy clojure source-->
     <copy todir="${project.dest}">
       <fileset dir="${src.dir}" includes="**/*.clj"/>
@@ -181,7 +181,7 @@
 
   </target>
 
-  <target name="make.plugin" depends="make.clojure">
+  <target name="make.plugin" depends="make.java, make.clojure">
     <replace file="${project.dest}/META-INF/plugin.xml" token="VERSION" value="${plugin.version}"/>
     <replace file="${project.dest}/META-INF/plugin.xml" token="SINCE_IDEA" value="${idea.build}"/>
     <replace file="${project.dest}/META-INF/plugin.xml" token="UNTIL_IDEA" value="${idea.build}"/>

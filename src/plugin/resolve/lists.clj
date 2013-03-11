@@ -15,8 +15,26 @@
 
 (def ^Logger logger (Logger/getInstance "plugin.resolve.lists"))
 
-(def local-binding-forms #{"let" "with-open" "with-local-vars" "when-let" "when-first"
-                           "for" "if-let" "loop" "doseq"})
+(def local-binding-forms [:clojure.core/let
+                          :clojure.core/with-open
+                          :clojure.core/with-local-vars
+                          :clojure.core/when-let
+                          :clojure.core/when-first
+                          :clojure.core/for
+                          :clojure.core/if-let
+                          :clojure.core/loop
+                          :clojure.core/doseq])
+
+; TODO verify this list - these are probably not all correct
+(def defn-forms [:def
+                 :clojure.core/defn
+                 :clojure.core/defn-
+                 :clojure.core/defmacro
+                 :clojure.core/defmethod
+                 :clojure.core/defmulti
+                 :clojure.core/defonce
+                 :clojure.core/defstruct
+                 :clojure.core/definline])
 
 ; Note that we use "true" to indicate "stop searching", not "continue searching"
 
@@ -53,7 +71,7 @@
       (recur (+ offset (.getStartOffsetInParent current))
              (.getParent current)))))
 
-(defn process-fn [processor list place last-parent]
+(defn process-fn [list processor state last-parent place]
   (if (psi/contains? list place)
     (let [children (psi/significant-children list)
           second-item (second children)]
@@ -80,7 +98,7 @@
                (and (instance? ClVector params)
                     (process-params processor params place last-parent))))))))
 
-(defn process-let [processor list place last-parent]
+(defn process-let [list processor state last-parent place]
   (if (psi/contains? list place)
     (let [children (psi/significant-children list)
           params (second children)]
@@ -99,27 +117,29 @@
                                                         definitions))
                                        place)))))))))
 
-(defn process-defn [processor list place ^PsiElement last-parent]
+(defn process-defn [list processor state ^PsiElement last-parent place]
   (if (and (not (nil? last-parent))
            (= (.getParent last-parent) list))
-    (process-fn processor list place last-parent)
+    (process-fn list processor state last-parent place)
     (process-element processor list place)))
 
 (extend-type ClList
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (if (if-let [head-text (.getHeadText this)]
-          (case head-text
-                "fn" (process-fn processor this place last-parent)
-                (if (local-binding-forms head-text)
-                  (process-let processor this place last-parent)
-                  (not (ListDeclarations/get processor state last-parent place this (.getHeadText this))))))
-      true
-      false)))
+    (let [head-element (first (psi/significant-children this))]
+      (if (instance? ClSymbol head-element)
+        (if (= place head-element)
+          false
+          (let [resolve-keys (filter resolve/has-resolver? (resolve/resolve-keys head-element))]
+            (if (not (empty? resolve-keys))
+              (reduce (fn [return key]
+                        (or ((resolve/get-resolver key) this processor state last-parent place)
+                            return))
+                      false
+                      resolve-keys)
+              (not (ListDeclarations/get processor state last-parent place this (.getHeadText this))))))
+        (not (ListDeclarations/get processor state last-parent place this (.getHeadText this)))))))
 
-(extend-type ClDef
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (if (process-defn processor this place last-parent)
-      true
-      false)))
+(resolve/register-resolver local-binding-forms process-let)
+(resolve/register-resolver :clojure.core/fn process-fn)
+(resolve/register-resolver defn-forms process-defn)

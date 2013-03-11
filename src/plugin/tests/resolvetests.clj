@@ -49,8 +49,7 @@
                                             "(defn another-fun2 [])")})
 
 (deftest multi-file
-  (is (valid-resolve? "(<clojure.core/defn>defn x [])"
-                      :use-clojure-core true)
+  (is (valid-resolve? "(<clojure.core/defn>defn x [])")
       "clojure.core resolution")
   (is (valid-resolve? (test/lines "(ns test (:use other another))"
                                   "(<other/fun>fun)"
@@ -59,26 +58,26 @@
                                   "(<another/another-fun2>another-fun2)")
                       :files other-files)
       "ns symbol use form")
-  ;  (is (valid-resolve? (test/lines "(ns test (:use [other] [another]))"
-  ;                             "(<other/fun>fun)"
-  ;                             "(<other/fun2>fun2)"
-  ;                             "(<another/another-fun>another-fun)"
-  ;                             "(<another/another-fun2>another-fun2)")
-  ;                      other-files)
-  ;      "ns vector use form")
-  ;  (is (valid-resolve? (test/lines "(ns test (:use [other :only fun]))"
-  ;                             "(<other/fun>fun)"
-  ;                             "(</>fun2)")
-  ;                      other-files)
-  ;      "test :only filter")
-  ;  (is (valid-resolve? (test/lines "(ns test (:use [other :exclude fun]))"
-  ;                             "(</>fun)"
-  ;                             "(<other/fun2>fun2)")
-  ;                      other-files)
-  ;      "test :exclude filter")
-  ;  (is (valid-resolve? (test/lines "(ns test (:use [other :rename {fun myfun, fun2 myfun2}]))"
-  ;                             "(<other/fun>myfun)"
-  ;                             "(<other/fun2>myfun2)")
-  ;                      other-files)
-  ;      "test :rename filter")
+  (is (valid-resolve? (test/lines "(ns test (:use [other] [another]))"
+                                  "(<other/fun>fun)"
+                                  "(<other/fun2>fun2)"
+                                  "(<another/another-fun>another-fun)"
+                                  "(<another/another-fun2>another-fun2)")
+                      :files other-files)
+      "ns vector use form")
+;  (is (valid-resolve? (test/lines "(ns test (:use [other :only fun]))"
+;                                  "(<other/fun>fun)"
+;                                  "(</>fun2)")
+;                      :files other-files)
+;      "test :only filter")
+;  (is (valid-resolve? (test/lines "(ns test (:use [other :exclude fun]))"
+;                                  "(</>fun)"
+;                                  "(<other/fun2>fun2)")
+;                      :files other-files)
+;      "test :exclude filter")
+  (is (valid-resolve? (test/lines "(ns test (:use [other :rename {fun myfun, fun2 myfun2}]))"
+                                  "(<other/fun>myfun)"
+                                  "(<other/fun2>myfun2)")
+                      :files other-files)
+      "test :rename filter")
   )

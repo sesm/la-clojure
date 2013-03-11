@@ -80,8 +80,7 @@
 (defn check-resolve [text params extra]
   (let [[text tags] (re-pos #"<[^ >]+>" text)
         file ((:create-file params) "check-resolve.clj" text)]
-    (if (:use-clojure-core extra)
-      ((:create-file params) "clojure-core.clj" ((:clojure-core params))))
+    ((:create-file params) "clojure-core.clj" ((:clojure-core params)))
     (if (:files extra)
       (doseq [[file text] (:files extra)]
         ((:create-file params) file text)))
