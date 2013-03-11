@@ -1,12 +1,13 @@
 (ns plugin.resolve.lists
   (:import (org.jetbrains.plugins.clojure.psi.impl.list ListDeclarations)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata ClKeyword)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
            (com.intellij.psi PsiNamedElement PsiElement)
-           (com.intellij.openapi.diagnostic Logger))
+           (com.intellij.openapi.diagnostic Logger)
+           (org.jetbrains.plugins.clojure.psi.impl ImportOwner))
   (:require [plugin.resolve.core :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
@@ -15,26 +16,10 @@
 
 (def ^Logger logger (Logger/getInstance "plugin.resolve.lists"))
 
-(def local-binding-forms [:clojure.core/let
-                          :clojure.core/with-open
-                          :clojure.core/with-local-vars
-                          :clojure.core/when-let
-                          :clojure.core/when-first
-                          :clojure.core/for
-                          :clojure.core/if-let
-                          :clojure.core/loop
-                          :clojure.core/doseq])
+(def local-binding-forms [:clojure.core/let :clojure.core/with-open :clojure.core/with-local-vars :clojure.core/when-let :clojure.core/when-first :clojure.core/for :clojure.core/if-let :clojure.core/loop :clojure.core/doseq])
 
 ; TODO verify this list - these are probably not all correct
-(def defn-forms [:def
-                 :clojure.core/defn
-                 :clojure.core/defn-
-                 :clojure.core/defmacro
-                 :clojure.core/defmethod
-                 :clojure.core/defmulti
-                 :clojure.core/defonce
-                 :clojure.core/defstruct
-                 :clojure.core/definline])
+(def defn-forms [:def :clojure.core/defn :clojure.core/defn- :clojure.core/defmacro :clojure.core/defmethod :clojure.core/defmulti :clojure.core/defonce :clojure.core/defstruct :clojure.core/definline])
 
 ; Note that we use "true" to indicate "stop searching", not "continue searching"
 
@@ -123,13 +108,38 @@
     (process-fn list processor state last-parent place)
     (process-element processor list place)))
 
+(defn process-ns [^ClList list processor state last-parent place]
+  (not (ImportOwner/processDeclarations list processor place)))
+
+(defn process-import [^ClList list processor state last-parent place]
+  (not (ImportOwner/processImports processor place list (.getHeadText list))))
+
+(defn process-use [^ClList list processor state last-parent place]
+  (not (ImportOwner/processUses processor place list (.getHeadText list))))
+
+(defn process-refer [^ClList list processor state last-parent place]
+  (not (ImportOwner/processRefer processor place list (.getHeadText list))))
+
+(defn process-require [^ClList list processor state last-parent place]
+  (not (ImportOwner/processRequires processor place list (.getHeadText list))))
+
+(defn process-memfn [^ClList list processor state last-parent place]
+  (not (ListDeclarations/processMemFnDeclaration processor list place)))
+
+(defn process-dot [^ClList list processor state last-parent place]
+  (not (ListDeclarations/processDotDeclaration processor list place last-parent)))
+
+(defn process-declare [^ClList list processor state last-parent place]
+  (not (ListDeclarations/processDeclareDeclaration processor list place last-parent)))
+
 (extend-type ClList
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
     (let [head-element (first (psi/significant-children this))]
-      (if (instance? ClSymbol head-element)
-        (if (= place head-element)
-          false
+      (if (= place head-element)
+        false
+        (cond
+          (instance? ClSymbol head-element)
           (let [resolve-keys (filter resolve/has-resolver? (resolve/resolve-keys head-element))]
             (if (not (empty? resolve-keys))
               (reduce (fn [return key]
@@ -137,9 +147,23 @@
                             return))
                       false
                       resolve-keys)
-              (not (ListDeclarations/get processor state last-parent place this (.getHeadText this))))))
-        (not (ListDeclarations/get processor state last-parent place this (.getHeadText this)))))))
+              false))
+          (instance? ClKeyword head-element)
+          (let [name (str/join (drop-while #(= \: %) (seq (.getName ^ClKeyword head-element))))
+                key (keyword name)]
+            (if (resolve/has-resolver? key)
+              ((resolve/get-resolver key) this processor state last-parent place)
+              false))
+          :else false)))))
 
 (resolve/register-resolver local-binding-forms process-let)
 (resolve/register-resolver :clojure.core/fn process-fn)
 (resolve/register-resolver defn-forms process-defn)
+(resolve/register-resolver :clojure.core/ns process-ns)
+(resolve/register-resolver :clojure.core/import process-import)
+(resolve/register-resolver :clojure.core/use process-use)
+(resolve/register-resolver :clojure.core/refer process-refer)
+(resolve/register-resolver :clojure.core/require process-require)
+(resolve/register-resolver :clojure.core/memfn process-memfn)
+(resolve/register-resolver :clojure.core/declare process-declare)
+(resolve/register-resolver :. process-dot)

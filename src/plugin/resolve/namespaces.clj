@@ -6,11 +6,6 @@
 
 ;(set! *warn-on-reflection* true)
 
-(extend-type ClNs
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (not (ImportOwner/processDeclarations this processor place))))
-
 (extend-type org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]

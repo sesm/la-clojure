@@ -1,6 +1,6 @@
 (ns plugin.resolve.core
   (:import (org.jetbrains.plugins.clojure.psi.api ClQuotedForm ClojureFile)
-           (com.intellij.psi ResolveResult PsiElement)
+           (com.intellij.psi ResolveResult PsiElement PsiNamedElement)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)))
 
 ;(set! *warn-on-reflection* true)

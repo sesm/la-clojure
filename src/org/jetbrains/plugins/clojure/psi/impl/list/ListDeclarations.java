@@ -54,58 +54,9 @@ public class ListDeclarations {
       LET, WITH_OPEN, WITH_LOCAL_VARS, WHEN_LET, WHEN_FIRST, FOR, IF_LET, LOOP
   ));
 
-  public static boolean get(PsiScopeProcessor processor,
-                            ResolveState state,
-                            PsiElement lastParent,
-                            PsiElement place,
-                            ClList list,
-                            @Nullable String headText) {
-    if (headText == null) return true;
-    if (headText.equals(FN)) return processFnDeclaration(processor, list, place, lastParent);
-    if (headText.equals(IMPORT)) return ImportOwner.processImports(processor, place, list, headText);
-    if (headText.equals(USE)) return ImportOwner.processUses(processor, place, list, headText);
-    if (headText.equals(REFER)) return ImportOwner.processRefer(processor, place, list, headText);
-    if (headText.equals(REQUIRE)) return ImportOwner.processRequires(processor, place, list, headText);
-    if (headText.equals(MEMFN)) return processMemFnDeclaration(processor, list, place);
-    if (headText.equals(DOT)) return processDotDeclaration(processor, list, place, lastParent);
-    if (headText.equals(LOOP)) return processLoopDeclaration(processor, list, place, lastParent);
-    if (headText.equals(DECLARE)) return processDeclareDeclaration(processor, list, place, lastParent);
 
-    final PsiElement parent = list.getParent();
-    if (parent != null && parent instanceof ClList) {
-      return getWithParentContext(processor, list, ((ClList) parent), state, lastParent, place);
-    }
-
-    return true;
-  }
-
-  private static boolean getWithParentContext(PsiScopeProcessor processor, ClList list, ClList parent,
-                                              ResolveState state, PsiElement lastParent, PsiElement place) {
-    final String parentHead = parent.getHeadText();
-    final PsiElement first = list.getFirstNonLeafElement();
-    if (processUseParent(processor, place, parentHead, first, state, lastParent)) return true;
-    return true;
-  }
-
-  /*
-    Handle (:use ...) parent, e.g.
-
-    (ns my-namespace
-     (:use (clojure <caret> data inspector)))
-
-   */
-  private static boolean processUseParent(PsiScopeProcessor processor, PsiElement place, String parentHead,
-                                          PsiElement first, ResolveState state, PsiElement lastParent) {
-    if ((USE.equals(parentHead) || ClojureKeywords.USE.equals(parentHead)) &&
-        first instanceof ClSymbol) {
-      final ClSymbol symbol = (ClSymbol) first;
-      final ClSyntheticNamespace namespace = NamespaceUtil.getNamespace(symbol.getNameString(), place.getProject());
-      return namespace == null? true : namespace.processDeclarations(processor, state, lastParent, place);
-    }
-    return true;
-  }
-
-  private static boolean processDeclareDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
+  // TODO is this right?
+  public static boolean processDeclareDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
     final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
     if (paramVector != null) {
       for (ClSymbol symbol : paramVector.getOddSymbols()) {
@@ -115,21 +66,8 @@ public class ListDeclarations {
     return true;
   }
 
-  private static boolean processLoopDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
-    if (lastParent != null && lastParent.getParent() == list) {
-      final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getOddSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      return true;
-    }
-    return true;
-  }
 
-
-  private static boolean processDotDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
+  public static boolean processDotDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
     final PsiElement parent = place.getParent();
     if (parent == null || list == parent) return true;
 
@@ -162,7 +100,7 @@ public class ListDeclarations {
     return true;
   }
 
-  private static boolean processMemFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
+  public static boolean processMemFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
     if (place instanceof ClSymbol && place.getParent() == list && ((ClSymbol) place).getQualifierSymbol() == null) {
       ClSymbol symbol = (ClSymbol) place;
       ResolveResult[] results = ClSymbolImpl.MyResolver.resolveJavaMethodReference(symbol, list.getParent(), true);
@@ -177,41 +115,6 @@ public class ListDeclarations {
     return true;
   }
 
-
-  private static boolean processLetDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place) {
-    if (PsiTreeUtil.findCommonParent(place, list) == list) {
-      final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getOddSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      return true;
-    }
-    return true;
-  }
-
-  private static boolean processFnDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
-    final PsiElement second = list.getSecondNonLeafElement();
-    if ((second instanceof ClSymbol) && place != second && !ResolveUtil.processElement(processor, ((ClSymbol) second)))
-      return false;
-
-    if (PsiTreeUtil.findCommonParent(place, list) == list) {
-      ClVector paramVector = list.findFirstChildByClass(ClVector.class);
-      if (paramVector == null && lastParent instanceof ClList) {
-        paramVector = ((ClList) lastParent).findFirstChildByClass(ClVector.class);
-      }
-
-      if (paramVector != null) {
-        for (ClSymbol symbol : paramVector.getAllSymbols()) {
-          if (!ResolveUtil.processElement(processor, symbol)) return false;
-        }
-      }
-      return true;
-    }
-    return true;
-
-  }
 
   public static boolean isLocal(PsiElement element) {
     if (element instanceof ClSymbol) {
