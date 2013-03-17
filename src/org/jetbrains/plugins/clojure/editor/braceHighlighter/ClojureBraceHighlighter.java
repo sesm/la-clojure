@@ -43,7 +43,9 @@ public class ClojureBraceHighlighter implements Annotator {
     if (psiElement instanceof LeafPsiElement &&
         ClojureProjectSettings.getInstance(psiElement.getProject()).coloredParentheses) {
       IElementType type = ((LeafPsiElement) psiElement).getElementType();
-      if (type == ClojureElementTypes.LEFT_PAREN || type == ClojureElementTypes.RIGHT_PAREN) {
+      if (type == ClojureElementTypes.LEFT_PAREN ||
+          type == ClojureElementTypes.SHARP_PAREN ||
+          type == ClojureElementTypes.RIGHT_PAREN) {
         int level = getLevel(psiElement);
         if (level >= 0) {
           final EditorColorsScheme scheme = EditorColorsManager.getInstance().getGlobalScheme();

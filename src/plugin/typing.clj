@@ -9,7 +9,7 @@
            (com.intellij.psi.util PsiUtilBase)
            (org.jetbrains.plugins.clojure.file ClojureFileType)
            (com.intellij.psi.tree TokenSet)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClMap ClSet)
            (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes))
   (:use [plugin.util :only [safely with-command]])
   (:require [plugin.psi :as psi]
@@ -42,13 +42,17 @@
 
 (def matching-char {\( \), \[ \], \{ \}, \" \"})
 
-(def matching-type {\) ClList, \] ClVector, \} ClMap})
+(def matching-types {\) #{ClList}, \] #{ClVector}, \} #{ClMap ClSet}})
 
-(defn ^PsiElement find-enclosing [^Editor editor type]
+(defn ^PsiElement find-enclosing [^Editor editor types]
   (loop [element (PsiUtilBase/getElementAtCaret editor)]
     (cond
       (nil? element) nil
-      (and (instance? type element)
+      (and (reduce (fn [result type]
+                     (or (instance? type element)
+                         result))
+                   false
+                   types)
            (> (editor/offset editor) (psi/start-offset element))) element
       :else (recur (psi/parent element)))))
 
@@ -77,7 +81,7 @@
     (editor/insert-after editor (str (matching-char char-typed)))))
 
 (defn close-matched [^Editor editor char-typed]
-  (if-let [enclosing (find-enclosing editor (matching-type char-typed))]
+  (if-let [enclosing (find-enclosing editor (matching-types char-typed))]
     (let [offset (psi/end-offset enclosing)
           highlighter (editor/highlighter-iterator editor offset)]
       (editor/move-to editor offset)

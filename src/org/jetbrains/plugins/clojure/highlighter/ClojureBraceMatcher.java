@@ -25,8 +25,10 @@ import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
 public class ClojureBraceMatcher implements PairedBraceMatcher {
   private static final BracePair[] PAIRS = new BracePair[]{
       new BracePair(ClojureTokenTypes.LEFT_PAREN, ClojureTokenTypes.RIGHT_PAREN, true),
+      new BracePair(ClojureTokenTypes.SHARP_PAREN, ClojureTokenTypes.RIGHT_PAREN, true),
       new BracePair(ClojureTokenTypes.LEFT_SQUARE, ClojureTokenTypes.RIGHT_SQUARE, true),
       new BracePair(ClojureTokenTypes.LEFT_CURLY, ClojureTokenTypes.RIGHT_CURLY, true),
+      new BracePair(ClojureTokenTypes.SHARP_CURLY, ClojureTokenTypes.RIGHT_CURLY, true),
   };
 
   public BracePair[] getPairs() {

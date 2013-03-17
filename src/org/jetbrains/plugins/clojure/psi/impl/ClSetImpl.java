@@ -18,15 +18,7 @@ public class ClSetImpl extends ClojurePsiElementImpl implements ClSet {
 
   @NotNull
   public PsiElement getFirstBrace() {
-    // XXX: there must be a cleaner way of doing this...
-    ASTNode sharp;
-    while ((sharp = getNode().findChildByType(ClojureTokenTypes.SHARP)) != null) {
-      ASTNode next = sharp.getTreeNext();
-      if (ClojureTokenTypes.LEFT_CURLY.equals(next.getElementType())) {
-        return sharp.getPsi();
-      }
-    }
-    throw new AssertionError();
+    return findChildByType(ClojureTokenTypes.SHARP_CURLY);
   }
 
   public PsiElement getLastBrace() {

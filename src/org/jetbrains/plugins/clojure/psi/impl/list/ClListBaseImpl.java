@@ -68,6 +68,9 @@ public abstract class ClListBaseImpl<T extends StubElement> extends ClojureBaseE
   @NotNull
   public PsiElement getFirstBrace() {
     PsiElement element = findChildByType(ClojureTokenTypes.LEFT_PAREN);
+    if (element == null) {
+      element = findChildByType(ClojureTokenTypes.SHARP_PAREN);
+    }
     assert element != null;
     return element;
   }

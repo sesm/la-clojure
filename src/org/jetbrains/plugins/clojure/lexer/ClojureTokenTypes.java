@@ -34,6 +34,8 @@ public interface ClojureTokenTypes {
   IElementType SHARP = new ClojureElementType("#");
   IElementType UP = new ClojureElementType("^");
   IElementType SHARPUP = new ClojureElementType("#^");
+  IElementType SHARP_PAREN = new ClojureElementType("#(");
+  IElementType SHARP_CURLY = new ClojureElementType("#{");
   IElementType TILDA = new ClojureElementType("~");
   IElementType AT = new ClojureElementType("@");
   IElementType TILDAAT = new ClojureElementType("~@");

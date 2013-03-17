@@ -53,14 +53,16 @@ public class ClojureSyntaxHighlighter extends SyntaxHighlighterBase implements C
 
   static final TokenSet sPARENTS = TokenSet.create(
       ClojureTokenTypes.LEFT_PAREN,
-      ClojureTokenTypes.RIGHT_PAREN
+      ClojureTokenTypes.RIGHT_PAREN,
+      ClojureTokenTypes.SHARP_PAREN
   );
 
   static final TokenSet sBRACES = TokenSet.create(
       ClojureTokenTypes.LEFT_SQUARE,
       ClojureTokenTypes.RIGHT_SQUARE,
       ClojureTokenTypes.LEFT_CURLY,
-      ClojureTokenTypes.RIGHT_CURLY
+      ClojureTokenTypes.RIGHT_CURLY,
+      ClojureTokenTypes.SHARP_CURLY
   );
 
   public static final TokenSet sATOMS = symS;

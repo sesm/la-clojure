@@ -120,8 +120,11 @@ mRC = "}"
 mQUOTE = "'"
 mBACKQUOTE = "`"
 mSHARP = "#"
-mSHARPUP = {mSHARP} {mUP}
 mUP = "^"
+mSHARPUP = {mSHARP} {mUP}
+mSHARPLP = {mSHARP} {mLP}
+mSHARPLC = {mSHARP} {mLC}
+
 mIMPLICIT_ARG = "%" | "%"{mDIGIT}+ | "%""&"
 mTILDA = "~"
 mAT = "@"
@@ -237,6 +240,8 @@ mFALSE = "false"
   {mQUOTE}                                  {  return QUOTE; }
   {mBACKQUOTE}                              {  return BACKQUOTE; }
   {mSHARPUP}                                {  return SHARPUP; }
+  {mSHARPLP}                                {  return SHARP_PAREN; }
+  {mSHARPLC}                                {  return SHARP_CURLY; }
   {mSHARP}                                  {  return SHARP; }
   {mUP}                                     {  return UP; }
   {mIMPLICIT_ARG}                           {  return symIMPLICIT_ARG; }

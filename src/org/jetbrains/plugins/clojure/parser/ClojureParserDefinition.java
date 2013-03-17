@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
@@ -67,31 +68,37 @@ public class ClojureParserDefinition implements ParserDefinition {
 
   public SpaceRequirements spaceExistanceTypeBetweenTokens(ASTNode left, ASTNode right) {
 
-    if (
-        left.getElementType() == ClojureTokenTypes.QUOTE
-            || left.getElementType() == ClojureTokenTypes.SHARP
-            || left.getElementType() == ClojureTokenTypes.SHARPUP
+    IElementType leftType = left.getElementType();
+    if (leftType == ClojureTokenTypes.QUOTE
+        || leftType == ClojureTokenTypes.SHARP
+        || leftType == ClojureTokenTypes.SHARPUP
         ) {
 
       return SpaceRequirements.MUST_NOT;
 
-    } else if (
-        left.getElementType() == ClojureTokenTypes.LEFT_PAREN
-            || right.getElementType() == ClojureTokenTypes.RIGHT_PAREN
-            || left.getElementType() == ClojureTokenTypes.RIGHT_PAREN
-            || right.getElementType() == ClojureTokenTypes.LEFT_PAREN
+    } else {
+      IElementType rightType = right.getElementType();
+      if (leftType == ClojureTokenTypes.LEFT_PAREN
+          || rightType == ClojureTokenTypes.RIGHT_PAREN
+          || leftType == ClojureTokenTypes.RIGHT_PAREN
+          || rightType == ClojureTokenTypes.LEFT_PAREN
+          || leftType == ClojureTokenTypes.SHARP_PAREN
+          || rightType == ClojureTokenTypes.SHARP_PAREN
+          || leftType == ClojureTokenTypes.SHARP_CURLY
+          || rightType == ClojureTokenTypes.SHARP_CURLY
 
-            || left.getElementType() == ClojureTokenTypes.LEFT_CURLY
-            || right.getElementType() == ClojureTokenTypes.RIGHT_CURLY
-            || left.getElementType() == ClojureTokenTypes.RIGHT_CURLY
-            || right.getElementType() == ClojureTokenTypes.LEFT_CURLY
+          || leftType == ClojureTokenTypes.LEFT_CURLY
+          || rightType == ClojureTokenTypes.RIGHT_CURLY
+          || leftType == ClojureTokenTypes.RIGHT_CURLY
+          || rightType == ClojureTokenTypes.LEFT_CURLY
 
-            || left.getElementType() == ClojureTokenTypes.LEFT_SQUARE
-            || right.getElementType() == ClojureTokenTypes.RIGHT_SQUARE
-            || left.getElementType() == ClojureTokenTypes.RIGHT_SQUARE
-            || right.getElementType() == ClojureTokenTypes.LEFT_SQUARE) {
+          || leftType == ClojureTokenTypes.LEFT_SQUARE
+          || rightType == ClojureTokenTypes.RIGHT_SQUARE
+          || leftType == ClojureTokenTypes.RIGHT_SQUARE
+          || rightType == ClojureTokenTypes.LEFT_SQUARE) {
 
-      return SpaceRequirements.MAY;
+        return SpaceRequirements.MAY;
+      }
     }
     return SpaceRequirements.MUST;
   }

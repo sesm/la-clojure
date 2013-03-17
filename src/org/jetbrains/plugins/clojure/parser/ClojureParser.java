@@ -54,7 +54,7 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
 
   private void parseExpression(PsiBuilder builder) {
     IElementType token = builder.getTokenType();
-    if (LEFT_PAREN == token) {
+    if (LEFT_PAREN == token || SHARP_PAREN == token) {
       parseList(builder);
     } else if (LEFT_SQUARE == token) {
       parseVector(builder);
@@ -64,7 +64,7 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
       parseQuotedForm(builder);
     } else if (BACKQUOTE == token) {
       parseBackQuote(builder);
-    } else if (ParserUtils.lookAhead(builder, SHARP, LEFT_CURLY)) {
+    } else if (SHARP_CURLY == token) {
       parseSet(builder);
     } else if (SHARP == token) {
       parseSharp(builder);
@@ -230,20 +230,14 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
   }
 
   private void parseSet(PsiBuilder builder) {
-    if (!ParserUtils.lookAhead(builder, SHARP, LEFT_CURLY)) {
-      internalError(ClojureBundle.message("expected.sharp.lcurly"));
-    }
-    PsiBuilder.Marker marker = builder.mark();
-    builder.advanceLexer();
-    assert builder.getTokenType() != null;
-    builder.eof();
+    if (builder.getTokenType() != SHARP_CURLY) internalError(ClojureBundle.message("expected.sharp.curly"));
+    PsiBuilder.Marker mark = builder.mark();
     builder.advanceLexer();
     for (IElementType token = builder.getTokenType(); token != RIGHT_CURLY && token != null; token = builder.getTokenType()) {
       parseExpression(builder); //entry
     }
     advanceLexerOrEOF(builder);
-    marker.done(SET);
-
+    mark.done(SET);
   }
 
   /**
@@ -311,7 +305,8 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
    * Exit: Lexer is pointed immediately after the closing right paren, or at the end-of-file
    */
   private void parseList(PsiBuilder builder) {
-    if (builder.getTokenType() != LEFT_PAREN) internalError(ClojureBundle.message("expected.lparen"));
+    if ((builder.getTokenType() != LEFT_PAREN) &&
+        (builder.getTokenType() != SHARP_PAREN)) internalError(ClojureBundle.message("expected.lparen"));
     PsiBuilder.Marker marker = markAndAdvance(builder);
     final String tokenText = builder.getTokenText();
     if (builder.getTokenType() == symATOM && DEF_TOKENS.contains(tokenText)) {

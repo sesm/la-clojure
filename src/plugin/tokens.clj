@@ -5,7 +5,9 @@
 
 (def opening-braces #{ClojureTokenTypes/LEFT_PAREN
                       ClojureTokenTypes/LEFT_SQUARE
-                      ClojureTokenTypes/LEFT_CURLY})
+                      ClojureTokenTypes/LEFT_CURLY
+                      ClojureTokenTypes/SHARP_PAREN
+                      ClojureTokenTypes/SHARP_CURLY})
 
 (def closing-braces #{ClojureTokenTypes/RIGHT_PAREN
                       ClojureTokenTypes/RIGHT_SQUARE
