@@ -37,7 +37,6 @@
         (recur processor (next elements) place))))
 
 (defn process-params [processor ^ClListLike params ^PsiElement place last-parent]
-  ;(println "params: "  (.getText params)  (elem place))
   (if (psi/contains? params place)
     (not (instance? ClMetadata (.getParent place)))
     (process-elements processor (seq (.getAllSymbols params)) place)))

@@ -15,10 +15,11 @@
   ([id] (unregister-action id nil))
   ([id group-id] (let [manager (ActionManager/getInstance)]
                    (if-let [action (.getAction manager id)]
-                     (if-not (nil? group-id)
-                       (let [^DefaultActionGroup group (.getAction manager group-id)]
-                         (.remove group action)))
-                     (.unregisterAction manager id)))))
+                     (do
+                       (if-not (nil? group-id)
+                         (let [^DefaultActionGroup group (.getAction manager group-id)]
+                           (.remove group action)))
+                       (.unregisterAction manager id))))))
 
 (defn set-text [^AnAction action text]
   (do

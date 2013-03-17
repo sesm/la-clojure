@@ -124,6 +124,7 @@
 
 (def indent-form {:ns              1,
                   :let             1,
+                  :for             1,
                   :if-let          1,
                   :when-let        1,
                   :when-first      1,

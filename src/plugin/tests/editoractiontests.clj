@@ -22,7 +22,8 @@
   (is (editor-action-result? "plugin.actions.paredit.slurp-backwards"
                              (test/lines "(a"
                                          " (<caret>b c))")
-                             "((a <caret>b c))")))
+                             (test/lines "((a"
+                                         "   <caret>b c))"))))
 
 (deftest slurp-forwards-tests
   (is (editor-action-result? "plugin.actions.paredit.slurp-forwards"
@@ -34,7 +35,8 @@
   (is (editor-action-result? "plugin.actions.paredit.slurp-forwards"
                              (test/lines "((a b<caret>)"
                                          " c)")
-                             "((a b<caret> c))")))
+                             (test/lines "((a b<caret>"
+                                         "    c))"))))
 
 (deftest splice-tests
   (is (editor-action-result? "plugin.actions.paredit.splice"
