@@ -1,20 +1,13 @@
 package org.jetbrains.plugins.clojure.repl.impl;
 
 import clojure.lang.Keyword;
+import clojure.lang.RT;
+import clojure.lang.Var;
 import clojure.tools.nrepl.Connection;
-import clojure.tools.nrepl.SafeFn;
-import com.intellij.execution.CantRunException;
-import com.intellij.execution.ExecutionBundle;
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.ExecutionHelper;
-import com.intellij.execution.KillableProcess;
+import com.intellij.execution.*;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.JavaParameters;
-import com.intellij.execution.process.ColoredProcessHandler;
-import com.intellij.execution.process.ProcessAdapter;
-import com.intellij.execution.process.ProcessEvent;
-import com.intellij.execution.process.ProcessHandler;
-import com.intellij.execution.process.ProcessTerminatedListener;
+import com.intellij.execution.process.*;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.facet.FacetManager;
 import com.intellij.openapi.module.Module;
@@ -26,18 +19,11 @@ import org.jetbrains.annotations.NonNls;
 import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.config.ClojureConfigUtil;
 import org.jetbrains.plugins.clojure.config.ClojureFacet;
-import org.jetbrains.plugins.clojure.repl.ClojureConsole;
-import org.jetbrains.plugins.clojure.repl.ClojureConsoleView;
-import org.jetbrains.plugins.clojure.repl.REPL;
-import org.jetbrains.plugins.clojure.repl.REPLComponent;
-import org.jetbrains.plugins.clojure.repl.REPLException;
-import org.jetbrains.plugins.clojure.repl.REPLProviderBase;
-import org.jetbrains.plugins.clojure.repl.REPLUtil;
-import org.jetbrains.plugins.clojure.repl.Response;
-import org.jetbrains.plugins.clojure.repl.TerminateREPLDialog;
+import org.jetbrains.plugins.clojure.repl.*;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,6 +52,7 @@ public class ClojureProcessREPL extends REPLBase {
   private Connection connection = null;
   private AtomicReference<Map<Keyword, Collection<String>>> completions =
       new AtomicReference<Map<Keyword, Collection<String>>>();
+  private AtomicReference<String> namespace = new AtomicReference<String>("user");
 
   public ClojureProcessREPL(Project project, Module module, ClojureConsoleView consoleView, String workingDir) {
     super(consoleView, project);
@@ -74,7 +61,7 @@ public class ClojureProcessREPL extends REPLBase {
   }
 
   public void start() throws REPLException {
-    SafeFn.find(REPLComponent.NREPL_NS, RESET_ACK_PORT).sInvoke();
+    RT.var(REPLComponent.NREPL_ACK_NS, RESET_ACK_PORT).invoke();
 
     Process process;
     GeneralCommandLine commandLine;
@@ -98,8 +85,8 @@ public class ClojureProcessREPL extends REPLBase {
     getConsoleView().attachToProcess(processHandler);
     processHandler.startNotify();
 
-    SafeFn waitForAck = SafeFn.find(REPLComponent.NREPL_NS, WAIT_FOR_ACK);
-    Number maybePort = (Number) waitForAck.sInvoke(Long.valueOf(PROCESS_WAIT_TIME));
+    Var waitForAck = RT.var(REPLComponent.NREPL_ACK_NS, WAIT_FOR_ACK);
+    Number maybePort = (Number) waitForAck.invoke(Long.valueOf(PROCESS_WAIT_TIME));
 
     if (maybePort == null) {
       stop();
@@ -107,7 +94,9 @@ public class ClojureProcessREPL extends REPLBase {
     }
 
     try {
-      connection = new Connection("localhost", maybePort.intValue());
+      int port = maybePort.intValue();
+      log.info("Received ack, connecting to port " + port);
+      connection = new Connection("nrepl://localhost:" + port);
     } catch (Exception e) {
       log.error("Error connecting to REPL: " + e.getMessage(), e);
       stop();
@@ -170,7 +159,11 @@ public class ClojureProcessREPL extends REPLBase {
   @Override
   public void doStop() {
     if (connection != null) {
-      connection.close();
+      try {
+        connection.close();
+      } catch (IOException e) {
+        log.error("Error closing connection", e);
+      }
       connection = null;
     }
 
@@ -210,12 +203,14 @@ public class ClojureProcessREPL extends REPLBase {
   private Response innerDoExecute(final String command) {
     setEditorEnabled(false);
 
-    return new Response(connection.send(command)) {
+    return new Response(connection.send("op", "eval", "code", command, "ns", namespace.get())) {
       private final AtomicBoolean editorEnabled = new AtomicBoolean(false);
 
       @Override
-      public Map<Keyword, Object> combinedResponse() {
-        Map<Keyword, Object> ret = super.combinedResponse();
+      public Map<String, Object> combinedResponse() {
+        Map<String, Object> ret = super.combinedResponse();
+
+        namespace.getAndSet((String) ret.get(NAMESPACE));
 
         if (!editorEnabled.getAndSet(true)) {
           setEditorEnabled(true);

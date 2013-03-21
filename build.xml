@@ -210,7 +210,7 @@
         <include name="clojure-1.4.0.jar"/>
       </fileset>
       <fileset dir="${project.lib}">
-        <include name="tools.nrepl-0.0.6-SNAPSHOT.jar"/>
+        <include name="tools.nrepl-0.2.2.jar"/>
       </fileset>
     </copy>
 

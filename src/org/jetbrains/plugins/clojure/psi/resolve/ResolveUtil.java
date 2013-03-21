@@ -1,10 +1,9 @@
 package org.jetbrains.plugins.clojure.psi.resolve;
 
-import com.intellij.openapi.util.Condition;
-import com.intellij.openapi.util.Key;
-import com.intellij.openapi.util.Trinity;
-import clojure.tools.nrepl.SafeFn;
+import clojure.lang.RT;
+import clojure.lang.Var;
 import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.ResolveState;
@@ -17,7 +16,7 @@ import com.intellij.psi.util.PsiTreeUtil;
  */
 public abstract class ResolveUtil {
 
-  private static SafeFn punt;
+  private static Var punt;
   private static final Object lock = new Object();
 
   public static boolean treeWalkUp(PsiElement place, PsiScopeProcessor processor) {
@@ -73,17 +72,17 @@ public abstract class ResolveUtil {
   public static Key<String> RENAMED_KEY = Key.create("clojure.renamed.key");
 
   public static boolean processDeclarations(PsiElement element, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
-    SafeFn safeFn;
+    Var var;
     synchronized (lock) {
       if (punt == null) {
-        punt = SafeFn.find("plugin.resolve.core", "punt");
+        punt = RT.var("plugin.resolve.core", "punt");
       }
-      safeFn = punt;
+      var = punt;
     }
 
     Object ret;
     try {
-      ret = safeFn.sInvoke(element, processor, state, lastParent, place);
+      ret = var.invoke(element, processor, state, lastParent, place);
     } catch (RuntimeException e) {
       if (e.getCause() instanceof ProcessCanceledException) {
         throw (ProcessCanceledException) e.getCause();

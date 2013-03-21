@@ -33,6 +33,15 @@
      ~name
      ~group-id))
 
+(defmacro invoke-later
+  "Runs body asynchronously on the EDT."
+  [& body]
+  `(.invokeLater
+     (ApplicationManager/getApplication)
+     (reify Runnable
+       (run [this] ~@body))))
+
+
 (defmacro safely
   "Allows safe Java method calls. If the target is nil returns nil, otherwise returns
   method call result."
