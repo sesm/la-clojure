@@ -41,6 +41,33 @@
       "Let should shadow external let")
   )
 
+(deftest destructuring
+  (is (valid-resolve? "(let [[<@1>a </>& <@2>b] []] <1>a <2>b) </>a </>b")
+      "Let-form vector destructuring")
+  (is (valid-resolve? (test/lines "(let [[[<@1>a <@2>b] [<@3>c <@4>d]] []]"
+                                  "  <1>a <2>b <3>c <4>d)"
+                                  "</>a </>b </>c </>d"))
+      "Nested let-form vector destructuring")
+  (is (valid-resolve? "(defn x [[<@1>a </>& <@2>b]] <1>a <2>b) </>a </>b")
+      "Fn vector destructuring")
+  (is (valid-resolve? (test/lines "(defn x [[[<@1>a <@2>b] [<@3>c <@4>d]]]"
+                                  "  <1>a <2>b <3>c <4>d)"
+                                  "</>a </>b </>c </>d"))
+      "Nested fn vector destructuring")
+  (is (valid-resolve? (test/lines "(let [{<@1>a :a, <@2>b :b, :as <@3>m :or {<1>a 2 <2>b 3}} {}]"
+                                  "  [<1>a <2>b <3>m])"))
+      "Let-form associative destructuring")
+  (is (valid-resolve? (test/lines "(let [{:keys [<@1>a <@2>b]} {}]"
+                                  "  [<1>a <2>b])"))
+      "Let-form associative keyword destructuring")
+  (is (valid-resolve? (test/lines "(defn x [{<@1>a :a, <@2>b :b, :as <@3>m :or {<1>a 2 <2>b 3}}]"
+                                  "  [<1>a <2>b <3>m])"))
+      "Fn associative destructuring")
+  (is (valid-resolve? (test/lines "(defn x [{:keys [<@1>a <@2>b]}]"
+                                  "  [<1>a <2>b])"))
+      "Fn associative keyword destructuring")
+  )
+
 (def other-files {"other.clj"   (test/lines "(ns other)"
                                             "(defn fun [])"
                                             "(defn fun2 [])")

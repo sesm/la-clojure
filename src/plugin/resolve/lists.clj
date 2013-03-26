@@ -1,13 +1,13 @@
 (ns plugin.resolve.lists
   (:import (org.jetbrains.plugins.clojure.psi.impl.list ListDeclarations)
-           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata ClKeyword)
+           (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata ClKeyword ClMap)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
            (com.intellij.psi PsiNamedElement PsiElement)
            (com.intellij.openapi.diagnostic Logger)
-           (org.jetbrains.plugins.clojure.psi.impl ImportOwner))
+           (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry))
   (:require [plugin.resolve.core :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
@@ -26,20 +26,43 @@
 (defn elem [^PsiElement element]
   (str (.getText element) ":" (.getTextOffset element)))
 
+(declare process-elements)
+
 (defn process-element [processor element place]
-  ;(println "element:" (elem element) (elem place))
-  (and (instance? PsiNamedElement element)
-       (not (ResolveUtil/processElement processor element))))
+  (cond
+    (instance? ClVector element) (process-elements processor (psi/significant-children element) place)
+    (instance? ClMap element) (reduce (fn [result ^ClMapEntry map-entry]
+                                        (let [key (.getKey map-entry)
+                                              value (.getValue map-entry)
+                                              keyword-text (if (instance? ClKeyword key)
+                                                             (.getText key))]
+                                          (or (cond
+                                                (= ":keys" keyword-text) (process-element processor
+                                                                                          value
+                                                                                          place)
+                                                (= ":as" keyword-text) (process-element processor
+                                                                                        value
+                                                                                        place)
+                                                (= ":or" keyword-text) false
+                                                :else (process-element processor key place))
+                                              result)))
+                                      false
+                                      (.getEntries ^ClMap element))
+    (instance? ClDef element) (process-element processor (.getNameSymbol ^ClDef element) place)
+    (instance? ClSymbol element) (not (or (= place element)
+                                          (= "&" (.getText ^ClSymbol element))
+                                          (ResolveUtil/processElement processor element)))
+    :else false))
 
 (defn process-elements [processor elements place]
-  (if (seq elements)
-    (or (process-element processor (first elements) place)
-        (recur processor (next elements) place))))
+  (reduce (fn [result item]
+            (or (process-element processor item place)
+                result))
+          false
+          elements))
 
 (defn process-params [processor ^ClListLike params ^PsiElement place last-parent]
-  (if (psi/contains? params place)
-    (not (instance? ClMetadata (.getParent place)))
-    (process-elements processor (seq (.getAllSymbols params)) place)))
+  (process-elements processor (psi/significant-children params) place))
 
 (defn third [coll]
   (first (rest (rest coll))))
@@ -75,12 +98,12 @@
                                 (instance? ClLiteral (third children))
                                 (instance? ClVector (fourth children))) (fourth children)
                               :else nil)]
-          (process-params processor params place last-parent))
+          (process-element processor params place))
         ; Check fn params for multi-arity fn
         (and (instance? ClList last-parent)
              (let [params (first (psi/significant-children last-parent))]
                (and (instance? ClVector params)
-                    (process-params processor params place last-parent))))))))
+                    (process-element processor params place))))))))
 
 (defn process-let [list processor state last-parent place]
   (if (psi/contains? list place)
@@ -94,12 +117,11 @@
                (process-elements processor (take-nth 2 children) place)
                ; More complex - place is within bindings
                (let [definitions (partition 2 children)]
-                 (or (some #(psi/contains? % place) (map first definitions))
-                     (process-elements processor
-                                       (map first
-                                            (take-while #(not (psi/contains? (second %) place))
-                                                        definitions))
-                                       place)))))))))
+                 (process-elements processor
+                                   (map first
+                                        (take-while #(not (psi/contains? (second %) place))
+                                                    definitions))
+                                   place))))))))
 
 (defn process-defn [list processor state ^PsiElement last-parent place]
   (if (and (not (nil? last-parent))
