@@ -17,7 +17,7 @@
     Inc.
   </vendor>
 
-  <idea-version since-build="126.232" until-build="126.9999"/>
+  <idea-version since-build="123.169" until-build="126.9999"/>
 
   <depends optional="true" config-file="copyright.xml">com.intellij.copyright</depends>
 
@@ -131,65 +131,6 @@
             text="Clojure File" description="Create new Clojure File">
       <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
     </action>
-
-    <!-- REPL-related actions -->
-    <group id="Clojure.REPL.Group"
-           class="org.jetbrains.plugins.clojure.repl.actions.ClojureReplActionGroup"
-           text="Clojure REPL" description="Clojure" popup="true">
-
-      <action id="org.jetbrains.plugins.clojure.repl.actions.LoadClojureFileInConsoleAction"
-              class="org.jetbrains.plugins.clojure.repl.actions.LoadClojureFileInConsoleAction"
-              text="Load file in REPL">
-        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift L"/>
-      </action>
-
-      <action id="org.jetbrains.plugins.clojure.repl.actions.RunSelectedTextAction"
-              class="org.jetbrains.plugins.clojure.repl.actions.RunSelectedTextAction"
-              text="Run selected text in REPL">
-        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift J"/>
-      </action>
-
-      <action id="org.jetbrains.plugins.clojure.repl.actions.RunLastSExprAction"
-              class="org.jetbrains.plugins.clojure.repl.actions.RunLastSExprAction"
-              text="Execute last S-expression in REPL">
-        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift H"/>
-      </action>
-
-      <action id="org.jetbrains.plugins.clojure.repl.actions.RunTopSExprAction"
-              class="org.jetbrains.plugins.clojure.repl.actions.RunTopSExprAction"
-              text="Run Top S-expression in REPL">
-        <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift G"/>
-      </action>
-
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-
-    </group>
-
-    <action id="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            class="org.jetbrains.plugins.clojure.repl.toolwindow.actions.NewExternalConsoleAction"
-            text="Start Clojure Console"
-            description="Runs Clojure REPL">
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-    </action>
-
-    <action id="Clojure.REPL.Execute.Immediately"
-            class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Execute Current Statement">
-      <keyboard-shortcut keymap="$default" first-keystroke="control ENTER"/>
-    </action>
-
-    <action id="Clojure.REPL.History.Previous"
-            class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Select Previous History Item">
-      <keyboard-shortcut keymap="$default" first-keystroke="control UP"/>
-    </action>
-
-    <action id="Clojure.REPL.History.Next"
-            class="com.intellij.openapi.actionSystem.EmptyAction"
-            text="Select Next History Item">
-      <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>
-    </action>
-
   </actions>
 
 

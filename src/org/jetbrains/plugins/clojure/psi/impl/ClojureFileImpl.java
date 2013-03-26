@@ -41,7 +41,7 @@ import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
-import org.jetbrains.plugins.clojure.repl.REPL;
+import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -299,7 +299,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
     }
 
-    Atom state = file.getCopyableUserData(REPL.STATE_KEY);
+    Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
     if (state != null) {
       Associative stateValue = (Associative) state.deref();
       Object repl = stateValue.valAt(REPL_KEYWORD);

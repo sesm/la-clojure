@@ -4,7 +4,7 @@
            (com.intellij.openapi.project Project)
            (com.intellij.openapi.wm ToolWindowManager)
            (org.jetbrains.plugins.clojure.repl.toolwindow REPLToolWindowFactory)
-           (org.jetbrains.plugins.clojure.repl REPL ClojureConsole Printing)
+           (org.jetbrains.plugins.clojure.repl ClojureConsole Printing)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile)
            (com.intellij.testFramework LightVirtualFile)
            (org.jetbrains.plugins.clojure ClojureIcons)
@@ -31,7 +31,7 @@
 (defn execute-command [state command]
   (let [{:keys [repl history-viewer]} @state]
     (when-not (str/blank? command)
-      (Printing/printToHistory history-viewer (str command "\n") Printing/NORMAL_TEXT)
+      (repl/print state (str command "\n"))
       (editor/scroll-down history-viewer)
       (insert-history-before-current state command)
       (repl/execute repl state command))))
@@ -49,7 +49,7 @@
   (let [manager (ToolWindowManager/getInstance project)
         tool-window (.getToolWindow manager REPLToolWindowFactory/TOOL_WINDOW_ID)]
     (if-let [^Content content (-> tool-window .getContentManager .getSelectedContent)]
-      (.getUserData content REPL/STATE_KEY))))
+      (.getUserData content ClojureConsole/STATE_KEY))))
 
 (defn repl-action-state [^AnActionEvent event]
   (if-let [editor ^Editor (.getData event PlatformDataKeys/EDITOR)]
@@ -63,7 +63,7 @@
                 (let [{:keys [active? console]} @state]
                   (if (and (instance? ClojureFile psi-file)
                            (not (instance? LightVirtualFile virtual-file))
-                           active?
+                           (active? state)
                            (instance? ClojureConsole console))
                     {:editor       editor
                      :project      project

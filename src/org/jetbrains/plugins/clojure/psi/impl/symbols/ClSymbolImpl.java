@@ -48,7 +48,7 @@ import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcess
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
-import org.jetbrains.plugins.clojure.repl.REPL;
+import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 
 import javax.swing.*;
 import java.util.Collection;
@@ -399,7 +399,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
     final PsiFile file = getContainingFile();
     if (element instanceof PsiClass && (file instanceof ClojureFile)) {
       final PsiClass clazz = (PsiClass) element;
-      Atom state = file.getCopyableUserData(REPL.STATE_KEY);
+      Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
       if (state == null) {
         // Import into current file
         final Application application = ApplicationManager.getApplication();

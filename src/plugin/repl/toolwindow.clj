@@ -2,7 +2,7 @@
   (:import (com.intellij.openapi.wm ToolWindowManager IdeFocusManager)
            (org.jetbrains.plugins.clojure.repl.toolwindow REPLToolWindowFactory)
            (org.jetbrains.plugins.clojure.repl ConsoleHistoryModel ClojureConsoleView TerminateREPLDialog
-                                               ClojureConsole REPL)
+                                               ClojureConsole)
            (com.intellij.openapi.actionSystem DefaultActionGroup AnAction AnActionEvent IdeActions)
            (javax.swing JPanel JLabel SwingConstants)
            (java.awt BorderLayout Color)
@@ -13,7 +13,6 @@
            (com.intellij.util.ui UIUtil)
            (org.jetbrains.plugins.clojure ClojureIcons)
            (org.jetbrains.plugins.clojure.utils Actions Editors)
-           (org.jetbrains.plugins.clojure.repl.toolwindow.actions ExecuteImmediatelyAction)
            (com.intellij.openapi.util IconLoader TextRange)
            (com.intellij.openapi.editor Editor EditorFactory)
            (com.intellij.codeInsight.lookup LookupManager)
@@ -49,7 +48,7 @@
   (boolean
     (let [{:keys [repl active? console-editor history-viewer project
                   history-index history-entries history-offsets]} @state]
-      (when active?
+      (when (active? state)
         (let [offset (editor/offset console-editor)
               text (editor/text-from console-editor)
               candidate (str/trim text)]
@@ -64,10 +63,20 @@
                                                         (TextRange. 0
                                                                     (editor/text-length console-editor)))
                   (if repl (repl/execute repl state candidate))
-                  (swap! state assoc
-                         :history-index (inc history-index)
-                         :history-entries (conj (assoc history-entries history-index text) "")
-                         :history-offsets (conj (assoc history-offsets history-index offset) 0)))
+                  (let [last-index (dec (count history-entries))
+                        offset (editor/offset console-editor)
+                        text (editor/text-from console-editor)]
+                    (if (or (= history-index last-index)
+                            (str/blank? (get history-entries last-index)))
+                      (swap! state assoc
+                             :history-index (count history-entries)
+                             :history-entries (conj (assoc history-entries last-index text) "")
+                             :history-offsets (conj (assoc history-offsets last-index offset) 0))
+                      (swap! state assoc
+                             :history-index (inc (count history-entries))
+                             :history-entries (conj history-entries text "")
+                             :history-offsets (conj history-offsets offset 0))))
+                  )
                 (util/with-write-action
                   (editor/set-text console-editor "")
                   (editor/scroll-down history-viewer))
@@ -75,7 +84,7 @@
 
 (defn do-stop [state]
   (let [{:keys [repl active? on-stop]} @state]
-    (when active?
+    (when (active? state)
       (if on-stop (on-stop state))
       (if repl (repl/stop repl state)))))
 
@@ -120,30 +129,31 @@
              :on-stop (fn [state]
                         (.removeProjectManagerListener project-manager project listener)
                         (.removeContentManagerListener content-manager listener)))
-      (if active?
+      (if (active? state)
         (focus-editor state)))))
 
-(defn active? [state]
+(defn update-active? [state]
   (fn [^AnActionEvent event]
-    (.setEnabled (.getPresentation event) (boolean (:active? @state)))))
+    (let [active? (:active? @state)]
+      (.setEnabled (.getPresentation event) (boolean (active? state))))))
 
 (defn execute-immediately [state]
   (actions/dumb-aware :action-performed (fn [event] (do-execute state true))
-                      :update (active? state)
+                      :update (update-active? state)
                       :shortcut-set "control ENTER"
                       :icon "/actions/execute.png"
                       :text "Execute Current Statement"))
 
 (defn stop-action [state]
   (actions/dumb-aware :action-performed (fn [event] (do-stop state))
-                      :update (active? state)
+                      :update (update-active? state)
                       :shortcut-from IdeActions/ACTION_STOP_PROGRAM
                       :icon "/actions/suspend.png"
                       :text "Stop REPL"))
 
 (defn close-action [state]
   (actions/dumb-aware :action-performed (fn [^AnActionEvent event]
-                                          (let [{:keys [content content-manager active?]} @state]
+                                          (let [{:keys [content content-manager]} @state]
                                             (do-stop state)
                                             (.removeContent content-manager content true)))
                       :shortcut-from IdeActions/ACTION_CLOSE
@@ -152,7 +162,7 @@
 
 (defn history-move [state next]
   (fn [^AnActionEvent event]
-    (let [{:keys [history-index history-entries history-offsets active? console-editor]} @state]
+    (let [{:keys [history-index history-entries history-offsets console-editor]} @state]
       (util/with-write-action
         (let [previous (editor/text-from console-editor)
               previous-offset (editor/offset console-editor)
@@ -169,7 +179,8 @@
                       :update (fn [^AnActionEvent event]
                                 (let [{:keys [history-index active?]} @state
                                       presentation (.getPresentation event)]
-                                  (.setEnabled presentation (boolean (and active? (> history-index 0))))))
+                                  (.setEnabled presentation (boolean (and (active? state)
+                                                                          (> history-index 0))))))
                       :shortcut-set "control UP"
                       :icon "/actions/previousOccurence.png"
                       :text "Select Previous History Item"))
@@ -179,7 +190,8 @@
                       :update (fn [^AnActionEvent event]
                                 (let [{:keys [history-index history-entries active?]} @state
                                       presentation (.getPresentation event)]
-                                  (.setEnabled presentation (boolean (and active? (< history-index (dec (count history-entries))))))))
+                                  (.setEnabled presentation (boolean (and (active? state)
+                                                                          (< history-index (dec (count history-entries))))))))
                       :shortcut-set "control DOWN"
                       :icon "/actions/nextOccurence.png"
                       :text "Select Next History Item"))
@@ -203,7 +215,7 @@
                       :update (fn [^AnActionEvent event]
                                 (let [{:keys [history-index active?]} @state
                                       presentation (.getPresentation event)]
-                                  (.setEnabled presentation (boolean (and active?
+                                  (.setEnabled presentation (boolean (and (active? state)
                                                                           (> history-index 0)
                                                                           (can-move-up-in-editor state))))))
                       :shortcut-set "UP"
@@ -214,7 +226,7 @@
                       :update (fn [^AnActionEvent event]
                                 (let [{:keys [history-index history-entries active?]} @state
                                       presentation (.getPresentation event)]
-                                  (.setEnabled presentation (boolean (and active?
+                                  (.setEnabled presentation (boolean (and (active? state)
                                                                           (< history-index (dec (count history-entries)))
                                                                           (can-move-down-in-editor state))))))
                       :shortcut-set "DOWN"
@@ -237,7 +249,7 @@
         event-document (.getDocument event)]
     (if (and (= editor-document event-document)
              (< history-index (dec (count history-offsets))))
-      (if (str/blank? (get history-entries (dec (count history-offsets))))
+      (if (str/blank? (get history-entries (dec (count history-entries))))
         (swap! state assoc
                :history-index (dec (count history-offsets))
                :history-offsets (assoc history-offsets history-index (editor/offset console-editor))
@@ -256,7 +268,7 @@
                                        REPLToolWindowFactory/TOOL_WINDOW_ID)]
     (let [history-model (ConsoleHistoryModel.)
           project (:project @state)
-          console-view (ClojureConsoleView. project "Title" history-model)
+          console-view (ClojureConsoleView. project "REPL" history-model)
           console (.getConsole console-view)
           console-editor (.getConsoleEditor console)
           history-viewer (.getHistoryViewer console)
@@ -281,8 +293,8 @@
         (.add (.getComponent console-view) "Center")
         (.updateUI))
 
-      (.putUserData console-editor REPL/STATE_KEY state)
-      (.putCopyableUserData (.getFile console) REPL/STATE_KEY state)
+      (.putUserData console-editor ClojureConsole/STATE_KEY state)
+      (.putCopyableUserData (.getFile console) ClojureConsole/STATE_KEY state)
 
       (let [content-factory (ContentFactory$SERVICE/getInstance)
             content (.createContent content-factory panel title false)
@@ -290,7 +302,7 @@
             editor-factory (EditorFactory/getInstance)
             multicaster (.getEventMulticaster editor-factory)]
         (.addContent manager content)
-        (.putUserData content REPL/STATE_KEY state)
+        (.putUserData content ClojureConsole/STATE_KEY state)
         (.addDocumentListener multicaster
                               (reify DocumentListener
                                 (beforeDocumentChange [this event]

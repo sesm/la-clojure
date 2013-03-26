@@ -1,7 +1,5 @@
 (ns plugin.repl.ide
-  (:import (org.jetbrains.plugins.clojure.repl.toolwindow.actions NewConsoleActionBase)
-           (org.jetbrains.plugins.clojure.repl REPLProviderBase Response Printing)
-           (org.jetbrains.plugins.clojure.repl.impl REPLBase)
+  (:import (org.jetbrains.plugins.clojure.repl Printing)
            (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
            (java.io Writer PrintWriter StringReader StringWriter)
            (clojure.lang LineNumberingPushbackReader)
@@ -63,18 +61,18 @@
 (defn do-execute [state command print-values?]
   (let [{:keys [history-viewer client-state]} @state
         result (ide-execute client-state command)]
-    (if-let [ns (:ns result)]
+    (when-let [ns (:ns result)]
       (toolwindow/set-title! state (str "IDE: " ns)))
-    (if-let [error (:err result)]
-      (Printing/printToHistory history-viewer error Printing/ERROR_TEXT))
-    (if-let [output (:out result)]
-      (Printing/printToHistory history-viewer output Printing/NORMAL_TEXT))
+    (when-let [error (:err result)]
+      (repl/print-error state error))
+    (when-let [output (:out result)]
+      (repl/print state output))
     (if print-values?
-      (if-let [values (:value result)]
+      (when-let [values (:value result)]
         (doseq [value values]
-          (Printing/printToHistory history-viewer "=> " Printing/USER_INPUT_TEXT)
-          (Printing/printValue history-viewer value)
-          (Printing/printToHistory history-viewer "\n" Printing/NORMAL_TEXT))))
+          (repl/print state "=> " Printing/USER_INPUT_TEXT)
+          (repl/print-value state value)
+          (repl/print state "\n"))))
     (util/invoke-later
       (editor/scroll-down history-viewer))))
 
@@ -83,7 +81,7 @@
     (execute [this state command]
       (do-execute state command true))
     (stop [this state]
-      (swap! state dissoc :active?))
+      (swap! state assoc :active? (fn [state] false)))
     (completions [this state]
       (completions (:client-state @state)))
     (ns-symbols [this state ns-name]
@@ -96,7 +94,7 @@
                      :project (.getProject ^Module module)
                      :repl (ide-repl)
                      :client-state (atom {#'*ns* (create-ns 'user)})
-                     :active? true})]
+                     :active? (fn [state] true)})]
     (toolwindow/create-repl state "IDE: user")
     (do-execute state repl/init-command false)
     (toolwindow/enabled! state true)

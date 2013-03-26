@@ -3,6 +3,7 @@
             plugin.typing
             plugin.annotator
             plugin.repl.ide
+            plugin.repl.process
             plugin.resolve.core
             plugin.resolve.lists
             plugin.resolve.files
@@ -17,5 +18,6 @@
   (plugin.annotator/initialise)
   (plugin.repl.actions/initialise)
   (plugin.repl.ide/initialise)
+  (plugin.repl.process/initialise)
   (plugin.documentation/initialise)
   (plugin.actions.paredit/initialise))

@@ -33,30 +33,6 @@ public class Printing {
   public static final TextAttributes ERROR_TEXT = ConsoleViewContentType.ERROR_OUTPUT.getAttributes();
   public static final TextAttributes USER_INPUT_TEXT = ConsoleViewContentType.USER_INPUT.getAttributes();
 
-  static void printResponse(Editor editor, Response response, boolean displayResult) {
-    if (response.errorOutput() != null) {
-      printToHistory(editor, response.errorOutput(), ERROR_TEXT);
-    }
-    if (response.stdOutput() != null) {
-      printToHistory(editor, response.stdOutput(), NORMAL_TEXT);
-    }
-
-    if (displayResult) {
-      for (Object value : response.values()) {
-        print(editor, "=> ", USER_INPUT_TEXT);
-        if (value instanceof Response.UnreadableForm) {
-          print(editor, ((Response.UnreadableForm) value).form.trim(), NORMAL_TEXT);
-        }
-        else {
-          printValue(editor, value);
-        }
-        print(editor, "\n", NORMAL_TEXT);
-      }
-    }
-
-    Editors.scrollDown(editor);
-  }
-
   // Based on RT.print
   @SuppressWarnings("HardCodedStringLiteral")
   public static void printValue(Editor editor, Object x) {
