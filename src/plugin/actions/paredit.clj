@@ -8,13 +8,12 @@
            (com.intellij.openapi.util TextRange)
            (org.jetbrains.plugins.clojure.psi.api ClBraced)
            (com.intellij.openapi.diagnostic Logger))
-  (:use [plugin.actions.editor :only [defeditor-action]])
   (:require [plugin.tokens :as tokens]
             [plugin.util :as util]
             [plugin.psi :as psi]
             [plugin.editor :as edit]
             [plugin.tokens :as tokens]
-            [plugin.actions.core :as actions]))
+            [plugin.actions :as actions]))
 
 (def logger (Logger/getInstance "plugin.actions.paredit"))
 
@@ -72,24 +71,21 @@
 
 (defn initialise []
   ; Unregister these first for REPL convenience
-  (actions/unregister-action "plugin.actions.paredit.slurp-backwards")
-  (actions/unregister-action "plugin.actions.paredit.slurp-forwards")
-  (actions/unregister-action "plugin.actions.paredit.splice")
+  (actions/unregister-action ::slurp-backwards)
+  (actions/unregister-action ::slurp-forwards)
+  (actions/unregister-action ::splice)
 
-  (defeditor-action
-    "plugin.actions.paredit.slurp-backwards"
-    "Slurp Backwards"
-    "ctrl shift 9"
-    slurp-backwards)
+  (actions/register-action (actions/editor-write-action :execute slurp-backwards
+                                                        :text "Slurp Backwards")
+                           ::slurp-backwards)
+  (actions/register-shortcut ::slurp-backwards "ctrl shift 9")
 
-  (defeditor-action
-    "plugin.actions.paredit.slurp-forwards"
-    "Slurp Forwards"
-    "ctrl shift 0"
-    slurp-forwards)
+  (actions/register-action (actions/editor-write-action :execute slurp-forwards
+                                                        :text "Slurp Forwards")
+                           ::slurp-forwards)
+  (actions/register-shortcut ::slurp-forwards "ctrl shift 0")
 
-  (defeditor-action
-    "plugin.actions.paredit.splice"
-    "Splice Sexp"
-    "alt S"
-    splice))
+  (actions/register-action (actions/editor-write-action :execute splice
+                                                        :text "Splice Sexp")
+                           ::splice)
+  (actions/register-shortcut ::splice "alt S"))

@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.clojure.repl;
 
+import clojure.lang.Atom;
 import clojure.lang.Keyword;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.util.Key;
@@ -16,6 +17,7 @@ public interface REPL
 {
   Key<REPL> REPL_KEY = Key.create(REPLToolWindowFactory.TOOL_WINDOW_ID);
   Key<Content> CONTENT_KEY = Key.create("REPL.Content");
+  Key<Atom> STATE_KEY = Key.create(":plugin.repl.toolwindow/state");
 
   Response execute(String command);
 

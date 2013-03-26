@@ -153,7 +153,7 @@ public class ClojureProcessREPL extends REPLBase {
 
   private void printError(String text) {
     ClojureConsole console = getConsoleView().getConsole();
-    console.printToHistory(text, ConsoleViewContentType.ERROR_OUTPUT.getAttributes());
+    Printing.printToHistory(console.getHistoryViewer(), text, ConsoleViewContentType.ERROR_OUTPUT.getAttributes());
   }
 
   @Override

@@ -48,35 +48,23 @@ import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileEditor.*;
-import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
-import com.intellij.openapi.fileEditor.impl.EditorWindow;
-import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.fileEditor.impl.FileEditorManagerImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Splitter;
 import com.intellij.openapi.util.Comparing;
-import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiFileFactory;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.impl.PsiDocumentManagerImpl;
-import com.intellij.psi.impl.PsiFileFactoryImpl;
-import com.intellij.psi.impl.PsiManagerEx;
 import com.intellij.testFramework.LightVirtualFile;
 import com.intellij.util.FileContentUtil;
 import com.intellij.util.ObjectUtils;
 import com.intellij.util.ui.UIUtil;
-import com.intellij.util.ui.update.MergingUpdateQueue;
-import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.FocusManager;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.Collections;
@@ -132,7 +120,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     // action shortcuts are not yet registered
     ApplicationManager.getApplication().invokeLater(new Runnable() {
       public void run() {
-        installEditorFactoryListener();
+        installFileEditorManager();
       }
     });
 
@@ -252,30 +240,6 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     return myTitle;
   }
 
-  public void printToHistory(final String text, final TextAttributes attributes)
-  {
-    ApplicationManager.getApplication().invokeLater(new Runnable()
-    {
-      public void run()
-      {
-        Document history = myHistoryViewer.getDocument();
-        MarkupModel markupModel = DocumentMarkupModel.forDocument(history, myProject, true);
-        int offset = history.getTextLength();
-        appendToHistoryDocument(history, StringUtil.convertLineSeparators(text));
-        markupModel.addRangeHighlighter(offset,
-                                        history.getTextLength(),
-                                        HighlighterLayer.SYNTAX,
-                                        attributes,
-                                        HighlighterTargetArea.EXACT_RANGE);
-      }
-    });
-  }
-
-  protected void appendToHistoryDocument(@NotNull Document history, @NotNull String text)
-  {
-    history.insertString(history.getTextLength(), text);
-  }
-
   public JComponent getComponent()
   {
     return splitter;
@@ -310,7 +274,7 @@ public class LanguageConsoleImpl implements Disposable, TypeSafeDataProvider
     sink.put(key, o);
   }
 
-  private void installEditorFactoryListener()
+  private void installFileEditorManager()
   {
     FileEditorManagerAdapter fileEditorListener = new FileEditorManagerAdapter() {
       @Override

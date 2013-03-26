@@ -58,11 +58,11 @@ public abstract class REPLProviderBase implements REPLProvider
 
     // Create toolbar
     DefaultActionGroup toolbarActions = new DefaultActionGroup();
-    ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar("unknown", toolbarActions, false);
+    ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar("unknown", toolbarActions, true);
 
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBackground(Color.WHITE);
-    panel.add(actionToolbar.getComponent(), "West");
+    panel.add(actionToolbar.getComponent(), "North");
     panel.add(consoleView.getComponent(), "Center");
 
     // TODO
@@ -143,7 +143,7 @@ public abstract class REPLProviderBase implements REPLProvider
 
     Response response = repl.execute("(println \"Clojure\" (clojure-version))");
     ClojureConsole console = repl.getConsoleView().getConsole();
-    console.printResponse(response, false);
+    console.printResponse(console.getHistoryViewer(), response, false);
   }
 
   private AnAction[] getToolbarActions(REPL repl) throws REPLException
@@ -235,8 +235,8 @@ public abstract class REPLProviderBase implements REPLProvider
         else
         {
           int lineCount = document.getLineCount();
-          return (lineCount == 0 || document.getLineNumber(caretModel.getOffset()) == lineCount - 1) &&
-                 StringUtil.isEmptyOrSpaces(document.getText().substring(caretModel.getOffset()));
+          return ((lineCount == 0) || (document.getLineNumber(caretModel.getOffset()) == (lineCount - 1))) &&
+              StringUtil.isEmptyOrSpaces(document.getText().substring(caretModel.getOffset()));
         }
       }
 

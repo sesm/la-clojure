@@ -23,6 +23,14 @@
      (reify Computable
        (compute [this] ~@body))))
 
+(defmacro with-write-action
+  "Runs body inside a write action."
+  [& body]
+  `(.runWriteAction
+     (ApplicationManager/getApplication)
+     (reify Runnable
+       (run [this] ~@body))))
+
 (defmacro with-command
   "Runs body inside a command."
   [project name group-id & body]

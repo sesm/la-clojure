@@ -1,5 +1,8 @@
 package org.jetbrains.plugins.clojure.psi.impl.symbols;
 
+import clojure.lang.Atom;
+import clojure.lang.RT;
+import clojure.lang.Var;
 import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.application.Application;
@@ -46,7 +49,6 @@ import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.repl.REPL;
-import org.jetbrains.plugins.clojure.repl.actions.RunActionBase;
 
 import javax.swing.*;
 import java.util.Collection;
@@ -397,8 +399,8 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
     final PsiFile file = getContainingFile();
     if (element instanceof PsiClass && (file instanceof ClojureFile)) {
       final PsiClass clazz = (PsiClass) element;
-      REPL repl = file.getCopyableUserData(REPL.REPL_KEY);
-      if (repl == null) {
+      Atom state = file.getCopyableUserData(REPL.STATE_KEY);
+      if (state == null) {
         // Import into current file
         final Application application = ApplicationManager.getApplication();
         application.runWriteAction(new Runnable() {
@@ -410,7 +412,8 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
       } else {
         // Import into REPL session
         String command = "(import " + clazz.getQualifiedName() + ')';
-        RunActionBase.executeCommand(getProject(), command);
+        Var executeCommand = RT.var("plugin.repl.actions", "execute-command");
+        executeCommand.invoke(state, command);
       }
       return this;
     }

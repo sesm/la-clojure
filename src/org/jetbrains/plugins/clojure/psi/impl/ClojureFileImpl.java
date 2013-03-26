@@ -1,6 +1,6 @@
 package org.jetbrains.plugins.clojure.psi.impl;
 
-import clojure.lang.Keyword;
+import clojure.lang.*;
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.editor.Document;
@@ -14,7 +14,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiElementProcessor;
-import com.intellij.psi.stubs.PsiFileStub;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubTree;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -28,7 +27,6 @@ import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
@@ -66,6 +64,7 @@ import java.util.Map;
  * limitations under the License.
  */
 public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
+  public static final Keyword REPL_KEYWORD = Keyword.intern("repl");
   private PsiElement myContext = null;
   private PsiClass myClass;
   private boolean myScriptClassInitialized = false;
@@ -281,28 +280,33 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   @Override
-  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    if (!ResolveUtil.processDeclarations(this, processor, state, lastParent, place)) {
+  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState resolveState, PsiElement lastParent, @NotNull PsiElement place) {
+    if (!ResolveUtil.processDeclarations(this, processor, resolveState, lastParent, place)) {
       return false;
     }
-    return super.processDeclarations(processor, state, lastParent, place);
+    return super.processDeclarations(processor, resolveState, lastParent, place);
   }
 
-  public static boolean processDeclarations(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
+  public static boolean processDeclarations(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState resolveState, PsiElement lastParent, PsiElement place) {
     //Process precedent read forms
-    ResolveUtil.processChildren(file, processor, state, lastParent, place);
+    ResolveUtil.processChildren(file, processor, resolveState, lastParent, place);
 
     final JavaPsiFacade facade = JavaPsiFacade.getInstance(file.getProject());
 
     //Add top-level package names
     final PsiPackage rootPackage = facade.findPackage("");
     if (rootPackage != null) {
-      NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, state, null, place);
+      NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
     }
 
-    REPL repl = file.getCopyableUserData(REPL.REPL_KEY);
-    if (repl != null) {
-      Map<Keyword, Collection<String>> completions = repl.getCompletions();
+    Atom state = file.getCopyableUserData(REPL.STATE_KEY);
+    if (state != null) {
+      Associative stateValue = (Associative) state.deref();
+      Object repl = stateValue.valAt(REPL_KEYWORD);
+      Var doCompletions = RT.var("plugin.repl", "completions");
+
+      Map<Keyword, Collection<String>> completions =
+          (Map<Keyword, Collection<String>>) doCompletions.invoke(repl, state);
 
       Collection<String> symbols = completions.get(SYMBOLS_KEYWORD);
       if (symbols != null) {
@@ -318,7 +322,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         for (String namespace : topLevel(namespaces)) {
           if (!ResolveUtil.processElement(
               processor,
-              new CompletionSyntheticNamespace(repl, PsiManager.getInstance(file.getProject()), namespace, namespace, namespaces))) {
+              new CompletionSyntheticNamespace(state, PsiManager.getInstance(file.getProject()), namespace, namespace, namespaces))) {
             return false;
           }
         }
@@ -387,12 +391,12 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   public static class CompletionSyntheticNamespace extends ClSyntheticNamespace {
-    private final REPL repl;
+    private final Atom state;
     private final Collection<String> namespaces;
 
-    public CompletionSyntheticNamespace(REPL repl, PsiManager manager, String name, String fqn, Collection<String> namespaces) {
+    public CompletionSyntheticNamespace(Atom state, PsiManager manager, String name, String fqn, Collection<String> namespaces) {
       super(manager, name, fqn, null);
-      this.repl = repl;
+      this.state = state;
       this.namespaces = namespaces;
     }
 
@@ -408,14 +412,18 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
       if ((separator == null) || separator.getText().equals(".")) {
         for (String ns : nextLevel(namespace.namespaces, qualifiedName)) {
-          if (!ResolveUtil.processElement(processor, new CompletionSyntheticNamespace(namespace.repl, namespace.getManager(), ns, qualifiedName + '.' + ns, namespace.namespaces))) {
+          if (!ResolveUtil.processElement(processor, new CompletionSyntheticNamespace(namespace.state, namespace.getManager(), ns, qualifiedName + '.' + ns, namespace.namespaces))) {
             return false;
           }
         }
       }
 
       if ((separator == null) || separator.getText().equals("/")) {
-        Collection<String> symbolsInNS = namespace.repl.getSymbolsInNS(qualifiedName);
+        Associative stateValue = (Associative) namespace.state.deref();
+        Object repl = stateValue.valAt(REPL_KEYWORD);
+        Var nsSymbols = RT.var("plugin.repl", "ns-symbols");
+
+        Collection<String> symbolsInNS = (Collection<String>) nsSymbols.invoke(repl, state, qualifiedName);
         if (symbolsInNS != null) {
           for (String symbol : symbolsInNS) {
             if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(namespace.getManager(), symbol))) {

@@ -1,12 +1,18 @@
 (ns plugin.repl.ide
   (:import (org.jetbrains.plugins.clojure.repl.toolwindow.actions NewConsoleActionBase)
-           (org.jetbrains.plugins.clojure.repl REPLProviderBase Response)
+           (org.jetbrains.plugins.clojure.repl REPLProviderBase Response Printing)
            (org.jetbrains.plugins.clojure.repl.impl REPLBase)
-           (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup)
+           (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
            (java.io Writer PrintWriter StringReader StringWriter)
            (clojure.lang LineNumberingPushbackReader)
-           (com.intellij.openapi.diagnostic Logger))
-  (:require [plugin.actions.core :as actions]))
+           (com.intellij.openapi.diagnostic Logger)
+           (org.jetbrains.plugins.clojure ClojureIcons)
+           (com.intellij.openapi.module Module))
+  (:require [plugin.actions :as actions]
+            [plugin.repl :as repl]
+            [plugin.repl.toolwindow :as toolwindow]
+            [plugin.editor :as editor]
+            [plugin.util :as util]))
 
 (defn ide-execute [client-state code]
   (let [code-reader (LineNumberingPushbackReader. (StringReader. code))
@@ -48,44 +54,58 @@
      :err   (str err-buffer),
      :ns    (str (ns-name (get @client-state #'*ns*)))}))
 
-(defn ns-symbols [the-ns]
-  (map str (keys (ns-interns the-ns))))
-
 (defn completions [client-state]
   (let [the-ns (get @client-state #'*ns*)]
     {:imports    (map (fn [^Class c] (.getName c)) (vals (ns-imports the-ns))),
      :symbols    (map str (keys (filter (fn [v] (var? (second v))) (seq (ns-map the-ns)))))
      :namespaces (map str (all-ns))}))
 
-(defn create-repl [project module console-view working-dir]
-  (let [active (atom false)
-        client-state (atom {#'*ns* (create-ns 'user)})]
-    (proxy [REPLBase] [console-view project]
-      (start []
-        (swap! active (fn [atom] true)))
-      (doStop []
-        (swap! active (fn [atom] false)))
-      (doExecute [command]
-        (let [response (ide-execute client-state command)]
-          (proxy [Response] [nil]
-            (combinedResponse []
-              response)
-            (values []
-              (:value response)))))
-      (isActive [] @active)
-      (getType [] "IDE")
-      (getCompletions []
-        (completions client-state))
-      (getSymbolsInNS [ns-name]
-        (if-let [the-ns (find-ns (symbol ns-name))]
-          (ns-symbols the-ns))))))
+(defn do-execute [state command print-values?]
+  (let [{:keys [history-viewer client-state]} @state
+        result (ide-execute client-state command)]
+    (if-let [ns (:ns result)]
+      (toolwindow/set-title! state (str "IDE: " ns)))
+    (if-let [error (:err result)]
+      (Printing/printToHistory history-viewer error Printing/ERROR_TEXT))
+    (if-let [output (:out result)]
+      (Printing/printToHistory history-viewer output Printing/NORMAL_TEXT))
+    (if print-values?
+      (if-let [values (:value result)]
+        (doseq [value values]
+          (Printing/printToHistory history-viewer "=> " Printing/USER_INPUT_TEXT)
+          (Printing/printValue history-viewer value)
+          (Printing/printToHistory history-viewer "\n" Printing/NORMAL_TEXT))))
+    (util/invoke-later
+      (editor/scroll-down history-viewer))))
+
+(defn ide-repl []
+  (reify repl/IRepl
+    (execute [this state command]
+      (do-execute state command true))
+    (stop [this state]
+      (swap! state dissoc :active?))
+    (completions [this state]
+      (completions (:client-state @state)))
+    (ns-symbols [this state ns-name]
+      (if-let [the-ns (find-ns (symbol ns-name))]
+        (map str (keys (ns-interns the-ns)))))))
+
+(defn create-new-repl [^AnActionEvent event]
+  (let [module (actions/module event)
+        state (atom {:module  module
+                     :project (.getProject ^Module module)
+                     :repl (ide-repl)
+                     :client-state (atom {#'*ns* (create-ns 'user)})
+                     :active? true})]
+    (toolwindow/create-repl state "IDE: user")
+    (do-execute state repl/init-command false)
+    (toolwindow/enabled! state true)
+    (toolwindow/focus-editor state)))
 
 (defn initialise []
-  (let [action (proxy [NewConsoleActionBase] []
-                 (getProvider []
-                   (proxy [REPLProviderBase] []
-                     (isSupported [] true)
-                     (newREPL [project module console-view working-dir]
-                       (create-repl project module console-view working-dir)))))]
-    (actions/register-action action "NewIDERepl" "ToolsMenu")
-    (actions/set-text action "Start IDE Clojure Console")))
+  (actions/unregister-action ::new-ide-repl "ToolsMenu")
+  (let [action (actions/dumb-aware
+                 :action-performed create-new-repl
+                 :icon ClojureIcons/REPL_GO
+                 :text "Start IDE Clojure Console")]
+    (actions/register-action action ::new-ide-repl "ToolsMenu")))
