@@ -1,4 +1,5 @@
 (ns plugin.repl
+  (:refer-clojure :exclude [print])
   (:import (org.jetbrains.plugins.clojure.repl Printing)))
 
 (def init-command "(println (str \"Clojure \" (clojure-version)))")

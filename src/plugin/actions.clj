@@ -1,6 +1,7 @@
 (ns plugin.actions
   (:import (com.intellij.openapi.actionSystem AnAction ActionManager KeyboardShortcut DefaultActionGroup AnActionEvent
-                                              DataKeys Presentation CustomShortcutSet ShortcutSet)
+                                              DataKeys Presentation CustomShortcutSet ShortcutSet Shortcut
+                                              ActionToolbar)
            (com.intellij.openapi.keymap KeymapManager)
            (com.intellij.openapi.actionSystem.ex ActionManagerEx)
            (com.intellij.openapi.project DumbAwareAction)
@@ -103,9 +104,9 @@
       (if (vector? key)
         (let [shortcut (KeyboardShortcut. (remap-key-stroke (first key))
                                           (remap-key-stroke (second key)))]
-          (.setShortcutSet action (CustomShortcutSet. (to-array shortcut))))
+          (.setShortcutSet action (CustomShortcutSet. (into-array Shortcut shortcut))))
         (let [key-stroke (remap-key-stroke key)]
-          (.setShortcutSet action (CustomShortcutSet. key-stroke)))))
+          (.setShortcutSet action (CustomShortcutSet. ^KeyStroke key-stroke)))))
     action))
 
 (defn action-group [& rest]
@@ -138,7 +139,7 @@
                       (doit editor data-context))))
         action (proxy [EditorAction] [handler]
                  (update
-                   ([event]
+                   ([^AnActionEvent event]
                     (proxy-super update event))
                    ([editor presentation data-context]
                     (.setEnabled ^Presentation presentation (ClojureUtils/isClojureEditor editor)))))]
@@ -147,7 +148,7 @@
 (defn config! [action & rest]
   (config!* action (apply assoc {} rest)))
 
-(defn create-toolbar [place action-group horizontal]
+(defn ^ActionToolbar create-toolbar [place action-group horizontal]
   (let [manager (ActionManager/getInstance)]
     (.createActionToolbar manager place action-group horizontal)))
 

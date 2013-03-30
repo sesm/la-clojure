@@ -4,22 +4,24 @@
            (org.jetbrains.plugins.clojure.repl ClojureConsoleView TerminateREPLDialog
                                                ClojureConsole)
            (com.intellij.openapi.actionSystem DefaultActionGroup AnAction AnActionEvent IdeActions)
-           (javax.swing JPanel JLabel SwingConstants)
+           (javax.swing JPanel JLabel SwingConstants JComponent)
            (java.awt BorderLayout Color)
            (com.intellij.ui.content ContentFactory ContentManager Content ContentManagerAdapter ContentManagerEvent
                                     ContentFactory$SERVICE)
-           (com.intellij.openapi.project ProjectManagerListener ProjectManager DumbAware)
+           (com.intellij.openapi.project ProjectManagerListener ProjectManager DumbAware Project)
            (com.intellij.openapi.ui DialogWrapper)
            (com.intellij.util.ui UIUtil)
            (org.jetbrains.plugins.clojure ClojureIcons)
            (org.jetbrains.plugins.clojure.utils Actions Editors)
            (com.intellij.openapi.util IconLoader TextRange Disposer)
            (com.intellij.openapi.editor Editor EditorFactory)
+           (com.intellij.openapi.editor.ex EditorEx)
            (com.intellij.codeInsight.lookup LookupManager)
            (org.jetbrains.plugins.clojure.psi.util ClojurePsiUtil)
            (com.intellij.openapi.editor.event DocumentListener DocumentEvent)
            (com.intellij.openapi Disposable)
-           (com.intellij.openapi.diagnostic Logger))
+           (com.intellij.openapi.diagnostic Logger)
+           (java.util Collection))
   (:require [plugin.actions :as actions]
             [plugin.util :as util]
             [plugin.repl :as repl]
@@ -27,15 +29,15 @@
             [clojure.string :as str]
             [plugin.executor :as executor]))
 
-(def logger (Logger/getInstance (str *ns*)))
+(def ^Logger logger (Logger/getInstance (str *ns*)))
 
 (defn set-title! [state title]
-  (let [{:keys [content]} @state]
+  (let [{:keys [^Content content]} @state]
     (util/invoke-later
       (.setDisplayName content title))))
 
 (defn get-title [state]
-  (let [{:keys [content]} @state]
+  (let [{:keys [^Content content]} @state]
     (.getDisplayName content)))
 
 (defn terminate-dialog [state]
@@ -50,13 +52,13 @@
        DialogWrapper/OK_EXIT_CODE)))
 
 (defn enabled! [state enabled]
-  (let [{:keys [console-editor]} @state]
+  (let [{:keys [^EditorEx console-editor]} @state]
     (.setRendererMode console-editor (not enabled))
     (util/invoke-later
       (-> console-editor .getComponent .updateUI))))
 
 (defn hide-editor [state]
-  (let [{:keys [console-view console history-viewer]} @state]
+  (let [{:keys [^ClojureConsoleView console-view console ^Editor history-viewer]} @state]
     (util/invoke-later
       (let [component (.getComponent console-view)
             parent (.getParent component)]
@@ -65,7 +67,7 @@
             (.add parent (.getComponent history-viewer))
             (.remove parent component)
             (editor/scroll-down history-viewer)
-            (.updateUI parent)))))))
+            (.updateUI ^JComponent parent)))))))
 
 (defn do-execute [state immediately?]
   (boolean
@@ -130,7 +132,7 @@
             (.consume event)))))
     (projectOpened [project])
     (canCloseProject [closing-project]
-      (let [{:keys [content content-manager project]} @state]
+      (let [{:keys [content ^ContentManager content-manager project]} @state]
         (if (= project closing-project)
           (let [ret (terminate-dialog state)]
             (when ret
@@ -142,19 +144,19 @@
     (projectClosing [project])))
 
 (defn focus-editor [state]
-  (let [{:keys [project console-editor]} @state
+  (let [{:keys [project ^Editor console-editor]} @state
         focus-manager (IdeFocusManager/getInstance project)
         content-component (.getContentComponent console-editor)]
     (util/invoke-later
       (.requestFocus focus-manager content-component true))))
 
 (defn init-content [state]
-  (let [{:keys [active? content content-manager project]} @state]
+  (let [{:keys [active? content ^ContentManager content-manager project]} @state]
     (.addContent content-manager content)
     (.setSelectedContent content-manager content)
     (let [project-manager (ProjectManager/getInstance)
           listener (repl-listener state)]
-      (.addProjectManagerListener project-manager project listener)
+      (.addProjectManagerListener project-manager ^Project project ^ProjectManagerListener listener)
       (.addContentManagerListener content-manager listener)
       (swap! state assoc
              :listener listener
@@ -187,7 +189,7 @@
 
 (defn close-action [state]
   (actions/dumb-aware :action-performed (fn [event]
-                                          (let [{:keys [content content-manager]} @state]
+                                          (let [{:keys [content ^ContentManager content-manager]} @state]
                                             (stop state)
                                             (.removeContent content-manager content true)))
                       :shortcut-from IdeActions/ACTION_CLOSE
@@ -302,15 +304,15 @@
           toolbar-actions (DefaultActionGroup.)
           toolbar (actions/create-toolbar "unknown" toolbar-actions true)
           panel (JPanel. (BorderLayout.))
-          actions (into-array [(execute-immediately state)
-                               (stop-action state)
-                               (close-action state)
-                               (history-previous state)
-                               (history-next state)
-                               (history-up state)
-                               (history-down state)])]
+          actions [(execute-immediately state)
+                   (stop-action state)
+                   (close-action state)
+                   (history-previous state)
+                   (history-next state)
+                   (history-up state)
+                   (history-down state)]]
       (.setRendererMode console-editor true)
-      (.addAll toolbar-actions actions)
+      (.addAll toolbar-actions ^Collection actions)
       (register-shortcuts actions (.getComponent console-editor))
       (register-shortcuts actions panel)
 

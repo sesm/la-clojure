@@ -2,10 +2,10 @@
   (:import (org.jetbrains.plugins.clojure.repl REPLComponent REPLUtil ClojureConsoleView
                                                TerminateREPLDialog Printing)
            (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
-           (java.io Writer PrintWriter StringReader StringWriter File)
+           (java.io Writer PrintWriter StringReader StringWriter File Closeable)
            (clojure.lang LineNumberingPushbackReader)
            (com.intellij.openapi.diagnostic Logger)
-           (com.intellij.execution.configurations JavaParameters GeneralCommandLine)
+           (com.intellij.execution.configurations JavaParameters GeneralCommandLine ParametersList)
            (com.intellij.facet FacetManager)
            (org.jetbrains.plugins.clojure.config ClojureFacet ClojureConfigUtil)
            (org.jetbrains.plugins.clojure.utils ClojureUtils Editors)
@@ -15,7 +15,10 @@
                                            ProcessHandler)
            (javax.swing JPanel)
            (com.intellij.openapi.module Module)
-           (com.intellij.openapi.roots ModuleRootManager))
+           (com.intellij.openapi.roots ModuleRootManager ModuleRootModel)
+           (java.util List)
+           (com.intellij.openapi.editor.ex EditorEx)
+           (com.intellij.openapi.vfs VirtualFile))
   (:require [plugin.actions :as actions]
             [clojure.tools.nrepl :as nrepl]
             [clojure.tools.nrepl.ack :as ack]
@@ -26,13 +29,13 @@
             [plugin.util :as util]
             [plugin.executor :as executor]))
 
-(def logger (Logger/getInstance (str *ns*)))
+(def ^Logger logger (Logger/getInstance (str *ns*)))
 
 (defn ^ClojureFacet clojure-facet [module]
   (let [facet-manager (FacetManager/getInstance module)]
     (.getFacetByType facet-manager ClojureFacet/ID)))
 
-(defn jvm-clojure-options [module]
+(defn ^List jvm-clojure-options [module]
   (let [facet (clojure-facet module)]
     (if-let [options (util/safely (.getJvmOptions facet))]
       (if-not (str/blank? options)
@@ -40,7 +43,7 @@
         [])
       [])))
 
-(defn repl-clojure-options [module]
+(defn ^List repl-clojure-options [module]
   (let [facet (clojure-facet module)]
     (if-let [options (util/safely (.getReplOptions facet))]
       (if-not (str/blank? options)
@@ -48,10 +51,10 @@
         [])
       [])))
 
-(defn runtime-arguments [project module working-dir]
+(defn ^GeneralCommandLine runtime-arguments [project module ^String working-dir]
   (let [params (JavaParameters.)
-        vm-params (.getVMParametersList params)
-        program-params (.getProgramParametersList params)
+        vm-params ^ParametersList (.getVMParametersList params)
+        program-params ^ParametersList (.getProgramParametersList params)
         class-path (.getClassPath params)]
     (.configureByModule params module JavaParameters/JDK_AND_CLASSES)
     (.addAll vm-params (jvm-clojure-options module))
@@ -75,9 +78,9 @@
       (throw e#))))
 
 (defn set-editor-enabled [state enabled]
-  (let [{:keys [console-editor]} @state]
+  (let [{:keys [^EditorEx console-editor]} @state]
     (util/invoke-later
-      (.setRendererMode console-editor (not enabled))
+      (.setRendererMode console-editor ^boolean (not enabled))
       (-> console-editor .getComponent .updateUI))))
 
 (defn read-value [value]
@@ -112,7 +115,7 @@
 (defn start [state]
   (ack/reset-ack-port!)
   (repl/print state "Starting nREPL server...\n")
-  (let [{:keys [project module working-dir console-view]} @state
+  (let [{:keys [project module working-dir ^ClojureConsoleView console-view]} @state
         arguments (runtime-arguments project module working-dir)
         process (create-process project arguments)
         handler (proxy [ColoredProcessHandler] [process (.getCommandLineString arguments)]
@@ -141,7 +144,7 @@
         (toolwindow/stop state)))))
 
 (defn stop [state]
-  (let [{:keys [connection process-handler]} @state]
+  (let [{:keys [^Closeable connection ^ProcessHandler process-handler]} @state]
     (if connection
       (.close connection)
       (swap! state dissoc :connection))
@@ -155,7 +158,7 @@
 
 (defn active? [state]
   (boolean
-    (if-let [handler (:process-handler @state)]
+    (if-let [^ProcessHandler handler (:process-handler @state)]
       (if (.isStartNotified handler)
         (not (or (.isProcessTerminated handler)
                  (.isProcessTerminating handler)))
@@ -199,7 +202,7 @@
   (let [module (actions/module event)
         module-root-manager (ModuleRootManager/getInstance module)
         content-root (first (seq (.getContentRoots module-root-manager)))
-        working-dir (.getPath content-root)
+        working-dir (.getPath ^VirtualFile content-root)
         state (atom {:module      module
                      :project     (.getProject ^Module module)
                      :repl        (nrepl-repl)

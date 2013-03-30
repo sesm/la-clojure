@@ -55,7 +55,7 @@
 (defn delete-range [^Editor editor range]
   (.deleteString (.getDocument editor) (start-offset range) (end-offset range)))
 
-(defn text-from
+(defn ^String text-from
   ([^Editor editor start end]
    (text-from editor (TextRange. start end)))
   ([^Editor editor ^TextRange range]

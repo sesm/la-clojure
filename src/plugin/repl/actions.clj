@@ -1,6 +1,6 @@
 (ns plugin.repl.actions
   (:import (com.intellij.openapi.actionSystem AnActionEvent PlatformDataKeys)
-           (com.intellij.psi PsiDocumentManager)
+           (com.intellij.psi PsiDocumentManager PsiElement)
            (com.intellij.openapi.project Project)
            (com.intellij.openapi.wm ToolWindowManager)
            (org.jetbrains.plugins.clojure.repl.toolwindow REPLToolWindowFactory)
@@ -14,6 +14,7 @@
            (com.intellij.openapi.editor Editor)
            (org.jetbrains.plugins.clojure.psi.util ClojurePsiUtil ClojurePsiElementFactoryImpl ClojurePsiFactory)
            (com.intellij.openapi.ui Messages))
+  (:refer-clojure :exclude [load-file])
   (:require [plugin.actions :as actions]
             [clojure.string :as str]
             [plugin.editor :as editor]
@@ -91,9 +92,9 @@
   (if-let [action-state (repl-action-state event)]
     (let [{:keys [state editor project]} action-state
           psi-factory (ClojurePsiElementFactoryImpl/getInstance project)]
-      (if-let [sexp (finder editor)]
+      (if-let [sexp ^PsiElement (finder editor)]
         (if (.hasSyntacticalErrors psi-factory sexp)
-          (Messages/showErrorDialog project
+          (Messages/showErrorDialog ^Project project
                                     "S-expression contains syntax errors"
                                     "Cannot evaluate")
           (execute-text-range state editor (.getTextRange sexp)))))))
@@ -113,7 +114,7 @@
           command (editor/selected-text editor)]
       (if-not (str/blank? command)
         (if-let [msg (.getErrorMessage psi-factory command)]
-          (Messages/showErrorDialog project
+          (Messages/showErrorDialog ^Project project
                                     "Selected code fragment contains syntax errors"
                                     "Cannot evaluate")
           (execute-text-range state editor (editor/selected-text-range editor)))))))
