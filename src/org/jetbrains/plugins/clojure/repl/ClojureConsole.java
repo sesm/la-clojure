@@ -20,13 +20,11 @@ import org.jetbrains.plugins.clojure.utils.Editors;
 public class ClojureConsole extends LanguageConsoleImpl {
   public static final Key<Content> CONTENT_KEY = Key.create("REPL.Content");
   public static final Key<Atom> STATE_KEY = Key.create(":plugin.repl.toolwindow/state");
-  private final ConsoleHistoryModel historyModel;
   private String currentREPLItem = null;
   private int currentREPLOffset = 0;
 
-  public ClojureConsole(Project project, String title, ConsoleHistoryModel historyModel) {
+  public ClojureConsole(Project project, String title) {
     super(project, title, ClojureFileType.CLOJURE_LANGUAGE);
-    this.historyModel = historyModel;
   }
 
   // Copied from LanguageConsoleImpl
@@ -38,10 +36,6 @@ public class ClojureConsole extends LanguageConsoleImpl {
       }
     });
     return ref.get();
-  }
-
-  public ConsoleHistoryModel getHistoryModel() {
-    return historyModel;
   }
 
   public void saveCurrentREPLItem() {

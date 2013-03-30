@@ -4,9 +4,9 @@ import com.intellij.openapi.project.Project;
 
 public class ClojureConsoleView extends LanguageConsoleViewImpl
 {
-  public ClojureConsoleView(Project project, String title, ConsoleHistoryModel historyModel)
+  public ClojureConsoleView(Project project, String title)
   {
-    super(project, new ClojureConsole(project, title, historyModel));
+    super(project, new ClojureConsole(project, title));
   }
 
   public ClojureConsole getConsole()

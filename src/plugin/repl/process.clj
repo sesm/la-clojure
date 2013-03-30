@@ -23,7 +23,8 @@
             [plugin.editor :as editor]
             [plugin.repl :as repl]
             [plugin.repl.toolwindow :as toolwindow]
-            [plugin.util :as util]))
+            [plugin.util :as util]
+            [plugin.executor :as executor]))
 
 (def logger (Logger/getInstance (str *ns*)))
 
@@ -35,7 +36,7 @@
   (let [facet (clojure-facet module)]
     (if-let [options (util/safely (.getJvmOptions facet))]
       (if-not (str/blank? options)
-        (str/split (str/trim options) #"\w+")
+        (str/split (str/trim options) #"\s+")
         [])
       [])))
 
@@ -43,18 +44,18 @@
   (let [facet (clojure-facet module)]
     (if-let [options (util/safely (.getReplOptions facet))]
       (if-not (str/blank? options)
-        (str/split (str/trim options) #"\w+")
+        (str/split (str/trim options) #"\s+")
         [])
       [])))
 
-(defn runtime-arguments [module working-dir]
+(defn runtime-arguments [project module working-dir]
   (let [params (JavaParameters.)
         vm-params (.getVMParametersList params)
         program-params (.getProgramParametersList params)
         class-path (.getClassPath params)]
     (.configureByModule params module JavaParameters/JDK_AND_CLASSES)
-    ;    (.addAll vm-params (jvm-clojure-options module))
-    ;    (.addAll program-params (repl-clojure-options module))
+    (.addAll vm-params (jvm-clojure-options module))
+    (.addAll program-params (repl-clojure-options module))
     (.addAll program-params ["--port" "0" "--ack" (str (REPLComponent/getLocalPort))])
     (when-not (ClojureConfigUtil/isClojureConfigured module)
       (.add class-path ClojureConfigUtil/CLOJURE_SDK)
@@ -63,7 +64,7 @@
     (REPLUtil/addSourcesToClasspath module params)
     (.setMainClass params ClojureUtils/REPL_MAIN)
     (.setWorkingDirectory params (File. working-dir))
-    (REPLUtil/getCommandLine params)))
+    (REPLUtil/getCommandLine params project)))
 
 (defn create-process [project ^GeneralCommandLine command-line]
   (try
@@ -72,18 +73,6 @@
       (.error logger "Error creating REPL process" e#)
       (ExecutionHelper/showErrors project [e#] "Errors" nil)
       (throw e#))))
-
-(defn hide-editor [state]
-  (let [{:keys [console-view console history-viewer]} @state]
-    (util/invoke-later
-      (let [component (.getComponent console-view)
-            parent (.getParent component)]
-        (if (instance? JPanel parent)
-          (do
-            (.add parent (.getComponent history-viewer))
-            (.remove parent component)
-            (editor/scroll-down history-viewer)
-            (.updateUI parent)))))))
 
 (defn set-editor-enabled [state enabled]
   (let [{:keys [console-editor]} @state]
@@ -109,12 +98,12 @@
           "   :namespaces (map str (all-ns))})\n"))
 
 (defn init-completion [state ns command]
-  (let [{:keys [client history-viewer]} @state]
-    (if client
+  (let [{:keys [tooling-session history-viewer]} @state]
+    (if tooling-session
       (let [item (nrepl/combine-responses
-                   (nrepl/message client {:op   "eval"
-                                          :code command
-                                          :ns   ns}))]
+                   (nrepl/message tooling-session {:op   "eval"
+                                                   :code command
+                                                   :ns   ns}))]
         (when-let [error (:err item)]
           (repl/print-error state (str "Error initialising completion:\n" error))
           (util/invoke-later
@@ -122,8 +111,9 @@
 
 (defn start [state]
   (ack/reset-ack-port!)
+  (repl/print state "Starting nREPL server...\n")
   (let [{:keys [project module working-dir console-view]} @state
-        arguments (runtime-arguments module working-dir)
+        arguments (runtime-arguments project module working-dir)
         process (create-process project arguments)
         handler (proxy [ColoredProcessHandler] [process (.getCommandLineString arguments)]
                   (textAvailable [text attributes]
@@ -131,18 +121,24 @@
     (ProcessTerminatedListener/attach handler)
     (.addProcessListener handler (proxy [ProcessAdapter] []
                                    (processTerminated [event]
-                                     (set-editor-enabled state false)
-                                     (hide-editor state))))
+                                     (toolwindow/stop state)
+                                     (set-editor-enabled state false))))
     (.attachToProcess console-view handler)
     (.startNotify handler)
     (swap! state assoc :process-handler handler)
-    ; TODO error handling
-    (let [port (ack/wait-for-ack 30000)
-          connection (nrepl/connect :port port)
-          client (nrepl/client connection 1000)]
-      (swap! state assoc
-             :connection connection
-             :client client))))
+    (if-let [port (ack/wait-for-ack 30000)]
+      (let [connection (nrepl/connect :port port)
+            client (nrepl/client connection 1000)
+            session (nrepl/client-session client)
+            tooling-session (nrepl/client-session client)]
+        (swap! state assoc
+               :connection connection
+               :client client
+               :session session
+               :tooling-session tooling-session))
+      (do
+        (repl/print-error state "No nREPL ack received\n")
+        (toolwindow/stop state)))))
 
 (defn stop [state]
   (let [{:keys [connection process-handler]} @state]
@@ -158,16 +154,17 @@
         (.destroyProcess process-handler)))))
 
 (defn active? [state]
-  (if-let [handler (:process-handler @state)]
-    (if (.isStartNotified handler)
-      (not (or (.isProcessTerminated handler)
-               (.isProcessTerminating handler)))
-      false)))
+  (boolean
+    (if-let [handler (:process-handler @state)]
+      (if (.isStartNotified handler)
+        (not (or (.isProcessTerminated handler)
+                 (.isProcessTerminating handler)))
+        false))))
 
 (defn execute [state command print-values?]
-  (let [{:keys [client history-viewer]} @state]
-    (if client
-      (doseq [item (nrepl/message client {:op "eval" :code command})]
+  (let [{:keys [session history-viewer]} @state]
+    (if session
+      (doseq [item (nrepl/message session {:op "eval" :code command})]
         (when-let [ns (:ns item)]
           (toolwindow/set-title! state (str "nREPL: " ns)))
         (when-let [error (:err item)]
@@ -210,12 +207,13 @@
                      :completions {}
                      :active?     active?})]
     (toolwindow/create-repl state "nREPL: user")
-    (start state)
-;    (init-completion state "user" "(ns la-clojure.repl)")
-;    (init-completion state "la-clojure.repl" completion-init)
-    (execute state repl/init-command false)
-    (toolwindow/enabled! state true)
-    (toolwindow/focus-editor state)))
+    (let [{:keys [repl-executor]} @state]
+      (executor/submit repl-executor
+                       (fn []
+                         (start state)
+                         (execute state repl/init-command false)
+                         (toolwindow/enabled! state true)
+                         (toolwindow/focus-editor state))))))
 
 (defn initialise []
   (actions/unregister-action ::new-nrepl "ToolsMenu")

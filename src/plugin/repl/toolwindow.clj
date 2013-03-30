@@ -1,7 +1,7 @@
 (ns plugin.repl.toolwindow
   (:import (com.intellij.openapi.wm ToolWindowManager IdeFocusManager)
            (org.jetbrains.plugins.clojure.repl.toolwindow REPLToolWindowFactory)
-           (org.jetbrains.plugins.clojure.repl ConsoleHistoryModel ClojureConsoleView TerminateREPLDialog
+           (org.jetbrains.plugins.clojure.repl ClojureConsoleView TerminateREPLDialog
                                                ClojureConsole)
            (com.intellij.openapi.actionSystem DefaultActionGroup AnAction AnActionEvent IdeActions)
            (javax.swing JPanel JLabel SwingConstants)
@@ -13,16 +13,21 @@
            (com.intellij.util.ui UIUtil)
            (org.jetbrains.plugins.clojure ClojureIcons)
            (org.jetbrains.plugins.clojure.utils Actions Editors)
-           (com.intellij.openapi.util IconLoader TextRange)
+           (com.intellij.openapi.util IconLoader TextRange Disposer)
            (com.intellij.openapi.editor Editor EditorFactory)
            (com.intellij.codeInsight.lookup LookupManager)
            (org.jetbrains.plugins.clojure.psi.util ClojurePsiUtil)
-           (com.intellij.openapi.editor.event DocumentListener DocumentEvent))
+           (com.intellij.openapi.editor.event DocumentListener DocumentEvent)
+           (com.intellij.openapi Disposable)
+           (com.intellij.openapi.diagnostic Logger))
   (:require [plugin.actions :as actions]
             [plugin.util :as util]
             [plugin.repl :as repl]
             [plugin.editor :as editor]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [plugin.executor :as executor]))
+
+(def logger (Logger/getInstance (str *ns*)))
 
 (defn set-title! [state title]
   (let [{:keys [content]} @state]
@@ -44,10 +49,29 @@
     (= (.getExitCode dialog)
        DialogWrapper/OK_EXIT_CODE)))
 
+(defn enabled! [state enabled]
+  (let [{:keys [console-editor]} @state]
+    (.setRendererMode console-editor (not enabled))
+    (util/invoke-later
+      (-> console-editor .getComponent .updateUI))))
+
+(defn hide-editor [state]
+  (let [{:keys [console-view console history-viewer]} @state]
+    (util/invoke-later
+      (let [component (.getComponent console-view)
+            parent (.getParent component)]
+        (if (instance? JPanel parent)
+          (do
+            (.add parent (.getComponent history-viewer))
+            (.remove parent component)
+            (editor/scroll-down history-viewer)
+            (.updateUI parent)))))))
+
 (defn do-execute [state immediately?]
   (boolean
     (let [{:keys [repl active? console-editor history-viewer project
-                  history-index history-entries history-offsets]} @state]
+                  history-index history-entries history-offsets
+                  repl-executor]} @state]
       (when (active? state)
         (let [offset (editor/offset console-editor)
               text (editor/text-from console-editor)
@@ -62,7 +86,6 @@
                                                         history-viewer
                                                         (TextRange. 0
                                                                     (editor/text-length console-editor)))
-                  (if repl (repl/execute repl state candidate))
                   (let [last-index (dec (count history-entries))
                         offset (editor/offset console-editor)
                         text (editor/text-from console-editor)]
@@ -76,17 +99,26 @@
                              :history-index (inc (count history-entries))
                              :history-entries (conj history-entries text "")
                              :history-offsets (conj history-offsets offset 0))))
-                  )
+                  (if repl
+                    (executor/submit
+                      repl-executor
+                      (fn []
+                        (repl/execute repl state candidate)))))
                 (util/with-write-action
                   (editor/set-text console-editor "")
                   (editor/scroll-down history-viewer))
                 true))))))))
 
-(defn do-stop [state]
-  (let [{:keys [repl active? on-stop]} @state]
+(defn stop [state]
+  (let [{:keys [repl active? on-stop repl-executor]} @state]
     (when (active? state)
       (if on-stop (on-stop state))
-      (if repl (repl/stop repl state)))))
+      (if repl
+        (executor/submit
+          repl-executor
+          (fn []
+            (repl/stop repl state))))
+      (hide-editor state))))
 
 (defn repl-listener [state]
   (proxy [ContentManagerAdapter ProjectManagerListener] []
@@ -94,7 +126,7 @@
       (let [{:keys [content]} @state]
         (if (= content (.getContent event))
           (if (terminate-dialog state)
-            (do-stop state)
+            (stop state)
             (.consume event)))))
     (projectOpened [project])
     (canCloseProject [closing-project]
@@ -102,7 +134,7 @@
         (if (= project closing-project)
           (let [ret (terminate-dialog state)]
             (when ret
-              (do-stop state)
+              (stop state)
               (.removeContent content-manager content true))
             ret)
           true)))
@@ -138,23 +170,25 @@
       (.setEnabled (.getPresentation event) (boolean (active? state))))))
 
 (defn execute-immediately [state]
-  (actions/dumb-aware :action-performed (fn [event] (do-execute state true))
+  (actions/dumb-aware :action-performed (fn [event]
+                                          (do-execute state true))
                       :update (update-active? state)
                       :shortcut-set "control ENTER"
                       :icon "/actions/execute.png"
                       :text "Execute Current Statement"))
 
 (defn stop-action [state]
-  (actions/dumb-aware :action-performed (fn [event] (do-stop state))
+  (actions/dumb-aware :action-performed (fn [event]
+                                          (stop state))
                       :update (update-active? state)
                       :shortcut-from IdeActions/ACTION_STOP_PROGRAM
                       :icon "/actions/suspend.png"
                       :text "Stop REPL"))
 
 (defn close-action [state]
-  (actions/dumb-aware :action-performed (fn [^AnActionEvent event]
+  (actions/dumb-aware :action-performed (fn [event]
                                           (let [{:keys [content content-manager]} @state]
-                                            (do-stop state)
+                                            (stop state)
                                             (.removeContent content-manager content true)))
                       :shortcut-from IdeActions/ACTION_CLOSE
                       :icon "/actions/cancel.png"
@@ -237,12 +271,6 @@
     (if-let [shortcut-set (.getShortcutSet action)]
       (.registerCustomShortcutSet action shortcut-set component))))
 
-(defn enabled! [state enabled]
-  (let [{:keys [console-editor]} @state]
-    (.setRendererMode console-editor (not enabled))
-    (util/invoke-later
-      (-> console-editor .getComponent .updateUI))))
-
 (defn before-document-change [state ^DocumentEvent event]
   (let [{:keys [console-editor history-index history-entries history-offsets]} @state
         editor-document (.getDocument ^Editor console-editor)
@@ -266,9 +294,8 @@
   [state title]
   (if-let [tool-window (.getToolWindow (ToolWindowManager/getInstance (:project @state))
                                        REPLToolWindowFactory/TOOL_WINDOW_ID)]
-    (let [history-model (ConsoleHistoryModel.)
-          project (:project @state)
-          console-view (ClojureConsoleView. project "REPL" history-model)
+    (let [project (:project @state)
+          console-view (ClojureConsoleView. project "REPL")
           console (.getConsole console-view)
           console-editor (.getConsoleEditor console)
           history-viewer (.getHistoryViewer console)
@@ -300,7 +327,8 @@
             content (.createContent content-factory panel title false)
             manager (.getContentManager tool-window)
             editor-factory (EditorFactory/getInstance)
-            multicaster (.getEventMulticaster editor-factory)]
+            multicaster (.getEventMulticaster editor-factory)
+            repl-executor (executor/single-thread)]
         (.addContent manager content)
         (.putUserData content ClojureConsole/STATE_KEY state)
         (.addDocumentListener multicaster
@@ -309,6 +337,12 @@
                                   (before-document-change state event))
                                 (documentChanged [this event]))
                               content)
+        (Disposer/register content
+                           (reify Disposable
+                             (dispose [this]
+                               (.info logger "Shutting down REPL executor")
+                               (executor/shutdown repl-executor 30000))))
+
         (swap! state assoc
                :console console
                :console-view console-view
@@ -317,6 +351,7 @@
                :tool-window tool-window
                :content content
                :content-manager manager
+               :repl-executor repl-executor
                :history-entries [""]
                :history-offsets [0]
                :history-index 0)

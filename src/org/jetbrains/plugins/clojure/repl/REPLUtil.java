@@ -4,8 +4,6 @@ import com.intellij.execution.CantRunException;
 import com.intellij.execution.configurations.CommandLineBuilder;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.configurations.JavaParameters;
-import com.intellij.ide.DataManager;
-import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkType;
@@ -47,9 +45,8 @@ public class REPLUtil
     }
   }
 
-  public static GeneralCommandLine getCommandLine(JavaParameters params) throws CantRunException
+  public static GeneralCommandLine getCommandLine(JavaParameters params, Project project) throws CantRunException
   {
-    Project project = PlatformDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext());
     GeneralCommandLine line = CommandLineBuilder.createFromJavaParameters(params, project, true);
 
     Sdk sdk = params.getJdk();

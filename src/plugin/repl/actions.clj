@@ -17,7 +17,9 @@
   (:require [plugin.actions :as actions]
             [clojure.string :as str]
             [plugin.editor :as editor]
-            [plugin.repl :as repl]))
+            [plugin.repl :as repl]
+            [plugin.executor :as executor]
+            [plugin.util :as util]))
 
 (defn insert-history-before-current [state ^String command]
   (let [{:keys [history-index history-entries history-offsets]} @state]
@@ -29,21 +31,29 @@
                                   (get history-offsets history-index)))))
 
 (defn execute-command [state command]
-  (let [{:keys [repl history-viewer]} @state]
+  (let [{:keys [repl history-viewer repl-executor]} @state]
     (when-not (str/blank? command)
-      (repl/print state (str command "\n"))
-      (editor/scroll-down history-viewer)
-      (insert-history-before-current state command)
-      (repl/execute repl state command))))
+      (executor/submit
+        repl-executor
+        (fn []
+          (repl/print state (str command "\n"))
+          (util/invoke-later
+            (editor/scroll-down history-viewer))
+          (insert-history-before-current state command)
+          (repl/execute repl state command))))))
 
 (defn execute-text-range [state editor text-range]
-  (let [{:keys [repl history-viewer]} @state
+  (let [{:keys [repl history-viewer repl-executor]} @state
         command (editor/text-from editor text-range)]
     (when-not (str/blank? command)
-      (ClojureConsole/addTextRangeToHistory editor history-viewer text-range)
-      (editor/scroll-down history-viewer)
-      (insert-history-before-current state command)
-      (repl/execute repl state command))))
+      (executor/submit
+        repl-executor
+        (fn []
+          (ClojureConsole/addTextRangeToHistory editor history-viewer text-range)
+          (util/invoke-later
+            (editor/scroll-down history-viewer))
+          (insert-history-before-current state command)
+          (repl/execute repl state command))))))
 
 (defn active-repl-state [^Project project]
   (let [manager (ToolWindowManager/getInstance project)
