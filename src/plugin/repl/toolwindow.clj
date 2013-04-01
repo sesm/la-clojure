@@ -27,7 +27,8 @@
             [plugin.repl :as repl]
             [plugin.editor :as editor]
             [clojure.string :as str]
-            [plugin.executor :as executor]))
+            [plugin.executor :as executor]
+            [clj-stacktrace.core :as trace]))
 
 (def ^Logger logger (Logger/getInstance (str *ns*)))
 
@@ -69,11 +70,24 @@
             (editor/scroll-down history-viewer)
             (.updateUI ^JComponent parent)))))))
 
+(defn repl-submit [state command]
+  (let [{:keys [repl-executor]} @state]
+    (if repl-executor
+      (executor/submit
+        repl-executor
+        (fn []
+          (try
+            (command)
+            (catch Exception e#
+              (let [ex (trace/parse-exception e#)]
+                (repl/print-error state (str (:class ex) ": " (:message ex) "\n"))
+                (if-let [cause (:cause ex)]
+                  (repl/print-error state (str "Caused by:" (:class cause) ": " (:message cause) "\n")))))))))))
+
 (defn do-execute [state immediately?]
   (boolean
     (let [{:keys [repl active? console-editor history-viewer project
-                  history-index history-entries history-offsets
-                  repl-executor]} @state]
+                  history-index history-entries history-offsets]} @state]
       (when (active? state)
         (let [offset (editor/offset console-editor)
               text (editor/text-from console-editor)
@@ -101,11 +115,7 @@
                              :history-index (inc (count history-entries))
                              :history-entries (conj history-entries text "")
                              :history-offsets (conj history-offsets offset 0))))
-                  (if repl
-                    (executor/submit
-                      repl-executor
-                      (fn []
-                        (repl/execute repl state candidate)))))
+                  (repl-submit state #(repl/execute repl state candidate)))
                 (util/with-write-action
                   (editor/set-text console-editor "")
                   (editor/scroll-down history-viewer))
@@ -115,11 +125,7 @@
   (let [{:keys [repl active? on-stop repl-executor]} @state]
     (when (active? state)
       (if on-stop (on-stop state))
-      (if repl
-        (executor/submit
-          repl-executor
-          (fn []
-            (repl/stop repl state))))
+      (repl-submit state #(repl/stop repl state))
       (hide-editor state))))
 
 (defn repl-listener [state]
@@ -162,7 +168,8 @@
              :listener listener
              :on-stop (fn [state]
                         (.removeProjectManagerListener project-manager project listener)
-                        (.removeContentManagerListener content-manager listener)))
+                        (.removeContentManagerListener content-manager listener)
+                        (swap! state dissoc :listener :on-stop)))
       (if (active? state)
         (focus-editor state)))))
 

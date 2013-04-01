@@ -152,9 +152,7 @@
       (if (and (instance? KillableProcess process-handler)
                (.isProcessTerminating process-handler))
         (.killProcess ^KillableProcess process-handler))
-      (if (.detachIsDefault process-handler)
-        (.detachProcess process-handler)
-        (.destroyProcess process-handler)))))
+      (.destroyProcess process-handler))))
 
 (defn active? [state]
   (boolean
@@ -210,13 +208,12 @@
                      :completions {}
                      :active?     active?})]
     (toolwindow/create-repl state "nREPL: user")
-    (let [{:keys [repl-executor]} @state]
-      (executor/submit repl-executor
-                       (fn []
-                         (start state)
-                         (execute state repl/init-command false)
-                         (toolwindow/enabled! state true)
-                         (toolwindow/focus-editor state))))))
+    (toolwindow/repl-submit state
+                            (fn []
+                              (start state)
+                              (execute state repl/init-command false)
+                              (toolwindow/enabled! state true)
+                              (toolwindow/focus-editor state)))))
 
 (defn initialise []
   (actions/unregister-action ::new-nrepl "ToolsMenu")

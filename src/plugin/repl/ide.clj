@@ -60,7 +60,8 @@
 
 (defn do-execute [state command print-values?]
   (let [{:keys [history-viewer client-state]} @state
-        result (ide-execute client-state command)]
+        result (util/with-read-action
+                 (ide-execute client-state command))]
     (when-let [ns (:ns result)]
       (toolwindow/set-title! state (str "IDE: " ns)))
     (when-let [error (:err result)]

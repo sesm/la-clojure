@@ -293,12 +293,6 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
     final JavaPsiFacade facade = JavaPsiFacade.getInstance(file.getProject());
 
-    //Add top-level package names
-    final PsiPackage rootPackage = facade.findPackage("");
-    if (rootPackage != null) {
-      NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
-    }
-
     Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
     if (state != null) {
       Associative stateValue = (Associative) state.deref();
@@ -340,6 +334,12 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         }
       }
     } else {
+      //Add top-level package names
+      final PsiPackage rootPackage = facade.findPackage("");
+      if (rootPackage != null) {
+        NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
+      }
+
       // Add all java.lang classes
       final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
       if (javaLang != null) {

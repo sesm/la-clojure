@@ -211,6 +211,7 @@
       </fileset>
       <fileset dir="${project.lib}">
         <include name="tools.nrepl-0.2.2.jar"/>
+        <include name="clj-stacktrace-0.2.5.jar"/>
       </fileset>
     </copy>
 
