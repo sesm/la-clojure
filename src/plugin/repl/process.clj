@@ -90,27 +90,49 @@
       nil)))
 
 (def completion-init
-     (str "(defn ns-symbols [the-ns]\n"
-          "  (map str (keys (ns-interns the-ns))))\n"
-          "(defn ns-symbols-by-name [ns-name]\n"
-          "  (if-let [the-ns (find-ns (symbol ns-name))]\n"
-          "    (ns-symbols the-ns)))\n"
-          "(defn completions []\n"
-          "  {:imports    (map (fn [c] (.getName c)) (vals (ns-imports *ns*))),\n"
-          "   :symbols    (map str (keys (filter (fn [v] (var? (second v))) (seq (ns-map *ns*)))))\n"
-          "   :namespaces (map str (all-ns))})\n"))
+     (nrepl/code
+       (ns la-clojure.repl)
+       (defn ns-symbols [the-ns]
+         (map str (keys (ns-interns the-ns))))
+       (defn ns-symbols-by-name [ns-name]
+         (if-let [the-ns (find-ns ns-name)]
+           (apply vector (ns-symbols the-ns))))
+       (defn completions [ns]
+         (if-let [ns (find-ns ns)]
+           {:imports    (map (fn [c] (.getName c)) (vals (ns-imports ns))),
+            :symbols    (map str (keys (filter (fn [v] (var? (second v))) (ns-map ns))))
+            :namespaces (map str (all-ns))}
+           {}))))
 
-(defn init-completion [state ns command]
+(defn tooling-command [state command]
   (let [{:keys [tooling-session history-viewer]} @state]
     (if tooling-session
-      (let [item (nrepl/combine-responses
-                   (nrepl/message tooling-session {:op   "eval"
-                                                   :code command
-                                                   :ns   ns}))]
-        (when-let [error (:err item)]
-          (repl/print-error state (str "Error initialising completion:\n" error))
-          (util/invoke-later
-            (editor/scroll-down history-viewer)))))))
+      (nrepl/combine-responses
+        (nrepl/message tooling-session {:op   "eval"
+                                        :code command})))))
+
+(defn ns-symbols [state ns]
+  (let [command (str "(la-clojure.repl/ns-symbols-by-name '" ns ")")]
+    (if-let [result (tooling-command state command)]
+      (if-let [error (:err result)]
+        (repl/print-error state (str "Error completing ns:\n" error))
+        (or (first (filter vector? (map read-value (:value result))))
+            [])))))
+
+(defn update-completions [state]
+  (let [ns (:ns @state)
+        command (str "(la-clojure.repl/completions '" ns ")")]
+    (if-let [result (tooling-command state command)]
+      (if-let [error (:err result)]
+        (repl/print-error state (str "Error updating completions:\n" error))
+        (swap! state assoc :completions (or (first (filter map? (map read-value (:value result))))
+                                            {}))))))
+
+(defn init-completion [state command]
+  (if-let [result (tooling-command state command)]
+    (if-let [error (:err result)]
+      (repl/print-error state (str "Error initialising completion:\n" error))
+      (update-completions state))))
 
 (defn start [state]
   (ack/reset-ack-port!)
@@ -138,7 +160,8 @@
                :connection connection
                :client client
                :session session
-               :tooling-session tooling-session))
+               :tooling-session tooling-session)
+        (init-completion state completion-init))
       (do
         (repl/print-error state "No nREPL ack received\n")
         (toolwindow/stop state)))))
@@ -164,10 +187,11 @@
 
 (defn execute [state command print-values?]
   (let [{:keys [session history-viewer]} @state]
-    (if session
+    (when session
       (doseq [item (nrepl/message session {:op "eval" :code command})]
         (when-let [ns (:ns item)]
-          (toolwindow/set-title! state (str "nREPL: " ns)))
+          (toolwindow/set-title! state (str "nREPL: " ns))
+          (swap! state assoc :ns ns))
         (when-let [error (:err item)]
           (repl/print-error state error))
         (when-let [output (:out item)]
@@ -181,9 +205,8 @@
             (repl/print state "\n")))
         (let [unknown-keys (disj (set (keys item)) :ns :err :out :value :id :session :status :ex :root-ex)]
           (if-not (empty? unknown-keys)
-            (repl/print-error state (str "DEBUG: unknown response keys " unknown-keys "\n"))))
-        (util/invoke-later
-          (editor/scroll-down history-viewer))))))
+            (repl/print-error state (str "DEBUG: unknown response keys " unknown-keys "\n")))))
+      (update-completions state))))
 
 (defn nrepl-repl []
   (reify repl/IRepl
@@ -194,7 +217,7 @@
     (completions [this state]
       (:completions @state))
     (ns-symbols [this state ns-name]
-      [])))
+      (ns-symbols state ns-name))))
 
 (defn create-new-repl [^AnActionEvent event]
   (let [module (actions/module event)
@@ -206,6 +229,7 @@
                      :repl        (nrepl-repl)
                      :working-dir working-dir
                      :completions {}
+                     :ns          "user"
                      :active?     active?})]
     (toolwindow/create-repl state "nREPL: user")
     (toolwindow/repl-submit state

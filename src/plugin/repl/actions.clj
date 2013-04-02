@@ -37,8 +37,6 @@
       (toolwindow/repl-submit state
                               (fn []
                                 (repl/print state (str command "\n"))
-                                (util/invoke-later
-                                  (editor/scroll-down history-viewer))
                                 (insert-history-before-current state command)
                                 (repl/execute repl state command))))))
 

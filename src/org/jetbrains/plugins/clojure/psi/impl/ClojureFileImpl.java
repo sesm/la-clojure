@@ -423,7 +423,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         Object repl = stateValue.valAt(REPL_KEYWORD);
         Var nsSymbols = RT.var("plugin.repl", "ns-symbols");
 
-        Collection<String> symbolsInNS = (Collection<String>) nsSymbols.invoke(repl, state, qualifiedName);
+        Collection<String> symbolsInNS = (Collection<String>) nsSymbols.invoke(repl, namespace.state, qualifiedName);
         if (symbolsInNS != null) {
           for (String symbol : symbolsInNS) {
             if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(namespace.getManager(), symbol))) {

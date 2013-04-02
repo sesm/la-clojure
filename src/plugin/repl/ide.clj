@@ -55,7 +55,7 @@
 (defn completions [client-state]
   (let [the-ns (get @client-state #'*ns*)]
     {:imports    (map (fn [^Class c] (.getName c)) (vals (ns-imports the-ns))),
-     :symbols    (map str (keys (filter (fn [v] (var? (second v))) (seq (ns-map the-ns)))))
+     :symbols    (map str (keys (filter (fn [v] (var? (second v))) (ns-map the-ns))))
      :namespaces (map str (all-ns))}))
 
 (defn do-execute [state command print-values?]
@@ -73,9 +73,7 @@
         (doseq [value values]
           (repl/print state "=> " Printing/USER_INPUT_TEXT)
           (repl/print-value state value)
-          (repl/print state "\n"))))
-    (util/invoke-later
-      (editor/scroll-down history-viewer))))
+          (repl/print state "\n"))))))
 
 (defn ide-repl []
   (reify repl/IRepl
