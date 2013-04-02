@@ -4,7 +4,7 @@
             plugin.annotator
             plugin.repl.ide
             plugin.repl.process
-            plugin.resolve.core
+            plugin.resolve
             plugin.resolve.lists
             plugin.resolve.files
             plugin.resolve.namespaces

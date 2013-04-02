@@ -1,7 +1,8 @@
-(ns plugin.resolve.core
+(ns plugin.resolve
   (:import (org.jetbrains.plugins.clojure.psi.api ClQuotedForm ClojureFile)
            (com.intellij.psi ResolveResult PsiElement PsiNamedElement)
-           (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)))
+           (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
+           (org.jetbrains.plugins.clojure.psi ClojureConsoleElement)))
 
 ;(set! *warn-on-reflection* true)
 
@@ -18,13 +19,15 @@
   (process-declarations [this processor state last-parent place]
     false))
 
-(defn resolve-key [^ClSymbol item]
-  (let [file (.getContainingFile item)]
-    (if (instance? ClojureFile file)
-      (if-let [namespace (.getNamespaceElement ^ClojureFile file)]
-        (keyword (str (.getDefinedName namespace) "/" (.getName item)))
-        (keyword (.getName item)))
-      (keyword (.getName item)))))
+(defn resolve-key [^PsiNamedElement item]
+  (if (instance? ClojureConsoleElement item)
+    (.getResolveKey ^ClojureConsoleElement item)
+    (let [file (.getContainingFile item)]
+      (if (instance? ClojureFile file)
+        (if-let [namespace (.getNamespaceElement ^ClojureFile file)]
+          (keyword (str (.getDefinedName namespace) "/" (.getName item)))
+          (keyword (.getName item)))
+        (keyword (.getName item))))))
 
 (defn resolve-keys [^ClSymbol element]
   (let [elements (map #(.getElement ^ResolveResult %)

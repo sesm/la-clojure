@@ -22,11 +22,11 @@ import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
+import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
 import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
-import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
@@ -43,11 +43,7 @@ import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * User: peter
@@ -302,10 +298,12 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       Map<Keyword, Collection<String>> completions =
           (Map<Keyword, Collection<String>>) doCompletions.invoke(repl, state);
 
-      Collection<String> symbols = completions.get(SYMBOLS_KEYWORD);
+      Associative symbols = (Associative) completions.get(SYMBOLS_KEYWORD);
       if (symbols != null) {
-        for (String symbol : symbols) {
-          if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(file.getManager(), symbol))) {
+        for (ISeq seq = symbols.seq(); seq != null; seq = seq.next()) {
+          Map.Entry entry = (Map.Entry) seq.first();
+          ClojureConsoleElement element = new ClojureConsoleElement(file.getManager(), (String) entry.getKey(), Keyword.intern((String) entry.getValue()));
+          if (!ResolveUtil.processElement(processor, element)) {
             return false;
           }
         }
@@ -351,8 +349,11 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       }
 
       // Add all symbols from default namespaces
+      // We don't resolve symbols that come from the same file as place. This is to stop us
+      // resolving symbols in infinite loops when editing e.g. clojure.core.
+      PsiFile placeFile = place.getContainingFile();
       for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(file.getProject())) {
-        if (PsiTreeUtil.findCommonParent(element, place) != element && !ResolveUtil.processElement(processor, element)) {
+        if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
           return false;
         }
       }
@@ -426,7 +427,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         Collection<String> symbolsInNS = (Collection<String>) nsSymbols.invoke(repl, namespace.state, qualifiedName);
         if (symbolsInNS != null) {
           for (String symbol : symbolsInNS) {
-            if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(namespace.getManager(), symbol))) {
+            if (!ResolveUtil.processElement(processor, new ClojureConsoleElement(namespace.getManager(), symbol, Keyword.intern(qualifiedName, symbol)))) {
               return false;
             }
           }

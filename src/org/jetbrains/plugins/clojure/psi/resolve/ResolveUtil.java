@@ -75,7 +75,7 @@ public abstract class ResolveUtil {
     Var var;
     synchronized (lock) {
       if (punt == null) {
-        punt = RT.var("plugin.resolve.core", "punt");
+        punt = RT.var("plugin.resolve", "punt");
       }
       var = punt;
     }

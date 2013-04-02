@@ -55,7 +55,11 @@
 (defn completions [client-state]
   (let [the-ns (get @client-state #'*ns*)]
     {:imports    (map (fn [^Class c] (.getName c)) (vals (ns-imports the-ns))),
-     :symbols    (map str (keys (filter (fn [v] (var? (second v))) (ns-map the-ns))))
+     :symbols    (into {} (for [[k v] (ns-map the-ns) :when (var? v)]
+                            (let [metadata (meta v)
+                                  ns (ns-name (:ns metadata))
+                                  name (:name metadata)]
+                              [(str k) (str ns "/" name)])))
      :namespaces (map str (all-ns))}))
 
 (defn do-execute [state command print-values?]

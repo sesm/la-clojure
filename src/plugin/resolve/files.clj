@@ -3,7 +3,7 @@
            (org.jetbrains.plugins.clojure.psi.api.synthetic ClSyntheticClass)
            (org.jetbrains.plugins.clojure.psi.impl.synthetic ClSyntheticClassImpl)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile))
-  (:use [plugin.resolve.core :as resolve]))
+  (:use [plugin.resolve :as resolve]))
 
 ;(set! *warn-on-reflection* true)
 

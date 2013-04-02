@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.clojure.psi;
 
+import clojure.lang.Keyword;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNamedElement;
@@ -19,11 +20,13 @@ public class ClojureConsoleElement extends LightElement implements PsiNamedEleme
 {
   @NotNull
   private final String name;
+  private final Keyword resolveKey;
 
-  public ClojureConsoleElement(PsiManager manager, @NotNull String name)
+  public ClojureConsoleElement(PsiManager manager, @NotNull String name, Keyword resolveKey)
   {
     super(manager, ClojureFileType.CLOJURE_LANGUAGE);
     this.name = name;
+    this.resolveKey = resolveKey;
   }
 
   @Override
@@ -35,7 +38,7 @@ public class ClojureConsoleElement extends LightElement implements PsiNamedEleme
   @Override
   public PsiElement copy()
   {
-    return new ClojureConsoleElement(getManager(), name);
+    return new ClojureConsoleElement(getManager(), name, resolveKey);
   }
 
   @Override
@@ -43,6 +46,10 @@ public class ClojureConsoleElement extends LightElement implements PsiNamedEleme
   public String getName()
   {
     return name;
+  }
+
+  public Keyword getResolveKey() {
+    return resolveKey;
   }
 
   public PsiElement setName(@NonNls @NotNull String name) throws IncorrectOperationException

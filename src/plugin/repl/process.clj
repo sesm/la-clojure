@@ -100,7 +100,11 @@
        (defn completions [ns]
          (if-let [ns (find-ns ns)]
            {:imports    (map (fn [c] (.getName c)) (vals (ns-imports ns))),
-            :symbols    (map str (keys (filter (fn [v] (var? (second v))) (ns-map ns))))
+            :symbols    (into {} (for [[k v] (ns-map ns) :when (var? v)]
+                                   (let [metadata (meta v)
+                                         ns (ns-name (:ns metadata))
+                                         name (:name metadata)]
+                                     [(str k) (str ns "/" name)])))
             :namespaces (map str (all-ns))}
            {}))))
 

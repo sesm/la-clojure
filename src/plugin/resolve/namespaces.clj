@@ -2,7 +2,7 @@
   (:import (org.jetbrains.plugins.clojure.psi.api.ns ClNs)
            (org.jetbrains.plugins.clojure.psi.impl.ns ClNsImpl NamespaceUtil)
            (org.jetbrains.plugins.clojure.psi.impl ClojureFileImpl ImportOwner))
-  (:require [plugin.resolve.core :as resolve]))
+  (:require [plugin.resolve :as resolve]))
 
 ;(set! *warn-on-reflection* true)
 

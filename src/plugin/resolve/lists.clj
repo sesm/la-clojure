@@ -8,7 +8,7 @@
            (com.intellij.psi PsiNamedElement PsiElement)
            (com.intellij.openapi.diagnostic Logger)
            (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry))
-  (:require [plugin.resolve.core :as resolve]
+  (:require [plugin.resolve :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
 
@@ -109,7 +109,6 @@
   (if (psi/contains? list place)
     (let [children (psi/significant-children list)
           params (second children)]
-      ;(println (.getText list) ": "  (elem place) " " (.getText params))
       (and (instance? ClVector params)
            (let [children (psi/significant-children params)]
              (if-not (psi/contains? params place)
