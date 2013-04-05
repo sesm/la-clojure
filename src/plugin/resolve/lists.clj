@@ -82,7 +82,6 @@
   (if (psi/contains? list place)
     (let [children (psi/significant-children list)
           second-item (second children)]
-      ;(println (.getText list) ":"  (elem place) (.getText second))
       (or
         ; Check fn name
         (and (instance? ClSymbol second-item)
@@ -152,29 +151,29 @@
 (defn process-declare [^ClList list processor state last-parent place]
   (not (ListDeclarations/processDeclareDeclaration processor list place last-parent)))
 
+(defn to-keyword [^ClKeyword key]
+  (keyword (.substring (.getName key) 1)))
+
+(defn calculate-resolve-keys [^ClList element]
+  (if-let [head-element (first (psi/significant-children element))]
+    (cond
+      (instance? ClSymbol head-element) (resolve/resolve-keys head-element)
+      (instance? ClKeyword head-element) [(to-keyword head-element)]
+      :else [])
+    []))
+
 (extend-type ClList
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (let [head-element (first (psi/significant-children this))]
+    (if-let [head-element (first (psi/significant-children this))]
       (if (= place head-element)
         false
-        (cond
-          (instance? ClSymbol head-element)
-          (let [resolve-keys (filter resolve/has-resolver? (resolve/resolve-keys head-element))]
-            (if (not (empty? resolve-keys))
-              (reduce (fn [return key]
-                        (or ((resolve/get-resolver key) this processor state last-parent place)
-                            return))
-                      false
-                      resolve-keys)
-              false))
-          (instance? ClKeyword head-element)
-          (let [name (str/join (drop-while #(= \: %) (seq (.getName ^ClKeyword head-element))))
-                key (keyword name)]
-            (if (resolve/has-resolver? key)
-              ((resolve/get-resolver key) this processor state last-parent place)
-              false))
-          :else false)))))
+        (let [resolve-keys (psi/cached-value this calculate-resolve-keys)]
+          (reduce (fn [return key]
+                    (or ((resolve/get-resolver key) this processor state last-parent place)
+                        return))
+                  false
+                  (filter resolve/has-resolver? resolve-keys)))))))
 
 (resolve/register-resolver local-binding-forms process-let)
 (resolve/register-resolver :clojure.core/fn process-fn)

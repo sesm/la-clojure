@@ -5,9 +5,11 @@
                              SmartPsiElementPointer)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (com.intellij.openapi.editor Editor)
-           (com.intellij.psi.util PsiTreeUtil)
+           (com.intellij.psi.util PsiTreeUtil CachedValuesManager CachedValueProvider)
            (com.intellij.psi.codeStyle CodeStyleManager)
-           (clojure.lang IDeref)))
+           (com.intellij.psi.util CachedValueProvider$Result)
+           (clojure.lang IDeref)
+           (com.intellij.openapi.util Key)))
 
 (defn visible?
   "Visible elements are any real program elements - non-leaf,
@@ -84,6 +86,33 @@
     (fn [^PsiElement element] (if (.getFirstChild element) true false))
     (fn [^PsiElement element] (significant-children element))
     element))
+
+(defn cached-value
+  "Gets a cached value from element, calculating it if not found by
+   calling calculator passing the element as an argument. target is
+   used as a dependency of the cached value."
+  [^PsiElement target calculator]
+  (let [project (.getProject target)
+        manager (CachedValuesManager/getManager project)
+        provider (reify CachedValueProvider
+                   (compute [this]
+                     (CachedValueProvider$Result. (calculator target) (into-array [target]))))]
+    (.getCachedValue manager target provider)))
+
+(defn create-cached-value
+  "Creates a cached value for element, calculating it by calling calculator
+   passing the element as an argument. target is used as a dependency of
+   the cached value. Cached value is not added to target."
+  [^PsiElement target calculator]
+  (let [project (.getProject target)
+        manager (CachedValuesManager/getManager project)
+        provider (reify CachedValueProvider
+                   (compute [this]
+                     (CachedValueProvider$Result. (calculator target) (into-array [target]))))]
+    (.createCachedValue manager provider)))
+
+(defn cache-key [item]
+  (Key/create (str item)))
 
 (defn smart-ptr [^PsiElement element]
   (let [^SmartPointerManager ptr-manager (SmartPointerManager/getInstance (.getProject element))
