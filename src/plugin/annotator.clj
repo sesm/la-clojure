@@ -21,7 +21,8 @@
            (com.intellij.codeInspection ProblemHighlightType))
   (:require [plugin.psi :as psi]
             [plugin.util :as util]
-            [plugin.logging :as log]))
+            [plugin.logging :as log]
+            [plugin.extension :as extension]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -268,10 +269,8 @@
     (instance? ClKeyword element) (check-keyword-text-consistency element holder)))
 
 (defn initialise []
-  (.addExplicitExtension
-    LanguageAnnotators/INSTANCE
-    (ClojureLanguage/getInstance)
-    (reify Annotator
-      (annotate [this element holder]
-        (log/with-logging
-          (annotate element holder))))))
+  (extension/register LanguageAnnotators/INSTANCE
+                      (reify Annotator
+                        (annotate [this element holder]
+                          (log/with-logging
+                            (annotate element holder))))))

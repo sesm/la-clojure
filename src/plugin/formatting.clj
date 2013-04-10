@@ -9,13 +9,14 @@
            (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
            (com.intellij.psi PsiComment PsiFile)
            (com.intellij.psi.tree TokenSet)
-           (com.intellij.lang ASTNode)
+           (com.intellij.lang ASTNode LanguageFormatting)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (java.util Collection ArrayList))
   (:use [plugin.util :only [safely]]
         [plugin.tokens]
         [plugin.predicates])
-  (:require [plugin.logging :as log]))
+  (:require [plugin.logging :as log]
+            [plugin.extension :as extension]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -302,9 +303,9 @@
 (defn incomplete? [node] false)
 
 (defn initialise []
-  (.addExplicitExtension
-    com.intellij.lang.LanguageFormatting/INSTANCE
-    (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)
+  (extension/remove-all LanguageFormatting/INSTANCE)
+  (extension/register
+    LanguageFormatting/INSTANCE
     (reify FormattingModelBuilder
       (createModel [this element settings]
         (log/with-logging
@@ -313,8 +314,3 @@
                 block (create-block node settings)]
             (FormattingModelProvider/createFormattingModelForPsiFile file block settings))))
       (getRangeAffectingIndent [this file offset elementAtOffset] nil))))
-
-;; debugging tools
-(defn get-extension []
-  (.forLanguage com.intellij.lang.LanguageFormatting/INSTANCE
-                (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)))

@@ -8,7 +8,8 @@
            (org.jetbrains.plugins.clojure ClojureLanguage)
            (com.intellij.lang LanguageDocumentation)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile ClLiteral ClMetadata ClVector ClList ClListLike ClMap))
-  (:require [plugin.psi :as psi]))
+  (:require [plugin.psi :as psi]
+            [plugin.extension :as extension]))
 
 (defn process-string [^PsiElement element]
   (let [text (.getText element)
@@ -97,9 +98,9 @@
         (get-defn-doc parent)))))
 
 (defn initialise []
-  (.addExplicitExtension
+  (extension/remove-all LanguageDocumentation/INSTANCE)
+  (extension/register
     LanguageDocumentation/INSTANCE
-    (ClojureLanguage/getInstance)
     (reify DocumentationProvider
       (getQuickNavigateInfo [this element original-element]
         (cond
