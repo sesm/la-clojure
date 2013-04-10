@@ -1,6 +1,5 @@
 (ns plugin.annotator
   (:import (com.intellij.lang.annotation Annotator AnnotationHolder)
-           (com.intellij.openapi.diagnostic Logger)
            (org.jetbrains.plugins.clojure.psi.api ClList ClojureFile ClVector ClMetadata ClLiteral ClQuotedForm
                                                   ClKeyword)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
@@ -21,11 +20,10 @@
            (com.intellij.codeInsight.daemon DaemonCodeAnalyzer)
            (com.intellij.codeInspection ProblemHighlightType))
   (:require [plugin.psi :as psi]
-            [plugin.util :as util]))
+            [plugin.util :as util]
+            [plugin.logging :as log]))
 
 ;(set! *warn-on-reflection* true)
-
-(def ^Logger logger (Logger/getInstance "plugin.annotator"))
 
 (def implicit-names #{"def" "new" "throw" "ns" "in-ns" "if" "do" "let"
                       "quote" "var" "fn" "loop" "recur" "try" "catch" "finally"
@@ -275,5 +273,5 @@
     (ClojureLanguage/getInstance)
     (reify Annotator
       (annotate [this element holder]
-        (util/with-logging
+        (log/with-logging
           (annotate element holder))))))

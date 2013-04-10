@@ -3,7 +3,6 @@
            (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
            (java.io Writer PrintWriter StringReader StringWriter)
            (clojure.lang LineNumberingPushbackReader)
-           (com.intellij.openapi.diagnostic Logger)
            (org.jetbrains.plugins.clojure ClojureIcons)
            (com.intellij.openapi.module Module))
   (:require [plugin.actions :as actions]

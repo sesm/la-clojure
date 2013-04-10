@@ -1,6 +1,5 @@
 (ns plugin.util
-  (:import (com.intellij.openapi.diagnostic Logger)
-           (com.intellij.openapi.application ApplicationManager)
+  (:import (com.intellij.openapi.application ApplicationManager)
            (com.intellij.openapi.util Computable)
            (com.intellij.openapi.progress ProcessCanceledException)
            (java.lang.reflect InvocationTargetException)
@@ -12,8 +11,6 @@
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (com.intellij.openapi.command CommandProcessor)
            (com.intellij.openapi.editor Editor)))
-
-(def ^Logger logger (Logger/getInstance "plugin.util"))
 
 (defmacro with-read-action
   "Runs body inside a read action."
@@ -55,21 +52,6 @@
   method call result."
   [form]
   `(if-not (nil? ~(second form)) ~form))
-
-(defmacro with-logging
-  "Calls body and logs any exceptions caught. Logs targets of InvocationTargetExceptions."
-  [& body]
-  `(try
-     ~@body
-     (catch ProcessCanceledException e#
-       (throw e#))
-     (catch InvocationTargetException e#
-       (.error logger "Invocation target exception:" (.getTargetException e#))
-       (throw e#))
-     (catch Exception e#
-       (.error logger e#)
-       (throw e#))))
-
 
 (defn ^ProjectManager project-manager [] (ProjectManager/getInstance))
 (defn ^VirtualFileManager file-manager [] (VirtualFileManager/getInstance))

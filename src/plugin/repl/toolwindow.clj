@@ -20,7 +20,6 @@
            (org.jetbrains.plugins.clojure.psi.util ClojurePsiUtil)
            (com.intellij.openapi.editor.event DocumentListener DocumentEvent)
            (com.intellij.openapi Disposable)
-           (com.intellij.openapi.diagnostic Logger)
            (java.util Collection))
   (:require [plugin.actions :as actions]
             [plugin.util :as util]
@@ -28,9 +27,8 @@
             [plugin.editor :as editor]
             [clojure.string :as str]
             [plugin.executor :as executor]
-            [clj-stacktrace.core :as trace]))
-
-(def ^Logger logger (Logger/getInstance (str *ns*)))
+            [clj-stacktrace.core :as trace]
+            [plugin.logging :as log]))
 
 (defn set-title! [state title]
   (let [{:keys [^Content content]} @state]
@@ -349,7 +347,7 @@
         (Disposer/register content
                            (reify Disposable
                              (dispose [this]
-                               (.info logger "Shutting down REPL executor")
+                               (log/info "Shutting down REPL executor")
                                (executor/shutdown repl-executor 30000))))
 
         (swap! state assoc

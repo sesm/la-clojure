@@ -6,15 +6,12 @@
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
            (com.intellij.psi PsiNamedElement PsiElement)
-           (com.intellij.openapi.diagnostic Logger)
            (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry))
   (:require [plugin.resolve :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
 
 ;(set! *warn-on-reflection* true)
-
-(def ^Logger logger (Logger/getInstance "plugin.resolve.lists"))
 
 (def local-binding-forms [:clojure.core/let :clojure.core/with-open :clojure.core/with-local-vars :clojure.core/when-let :clojure.core/when-first :clojure.core/for :clojure.core/if-let :clojure.core/loop :clojure.core/doseq])
 

@@ -4,7 +4,6 @@
            (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
            (java.io Writer PrintWriter StringReader StringWriter File Closeable)
            (clojure.lang LineNumberingPushbackReader)
-           (com.intellij.openapi.diagnostic Logger)
            (com.intellij.execution.configurations JavaParameters GeneralCommandLine ParametersList)
            (com.intellij.facet FacetManager)
            (org.jetbrains.plugins.clojure.config ClojureFacet ClojureConfigUtil)
@@ -27,9 +26,8 @@
             [plugin.repl :as repl]
             [plugin.repl.toolwindow :as toolwindow]
             [plugin.util :as util]
-            [plugin.executor :as executor]))
-
-(def ^Logger logger (Logger/getInstance (str *ns*)))
+            [plugin.executor :as executor]
+            [plugin.logging :as log]))
 
 (defn ^ClojureFacet clojure-facet [module]
   (let [facet-manager (FacetManager/getInstance module)]
@@ -73,7 +71,7 @@
   (try
     (.createProcess command-line)
     (catch Exception e#
-      (.error logger "Error creating REPL process" e#)
+      (log/error e# "Error creating REPL process")
       (ExecutionHelper/showErrors project [e#] "Errors" nil)
       (throw e#))))
 
@@ -146,7 +144,7 @@
         process (create-process project arguments)
         handler (proxy [ColoredProcessHandler] [process (.getCommandLineString arguments)]
                   (textAvailable [text attributes]
-                    (.info logger (str/trim text))))]
+                    (log/info (str/trim text))))]
     (ProcessTerminatedListener/attach handler)
     (.addProcessListener handler (proxy [ProcessAdapter] []
                                    (processTerminated [event]

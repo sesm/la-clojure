@@ -6,16 +6,13 @@
            (com.intellij.psi.util PsiTreeUtil)
            (com.intellij.openapi.editor Editor)
            (com.intellij.openapi.util TextRange)
-           (org.jetbrains.plugins.clojure.psi.api ClBraced)
-           (com.intellij.openapi.diagnostic Logger))
+           (org.jetbrains.plugins.clojure.psi.api ClBraced))
   (:require [plugin.tokens :as tokens]
             [plugin.util :as util]
             [plugin.psi :as psi]
             [plugin.editor :as edit]
             [plugin.tokens :as tokens]
             [plugin.actions :as actions]))
-
-(def logger (Logger/getInstance "plugin.actions.paredit"))
 
 (defn find-slurpee [^Editor editor finder]
   (if-let [project (.getProject editor)]

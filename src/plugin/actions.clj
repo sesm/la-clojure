@@ -11,12 +11,9 @@
            (javax.swing Icon KeyStroke)
            (com.intellij.openapi.util IconLoader SystemInfo)
            (com.intellij.openapi.editor.actionSystem EditorWriteActionHandler EditorAction)
-           (org.jetbrains.plugins.clojure.utils ClojureUtils)
-           (com.intellij.openapi.diagnostic Logger))
+           (org.jetbrains.plugins.clojure.utils ClojureUtils))
   (:require [clojure.string :as str]
             [plugin.util :as util]))
-
-(def logger (Logger/getInstance (str ::logger)))
 
 (defn find-action [id]
   (let [manager (ActionManager/getInstance)]
