@@ -14,7 +14,7 @@ public class ClojureClassNameCompletionTest extends ClojureCompletionTestBase {
     final CompleteResult complete = complete(2);
     String resultText =
         "(ns dummy.clj\n" +
-            "  (:import [java.util ArrayList]))\n" +
+            "  (:import (java.util ArrayList)))\n" +
             "\n" +
             "(ArrayList<caret>)";
     completeLookupItem(complete.getElements()[0]);

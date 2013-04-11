@@ -15,7 +15,7 @@
       <excludeFolder url="file://$MODULE_DIR$/lib/NikaSDK" />
       <excludeFolder url="file://$MODULE_DIR$/lib/TrunkSDK" />
     </content>
-    <orderEntry type="jdk" jdkName="IDEA IC-123.155" jdkType="IDEA JDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
       <library>
@@ -40,6 +40,15 @@
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/lib/clj-stacktrace-0.2.5.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$APPLICATION_HOME_DIR$/plugins/copyright/lib/copyright.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />

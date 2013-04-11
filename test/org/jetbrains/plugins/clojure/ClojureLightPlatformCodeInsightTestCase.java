@@ -1,5 +1,7 @@
 package org.jetbrains.plugins.clojure;
 
+import clojure.lang.RT;
+import clojure.lang.Var;
 import com.intellij.ide.startup.impl.StartupManagerImpl;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.projectRoots.JavaSdk;
@@ -15,7 +17,9 @@ import com.intellij.openapi.vfs.impl.VirtualFilePointerManagerImpl;
 import com.intellij.openapi.vfs.pointers.VirtualFilePointerManager;
 import com.intellij.testFramework.LightPlatformCodeInsightTestCase;
 import com.intellij.util.Processor;
+import org.jetbrains.plugins.clojure.repl.REPLComponent;
 import org.jetbrains.plugins.clojure.util.TestUtils;
+import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -42,6 +46,10 @@ public abstract class ClojureLightPlatformCodeInsightTestCase extends LightPlatf
 
   protected void setUp() throws Exception {
     super.setUp();
+
+    Var require = RT.var(ClojureUtils.CORE_NAMESPACE, REPLComponent.REQUIRE_FUNCTION);
+    require.invoke(REPLComponent.INITIALISE_NS_SYMBOL);
+    Var.find(REPLComponent.INITIALISE).invoke();
 
     ModifiableRootModel rootModel = null;
     final ModuleRootManager rootManager = ModuleRootManager.getInstance(getModule());
