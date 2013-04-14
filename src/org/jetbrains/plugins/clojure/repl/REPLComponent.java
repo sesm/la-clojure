@@ -36,7 +36,13 @@ public class REPLComponent implements ApplicationComponent
   @NonNls
   public static final Symbol INITIALISE_NS_SYMBOL = Symbol.intern(INITIALISE_NS);
   @NonNls
-  private static final Symbol INITIALISE = Symbol.intern("plugin.initialise/initialise-all");
+  public static final String STACKTRACE_NS = "clj-stacktrace.repl";
+  @NonNls
+  public static final Symbol STACKTRACE_NS_SYMBOL = Symbol.intern(STACKTRACE_NS);
+  @NonNls
+  public static final String PST_STR_FUNCTION = "pst-str";
+  @NonNls
+  public static final Symbol INITIALISE = Symbol.intern("plugin.initialise/initialise-all");
   @NonNls
   private static final String COMPONENT_NAME = "clojure.support.repl";
   private static final Keyword SS_KEYWORD = Keyword.intern("ss");
@@ -63,11 +69,17 @@ public class REPLComponent implements ApplicationComponent
       ServerSocket serverSocket = (ServerSocket) ((IPersistentMap) replServer).valAt(SS_KEYWORD);
       logger.info(ClojureBundle.message("started.local.repl", serverSocket.getLocalPort()));
 
-      RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(INITIALISE_NS_SYMBOL);
-      Var.find(INITIALISE).invoke();
+      try {
+        RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(INITIALISE_NS_SYMBOL);
+        Var.find(INITIALISE).invoke();
 
-      String result = writer.toString();
-      logger.error("Reflection warnings:\n" + result);
+        String result = writer.toString();
+        logger.error("Reflection warnings:\n" + result);
+      } catch (Exception e) {
+        RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(STACKTRACE_NS_SYMBOL);
+        String trace = (String) RT.var(STACKTRACE_NS, PST_STR_FUNCTION).invoke(e);
+        logger.error("Error initialising:\n" + trace);
+      }
     }
     catch (Exception e)
     {

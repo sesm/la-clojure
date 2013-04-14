@@ -9,7 +9,7 @@
            (com.intellij.lang LanguageDocumentation)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile ClLiteral ClMetadata ClVector ClList ClListLike ClMap))
   (:require [plugin.psi :as psi]
-            [plugin.extension :as extension]))
+            [plugin.intellij.extension :as extension]))
 
 (defn process-string [^PsiElement element]
   (let [text (.getText element)

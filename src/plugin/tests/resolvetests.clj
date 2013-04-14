@@ -3,7 +3,6 @@
   (:require [plugin.test :as test]
             [clojure.string :as string]))
 
-; TODO destructuring etc
 (deftest basic-tests
   ;  (is (valid-resolve? "(declare <@1>x) <1>x")
   ;      "Basic declare")
@@ -39,6 +38,8 @@
       "Let bindings should not resolve to previous")
   (is (valid-resolve? "(let [x 2] (let [<@1>x 1] <1>x)) </>x")
       "Let should shadow external let")
+  (is (valid-resolve? "(let [<@1>x 1 <@2>x (inc <1>x)] <2>x) </>x")
+      "Let bindings should shadow earlier bindings")
   )
 
 (deftest destructuring

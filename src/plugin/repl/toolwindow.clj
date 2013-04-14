@@ -78,6 +78,7 @@
             (command)
             (catch Exception e#
               (let [ex (trace/parse-exception e#)]
+                (log/error e# "Error evaluating")
                 (repl/print-error state (str (:class ex) ": " (:message ex) "\n"))
                 (if-let [cause (:cause ex)]
                   (repl/print-error state (str "Caused by:" (:class cause) ": " (:message cause) "\n")))))))))))

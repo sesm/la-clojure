@@ -22,7 +22,7 @@
   (:require [plugin.psi :as psi]
             [plugin.util :as util]
             [plugin.logging :as log]
-            [plugin.extension :as extension]))
+            [plugin.intellij.extension :as extension]))
 
 ;(set! *warn-on-reflection* true)
 

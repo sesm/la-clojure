@@ -2,7 +2,7 @@
   (:import (com.intellij.lang LanguageNamesValidation)
            (com.intellij.lang.refactoring NamesValidator)
            (org.jetbrains.plugins.clojure.findUsages ClojureWordsScanner))
-  (:require [plugin.extension :as extension]))
+  (:require [plugin.intellij.extension :as extension]))
 
 (def keywords #{"nil" "true" "false"})
 

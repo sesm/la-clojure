@@ -7,11 +7,13 @@
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
            (com.intellij.psi PsiNamedElement PsiElement)
            (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry))
+  (:use [plugin.util :only [in? assoc-all safely]])
   (:require [plugin.resolve :as resolve]
             [plugin.psi :as psi]
             [clojure.string :as str]))
 
-;(set! *warn-on-reflection* true)
+(def resolve-keys-key (psi/cache-key ::resolve-keys))
+(def resolve-symbols-key (psi/cache-key ::resolve-symbols))
 
 (def local-binding-forms [:clojure.core/let :clojure.core/with-open :clojure.core/with-local-vars :clojure.core/when-let :clojure.core/when-first :clojure.core/for :clojure.core/if-let :clojure.core/loop :clojure.core/doseq])
 
@@ -20,10 +22,36 @@
 
 ; Note that we use "true" to indicate "stop searching", not "continue searching"
 
-(defn elem [^PsiElement element]
-  (str (.getText element) ":" (.getTextOffset element)))
-
 (declare process-elements)
+
+(defn destructuring-symbols
+  ([element]
+   (destructuring-symbols element []))
+  ([element symbols]
+   (if (sequential? element)
+     (reduce (fn [symbols element]
+               (destructuring-symbols element symbols))
+             symbols
+             element)
+     (cond
+       (instance? ClVector element) (destructuring-symbols (psi/significant-children element) symbols)
+       (instance? ClMap element) (reduce (fn [symbols ^ClMapEntry map-entry]
+                                           (let [key (.getKey map-entry)
+                                                 value (.getValue map-entry)
+                                                 keyword-text (if (instance? ClKeyword key)
+                                                                (.getText key))]
+                                             (cond
+                                               (= ":keys" keyword-text)
+                                               (destructuring-symbols value symbols)
+                                               (= ":as" keyword-text)
+                                               (destructuring-symbols value symbols)
+                                               (= ":or" keyword-text)
+                                               symbols
+                                               :else (destructuring-symbols key symbols))))
+                                         symbols
+                                         (.getEntries ^ClMap element))
+       (instance? ClSymbol element) (conj symbols element)
+       :else symbols))))
 
 (defn process-element [processor element place]
   (cond
@@ -58,22 +86,11 @@
           false
           elements))
 
-(defn process-params [processor ^ClListLike params ^PsiElement place last-parent]
-  (process-elements processor (psi/significant-children params) place))
-
 (defn third [coll]
   (first (rest (rest coll))))
 
 (defn fourth [coll]
   (first (rest (rest (rest coll)))))
-
-(defn offset-in [element ancestor]
-  (loop [offset 0
-         ^PsiElement current element]
-    (if (= current ancestor)
-      offset
-      (recur (+ offset (.getStartOffsetInParent current))
-             (.getParent current)))))
 
 (defn process-fn [list processor state last-parent place]
   (if (psi/contains? list place)
@@ -101,22 +118,34 @@
                (and (instance? ClVector params)
                     (process-element processor params place))))))))
 
-(defn process-let [list processor state last-parent place]
-  (if (psi/contains? list place)
-    (let [children (psi/significant-children list)
-          params (second children)]
-      (and (instance? ClVector params)
-           (let [children (psi/significant-children params)]
-             (if-not (psi/contains? params place)
-               ; Basic case - place outside let bindings
-               (process-elements processor (take-nth 2 children) place)
-               ; More complex - place is within bindings
-               (let [definitions (partition 2 children)]
-                 (process-elements processor
-                                   (map first
-                                        (take-while #(not (psi/contains? (second %) place))
-                                                    definitions))
-                                   place))))))))
+(defn or-variable?
+  "true if place is a variable in a destructuring :or clause within
+  the let-bindings of list."
+  [place list]
+  (let [parent (psi/parent place)
+        grandparent (safely (psi/parent parent))
+        previous (first (filter psi/significant? (safely (psi/prev-siblings grandparent))))]
+    (and (instance? ClMapEntry parent)
+         (= place (.getKey ^ClMapEntry parent))
+         (instance? ClKeyword previous)
+         (= ":or" (.getText ^PsiElement previous))
+         (psi/contains? list place))))
+
+(defn let-symbols [^ClList element]
+  (let [children (psi/significant-children element)
+        params (second children)]
+    (if (instance? ClVector params)
+      (let [children (psi/significant-children params)]
+        (reduce (fn [symbols [k v]]
+                  (assoc-all symbols
+                             (destructuring-symbols k)
+                             {:scope     :local
+                              :scoped-by element
+                              :condition (fn [list element place]
+                                           (or (psi/after? place v)
+                                               (or-variable? place list)))}))
+                {}
+                (partition 2 children))))))
 
 (defn process-defn [list processor state ^PsiElement last-parent place]
   (if (and (not (nil? last-parent))
@@ -146,7 +175,9 @@
   (not (ListDeclarations/processDotDeclaration processor list place last-parent)))
 
 (defn process-declare [^ClList list processor state last-parent place]
-  (not (ListDeclarations/processDeclareDeclaration processor list place last-parent)))
+  (if-let [sym (second (psi/significant-children list))]
+    (if (instance? ClSymbol sym)
+      (process-element processor sym place))))
 
 (defn to-keyword [^ClKeyword key]
   (keyword (.substring (.getName key) 1)))
@@ -159,20 +190,52 @@
       :else [])
     []))
 
+(defn in-scope? [place scope scoped-by]
+  (case scope
+    :ns true
+    :local (psi/contains? scoped-by place)
+    true))
+
+(defn resolve-symbol [element {:keys [scope scoped-by condition]
+                               :or   {condition (constantly true)}} list processor state place]
+  (or (= element place)
+      (if (and (in-scope? place scope scoped-by)
+               (condition list element place))
+        (not (ResolveUtil/processElement processor element state))
+        false)))
+
+(defn resolve-from-symbols [key list processor state place]
+  (let [calculator (resolve/get-symbols key)
+        symbols (psi/cached-value list resolve-symbols-key calculator)]
+    (reduce (fn [result [element params]]
+              (or (resolve-symbol element params list processor state place)
+                  result))
+            false
+            symbols)))
+
+(defn resolve-keys [list]
+  (psi/cached-value list resolve-keys-key calculate-resolve-keys))
+
 (extend-type ClList
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
     (if-let [head-element (first (psi/significant-children this))]
       (if (= place head-element)
         false
-        (let [resolve-keys (psi/cached-value this calculate-resolve-keys)]
-          (reduce (fn [return key]
-                    (or ((resolve/get-resolver key) this processor state last-parent place)
-                        return))
-                  false
-                  (filter resolve/has-resolver? resolve-keys)))))))
+        (let [keys (resolve-keys this)]
+          (or (reduce (fn [return key]
+                        (or (resolve-from-symbols key this processor state place)
+                            return))
+                      false
+                      (filter resolve/has-symbols? keys))
+              (reduce (fn [return key]
+                        (or ((resolve/get-resolver key) this processor state last-parent place)
+                            return))
+                      false
+                      (filter resolve/has-resolver? keys))))))))
 
-(resolve/register-resolver local-binding-forms process-let)
+(resolve/register-symbols local-binding-forms let-symbols)
+
 (resolve/register-resolver :clojure.core/fn process-fn)
 (resolve/register-resolver defn-forms process-defn)
 (resolve/register-resolver :clojure.core/ns process-ns)

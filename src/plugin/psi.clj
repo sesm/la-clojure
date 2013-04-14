@@ -68,7 +68,10 @@
   (PsiTreeUtil/findCommonParent first second))
 
 (defn contains? [container containee]
-  (= container (common-parent containee container)))
+  (cond
+    (nil? containee) false
+    (= container containee) true
+    :else (recur container (parent containee))))
 
 (defn ^ClMetadata metadata [element]
   (if-let [test (first (filter visible? (prev-siblings element)))]
@@ -88,27 +91,32 @@
     element))
 
 (defn cached-value
-  "Gets a cached value from element, calculating it if not found by
-   calling calculator passing the element as an argument. target is
-   used as a dependency of the cached value."
-  [^PsiElement target calculator]
-  (let [project (.getProject target)
-        manager (CachedValuesManager/getManager project)
-        provider (reify CachedValueProvider
-                   (compute [this]
-                     (CachedValueProvider$Result. (calculator target) (into-array [target]))))]
-    (.getCachedValue manager target provider)))
+  "Gets a cached value from element using key, calculating it if not
+   found by calling calculator passing the element as an argument.
+   dependencies are used as a dependency of the cached value, or element
+   is added as a dependency if dependencies are not passed."
+  ([^PsiElement element key calculator & dependencies]
+   (let [project (.getProject element)
+         manager (CachedValuesManager/getManager project)
+         provider (reify CachedValueProvider
+                    (compute [this]
+                      (CachedValueProvider$Result. (calculator element) (into-array (or dependencies
+                                                                                        [element])))))]
+     (.getCachedValue manager element key provider false))))
 
 (defn create-cached-value
-  "Creates a cached value for element, calculating it by calling calculator
-   passing the element as an argument. target is used as a dependency of
-   the cached value. Cached value is not added to target."
-  [^PsiElement target calculator]
-  (let [project (.getProject target)
+  "Creates a cached value for attachment to element, calculating it
+   by calling calculator passing element as an argument. dependencies
+   are used as a dependency of the cached value, or element is added
+   as a dependency if dependencies are not passed. Cached value is not
+   actually added to element."
+  [^PsiElement element calculator & dependencies]
+  (let [project (.getProject element)
         manager (CachedValuesManager/getManager project)
         provider (reify CachedValueProvider
                    (compute [this]
-                     (CachedValueProvider$Result. (calculator target) (into-array [target]))))]
+                     (CachedValueProvider$Result. (calculator element) (into-array (or dependencies
+                                                                                       [element])))))]
     (.createCachedValue manager provider)))
 
 (defn cache-key [item]
@@ -136,3 +144,9 @@
 
 (defn end-offset [^PsiElement element]
   (.getEndOffset (.getTextRange element)))
+
+(defn after?
+  "Return true if first appears after second in the file."
+  [^PsiElement first ^PsiElement second]
+  (>= (start-offset first)
+      (end-offset second)))

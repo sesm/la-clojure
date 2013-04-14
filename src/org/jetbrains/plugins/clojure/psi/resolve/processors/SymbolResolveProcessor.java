@@ -1,12 +1,10 @@
 package org.jetbrains.plugins.clojure.psi.resolve.processors;
 
 import com.intellij.openapi.util.Key;
-import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.NameHint;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.resolve.ClojureResolveResultImpl;
 
 import java.util.HashSet;
@@ -35,8 +33,7 @@ public class SymbolResolveProcessor extends ResolveProcessor implements NameHint
       boolean isAccessible = isAccessible();
       myCandidates.add(new ClojureResolveResultImpl(namedElement, isAccessible));
       myProcessedElements.add(namedElement);
-      return !ListDeclarations.isLocal(element);
-      //todo specify as it's possible!
+      return false;
     }
 
     return true;

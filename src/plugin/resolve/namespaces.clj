@@ -14,4 +14,4 @@
 (extend-type org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace
   resolve/Resolvable
   (process-declarations [this processor state last-parent place]
-    (not (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state last-parent place))))
+    (not (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state))))

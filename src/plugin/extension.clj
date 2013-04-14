@@ -1,16 +1,17 @@
-(ns plugin.extension
-  (:import (com.intellij.lang LanguageExtension)
-           (org.jetbrains.plugins.clojure ClojureLanguage)))
+(ns plugin.extension)
 
-(defn register [point extension]
-  (if (instance? LanguageExtension point)
-    (.addExplicitExtension ^LanguageExtension point
-                           (ClojureLanguage/getInstance)
-                           extension)))
+(def extensions (atom {}))
 
-(defn remove-all [point]
-  (if (instance? LanguageExtension point)
-    (doseq [extension (.allForLanguage ^LanguageExtension point (ClojureLanguage/getInstance))]
-      (.removeExplicitExtension ^LanguageExtension point
-                                (ClojureLanguage/getInstance)
-                                extension))))
+(defn has-extension? [type key]
+  (not (nil? (get-in @extensions [type key]))))
+
+(defn get-extension [type key]
+  (get-in @extensions [type key]))
+
+(defn register-extension [type key extension]
+  (if (sequential? key)
+    (swap! extensions (fn [extensions keys]
+                       (reduce #(assoc-in %1 [type %2] extension)
+                               extensions
+                               keys)) key)
+    (swap! extensions assoc-in [type key] extension)))

@@ -12,6 +12,19 @@
            (com.intellij.openapi.command CommandProcessor)
            (com.intellij.openapi.editor Editor)))
 
+(defn in?
+  "true if seq contains elm"
+  [seq elm]
+  (some #(= elm %) seq))
+
+(defn assoc-all
+  "Associates val in map with all keys in keys."
+  [map keys val]
+  (reduce (fn [map key]
+            (assoc map key val))
+          map
+          keys))
+
 (defmacro with-read-action
   "Runs body inside a read action."
   [& body]

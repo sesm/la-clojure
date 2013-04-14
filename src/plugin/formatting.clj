@@ -16,7 +16,7 @@
         [plugin.tokens]
         [plugin.predicates])
   (:require [plugin.logging :as log]
-            [plugin.extension :as extension]))
+            [plugin.intellij.extension :as extension]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -281,7 +281,6 @@
         (= "," (.getText node2)) no-spacing
         (or (brace? type1)
             (brace? type2)) no-spacing-with-newline
-        (instance? ClKeyword psi1) no-newline
         (and (instance? ClListLike psi1)
              (instance? ClListLike psi2)
              (= (.getParent psi1) (.getParent psi2))
