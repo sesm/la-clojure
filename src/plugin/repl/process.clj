@@ -17,7 +17,8 @@
            (com.intellij.openapi.roots ModuleRootManager ModuleRootModel)
            (java.util List)
            (com.intellij.openapi.editor.ex EditorEx)
-           (com.intellij.openapi.vfs VirtualFile))
+           (com.intellij.openapi.vfs VirtualFile)
+           (com.intellij.openapi.util Pair))
   (:require [plugin.actions :as actions]
             [clojure.tools.nrepl :as nrepl]
             [clojure.tools.nrepl.ack :as ack]
@@ -143,8 +144,12 @@
         arguments (runtime-arguments project module working-dir)
         process (create-process project arguments)
         handler (proxy [ColoredProcessHandler] [process (.getCommandLineString arguments)]
-                  (textAvailable [text attributes]
-                    (log/info (str/trim text))))]
+                  (textAvailable
+                          ([chunks]
+                           (doseq [^Pair chunk chunks]
+                             (log/info (str/trim (.getFirst chunk)))))
+                          ([text attributes]
+                           (log/info (str/trim text)))))]
     (ProcessTerminatedListener/attach handler)
     (.addProcessListener handler (proxy [ProcessAdapter] []
                                    (processTerminated [event]
@@ -155,7 +160,7 @@
     (swap! state assoc :process-handler handler)
     (if-let [port (ack/wait-for-ack 30000)]
       (let [connection (nrepl/connect :port port)
-            client (nrepl/client connection 1000)
+            client (nrepl/client connection Long/MAX_VALUE)
             session (nrepl/client-session client)
             tooling-session (nrepl/client-session client)]
         (swap! state assoc
