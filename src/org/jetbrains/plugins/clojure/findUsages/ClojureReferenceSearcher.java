@@ -2,7 +2,6 @@ package org.jetbrains.plugins.clojure.findUsages;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.util.Computable;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.PsiReference;
@@ -35,7 +34,11 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
         /* An optimization for Java refactorings */
         && !(elem instanceof PsiVariable)) {
       final PsiNamedElement symbolToSearch = (PsiNamedElement) elem;
-      final String name = symbolToSearch.getName();
+      final String name = ApplicationManager.getApplication().runReadAction(new Computable<String>() {
+        public String compute() {
+          return symbolToSearch.getName();
+        }
+      });
       if (name != null) {
         RequestResultProcessor processor = new RequestResultProcessor() {
           @Override
@@ -57,9 +60,7 @@ public class ClojureReferenceSearcher implements QueryExecutor<PsiReference, Ref
         if (scope instanceof GlobalSearchScope) {
           scope = GlobalSearchScope.getScopeRestrictedByFileTypes((GlobalSearchScope) scope, ClojureFileType.CLOJURE_FILE_TYPE);
         }
-        for (String word : StringUtil.getWordsIn(name)) {
-          params.getOptimizer().searchWord(word, scope, UsageSearchContext.ANY, true, processor);
-        }
+        params.getOptimizer().searchWord(name, scope, UsageSearchContext.ANY, true, processor);
       }
     }
     return true;
