@@ -102,5 +102,5 @@
   (if-let [editor (find-editor name-pattern)]
     (let [element (PsiUtilBase/getElementAtCaret editor)]
       (if (instance? LeafPsiElement element)
-        (.getParent element)
+        (.getContext element)
         element))))

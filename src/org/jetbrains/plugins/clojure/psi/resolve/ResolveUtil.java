@@ -89,6 +89,6 @@ public abstract class ResolveUtil {
       }
       throw e;
     }
-    return !((Boolean) ret).booleanValue();
+    return !(ret == null ? false : ((Boolean) ret).booleanValue());
   }
 }

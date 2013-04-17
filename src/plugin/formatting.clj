@@ -16,7 +16,8 @@
         [plugin.tokens]
         [plugin.predicates])
   (:require [plugin.logging :as log]
-            [plugin.intellij.extension :as extension]))
+            [plugin.intellij.extension :as extension]
+            [plugin.psi :as psi]))
 
 ;(set! *warn-on-reflection* true)
 
@@ -283,8 +284,8 @@
             (brace? type2)) no-spacing-with-newline
         (and (instance? ClListLike psi1)
              (instance? ClListLike psi2)
-             (= (.getParent psi1) (.getParent psi2))
-             (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
+             (= (psi/parent psi1) (psi/parent psi2))
+             (ClojurePsiCheckers/isImportingClause (psi/parent psi1))) mandatory-newline
         (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
         (.contains ClojureTokenTypes/ATOMS type2) no-spacing
         :else common-spacing))))

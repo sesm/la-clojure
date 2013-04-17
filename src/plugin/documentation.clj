@@ -90,10 +90,9 @@
 (defn get-doc [element]
   (cond
     (instance? ClDef element) (get-defn-doc element)
-    ; TODO formatting bug with let here
     (and (instance? ClSymbol element)
-         (instance? ClDef (.getParent ^ClSymbol element)))
-    (let [^ClDef parent (.getParent ^ClSymbol element)]
+         (instance? ClDef (psi/parent element)))
+    (let [^ClDef parent (psi/parent element)]
       (if (= element (.getNameSymbol parent))
         (get-defn-doc parent)))))
 
@@ -113,8 +112,7 @@
              "</pre>"))
       (getDocumentationElementForLookupItem [this manager object element]
         (if (instance? ClojurePsiElement object)
-          object
-          nil))
+          object))
       (getDocumentationElementForLink [this manager link context]
         (JavaDocUtil/findReferenceTarget manager link context))
       (getUrlFor [this element original-element]

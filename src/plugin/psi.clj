@@ -1,5 +1,5 @@
 (ns plugin.psi
-  (:refer-clojure :exclude [contains? descendants tree-seq])
+  (:refer-clojure :exclude [contains? descendants tree-seq ancestors])
   (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata)
            (com.intellij.psi PsiElement PsiComment PsiWhiteSpace SmartPointerManager PsiDocumentManager
                              SmartPsiElementPointer)
@@ -10,6 +10,9 @@
            (com.intellij.psi.util CachedValueProvider$Result)
            (clojure.lang IDeref)
            (com.intellij.openapi.util Key)))
+
+(defn ^PsiElement parent [^PsiElement element]
+  (.getContext element))
 
 (defn visible?
   "Visible elements are any real program elements - non-leaf,
@@ -26,23 +29,21 @@
   (and (visible? element)
        (not (instance? ClMetadata element))))
 
-(defn ^PsiElement next-siblings
+(defn next-siblings
   "Lazy sequence of the following siblings of element"
   [^PsiElement element]
   (lazy-seq
-    (when (.getNextSibling element)
-      (let [next (.getNextSibling element)]
-        (cons next
-              (next-siblings next))))))
+    (when-let [next (.getNextSibling element)]
+      (cons next
+            (next-siblings next)))))
 
 (defn prev-siblings
   "Lazy sequence of the previous siblings of element"
   [^PsiElement element]
   (lazy-seq
-    (when (.getPrevSibling element)
-      (let [prev (.getPrevSibling element)]
-        (cons prev
-              (prev-siblings prev))))))
+    (when-let [prev (.getPrevSibling element)]
+      (cons prev
+            (prev-siblings prev)))))
 
 (defn children
   "Lazy sequence of children of element"
@@ -57,12 +58,16 @@
   [element]
   (filter significant? (children element)))
 
+(defn ancestors
+  "Lazy sequence of the ancestors of element"
+  [^PsiElement element]
+  (lazy-seq
+    (when-let [next (parent element)]
+      (cons next
+            (ancestors next)))))
+
 (defn significant-offset [element]
   (count (filter significant? (prev-siblings element))))
-
-; TODO make this inline, replace usages
-(defn ^PsiElement parent [^PsiElement element]
-  (.getParent element))
 
 (defn common-parent [first second]
   (PsiTreeUtil/findCommonParent first second))

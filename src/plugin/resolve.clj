@@ -12,7 +12,7 @@
 
 (defn punt [element processor state last-parent place]
   (if (satisfies? Resolvable element)
-    (process-declarations element processor state last-parent place)
+    (boolean (process-declarations element processor state last-parent place))
     true))
 
 (extend-type ClQuotedForm

@@ -34,7 +34,6 @@ import org.jetbrains.plugins.clojure.psi.api.*;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.ImportOwner;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.ClojureResolveResult;
@@ -307,9 +306,9 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
           name = ((ClKeyword) listParentFirstSymbol).getName();
         }
         boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ListDeclarations.IMPORT)) && !onlyRequireOrUse) isOk = true;
+        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
         else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ListDeclarations.REQUIRE) || name.equals(ListDeclarations.USE)) && isQuoted) isOk = true;
+        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
         final ClSymbol firstSymbol = list.getFirstSymbol();
         if (isOk && firstSymbol != this && firstSymbol instanceof ClSymbol) {
           return firstSymbol;
@@ -330,9 +329,9 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
           name = ((ClKeyword) firstSymbol).getName();
         }
         boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ListDeclarations.IMPORT)) && !onlyRequireOrUse) isOk = true;
+        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
         else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ListDeclarations.REQUIRE) || name.equals(ListDeclarations.USE)) && isQuoted) isOk = true;
+        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
         if (isOk) {
           final PsiElement firstNonLeafElement = vector.getFirstNonLeafElement();
           if (firstNonLeafElement != null && firstNonLeafElement != this && firstNonLeafElement instanceof ClSymbol) {

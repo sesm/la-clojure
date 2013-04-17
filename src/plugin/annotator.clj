@@ -22,6 +22,7 @@
   (:require [plugin.psi :as psi]
             [plugin.util :as util]
             [plugin.logging :as log]
+            [plugin.resolve.lists :as lists]
             [plugin.intellij.extension :as extension]))
 
 ;(set! *warn-on-reflection* true)
@@ -38,99 +39,10 @@
 
 (def defn-names #{"defn" "defn-" "definline" "defmacro"})
 
-(defn impl-method?
-  "Checks to see if an element is a method implementation for proxy et al"
-  [^PsiElement element]
-  (if-let [parent (.getParent element)]
-    (and (instance? ClList element)
-         (instance? ClList parent)
-         (instantiators (.getHeadText ^ClList parent)))
-    false))
-
-(defn ancestor?
-  ([ancestor element]
-   (ancestor? ancestor element true))
-  ([ancestor element strict]
-   (PsiTreeUtil/isAncestor ancestor element strict)))
-
-(defn find-context-ancestor [^PsiElement element pred strict]
-  (if-not (nil? element)
-    (loop [current (if strict (.getContext element) element)]
-      (if-not (nil? current)
-        (if (pred current)
-          current
-          (recur (.getContext current)))))))
-
-(defn local-def? [^PsiElement element]
-  (if-let [let-block (find-context-ancestor element
-                                            (fn [element]
-                                              (and (instance? ClList element)
-                                                   (local-bindings (.getHeadText ^ClList element))))
-                                            true)]
-    (let [params (second (psi/significant-children let-block))
-          definitions (take-nth 2 (psi/significant-children params))]
-      (some #(ancestor? % element) definitions))))
-
-(defn let-binding? [^ClSymbol element]
-  (loop [current element
-         parent (.getParent element)
-         grand-parent (util/safely (.getParent parent))]
-    (cond
-      (nil? grand-parent) false
-      (and (instance? ClList grand-parent)
-           (instance? ClVector parent)
-           (local-bindings (.getHeadText ^ClList grand-parent))
-           (even? (psi/significant-offset current))) true
-      :else (recur parent grand-parent (.getParent grand-parent)))))
-
-; TODO duplicated from lists.clj
-(defn third [coll]
-  (first (rest (rest coll))))
-
-(defn fourth [coll]
-  (first (rest (rest (rest coll)))))
-
-(defn fn-arg? [^ClSymbol element]
-  (loop [current element
-         parent (.getParent element)
-         grandparent (util/safely (.getParent parent))]
-    (cond
-      (nil? grandparent) false
-      (and (instance? ClList grandparent)
-           (instance? ClVector parent)
-           (let [head-text (.getHeadText ^ClList grandparent)
-                 offset (psi/significant-offset parent)
-                 children (psi/significant-children grandparent)]
-             (or (and (= "fn" head-text)
-                      (= (if (instance? ClSymbol (second children)) 2 1) offset))
-                 (and (defn-names head-text)
-                      (= (if (instance? ClLiteral (third children)) 3 2) offset))
-                 (if-let [great-grandparent (.getParent grandparent)]
-                   (and (instance? ClList great-grandparent)
-                        (= 0 (psi/significant-offset parent))
-                        (defn-names (.getHeadText ^ClList great-grandparent))))))) true
-      :else (recur parent grandparent (.getParent grandparent)))))
-
 (defn should-resolve? [^ClSymbol element]
-  (let [parent (.getParent element)
-        grandparent (util/safely (.getParent parent))]
-    (cond
-      ; names of def/defn etc
-      (and (instance? ClDef parent)
-           (= element (.getNameSymbol ^ClDef parent))) false
-      ; let-bound variables
-      (let-binding? element) false
-      ; fn args
-      (and (fn-arg? element)
-           (not (instance? ClMetadata parent))) false
-      ; parameters of implementation methods
-      (and (instance? ClVector parent)
-           (impl-method? grandparent)
-           ;(= parent (.getSecondNonLeafElement grandparent)) TODO - some need third, eg proxy
-           ) false
-      (local-def? element) false
-      (not (nil? (PsiTreeUtil/getParentOfType element ClQuotedForm))) false
-      :else true)))
+  (nil? (some (fn [list]
+                (get (lists/get-resolve-symbols list) element))
+              (filter #(instance? ClList %) (psi/ancestors element)))))
 
 (defn annotate-list [^ClList element ^AnnotationHolder holder]
   (let [first (.getFirstSymbol element)]
@@ -262,11 +174,21 @@
       (let [annotation (.createErrorAnnotation holder element (ClojureBundle/message "invalid.token" text))]
         (.setHighlightType annotation ProblemHighlightType/GENERIC_ERROR_OR_WARNING)))))
 
-(defn annotate [element holder]
-  (cond
-    (instance? ClList element) (annotate-list element holder)
-    (instance? ClSymbol element) (annotate-symbol element holder)
-    (instance? ClKeyword element) (check-keyword-text-consistency element holder)))
+(defprotocol Annotatable
+  (annotate [this holder]))
+
+(extend-protocol Annotatable
+  ClList
+  (annotate [this holder]
+    (annotate-list this holder))
+  ClSymbol
+  (annotate [this holder]
+    (annotate-symbol this holder))
+  ClKeyword
+  (annotate [this holder]
+    (check-keyword-text-consistency this holder))
+  PsiElement
+  (annotate [this holder]))
 
 (defn initialise []
   (extension/register LanguageAnnotators/INSTANCE
