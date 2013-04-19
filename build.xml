@@ -46,7 +46,7 @@
     <path refid="idea.classpath"/>
     <path refid="tools.path"/>
     <fileset dir="${clojure.lib}">
-      <include name="clojure-1.4.0.jar"/>
+      <include name="clojure-1.5.1.jar"/>
     </fileset>
     <fileset dir="${project.lib}">
       <include name="*.jar"/>
@@ -60,7 +60,7 @@
     <pathelement location="${src.dir}"/>
     <pathelement location="${project.dest}"/>
     <fileset dir="${clojure.lib}">
-      <include name="clojure-1.4.0.jar"/>
+      <include name="clojure-1.5.1.jar"/>
     </fileset>
   </path>
 
@@ -207,7 +207,7 @@
 
     <copy todir="${project.dir}/tempjar/clojure-plugin/lib">
       <fileset dir="${clojure.lib}">
-        <include name="clojure-1.4.0.jar"/>
+        <include name="clojure-1.5.1.jar"/>
       </fileset>
       <fileset dir="${project.lib}">
         <include name="tools.nrepl-0.2.2.jar"/>
@@ -221,20 +221,20 @@
     <delete dir="${project.dir}/tempjar"/>
 
     <!-- Zip sources-->
-    <zip destfile="${main.dist}/clojure-intellij-src-${plugin.version}.zip" basedir="${project.dir}"
-         includes="src/**/*.java,
-         src/**/*.properties,
-         src/**/*.flex,
-         src/**/*.jar,
-         src/**/*.skeleton,
-         src/**/*.form,
-         build.xml,
-         clojure.properties,
-         resources/**/*.png,
-         META-INF/**/*.xml,
-         lib/**/*,
-         test/**/*"
-        />
+    <!--<zip destfile="${main.dist}/clojure-intellij-src-${plugin.version}.zip" basedir="${project.dir}"-->
+         <!--includes="src/**/*.java,-->
+         <!--src/**/*.properties,-->
+         <!--src/**/*.flex,-->
+         <!--src/**/*.jar,-->
+         <!--src/**/*.skeleton,-->
+         <!--src/**/*.form,-->
+         <!--build.xml,-->
+         <!--clojure.properties,-->
+         <!--resources/**/*.png,-->
+         <!--META-INF/**/*.xml,-->
+         <!--lib/**/*,-->
+         <!--test/**/*"-->
+        <!--/>-->
   </target>
 
 

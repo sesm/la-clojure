@@ -60,16 +60,20 @@ public class REPLComponent implements ApplicationComponent
 
       StringWriter writer = new StringWriter();
 
-      Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader,
-                                    RT.var("clojure.core", "*warn-on-reflection*"), true,
-                                    RT.ERR, writer));
+      // dummy to force RT class load first, since it has a circular static
+      // initializer loop with Compiler
+      new RT();
 
-      RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(PLUGIN_SERVER_NS_SYMBOL);
-      replServer = Var.find(START_SERVER).invoke();
-      ServerSocket serverSocket = (ServerSocket) ((IPersistentMap) replServer).valAt(SS_KEYWORD);
-      logger.info(ClojureBundle.message("started.local.repl", serverSocket.getLocalPort()));
+      Var.pushThreadBindings(RT.map(clojure.lang.Compiler.LOADER, loader,
+          RT.var("clojure.core", "*warn-on-reflection*"), true,
+          RT.ERR, writer));
 
       try {
+        RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(PLUGIN_SERVER_NS_SYMBOL);
+        replServer = Var.find(START_SERVER).invoke();
+        ServerSocket serverSocket = (ServerSocket) ((IPersistentMap) replServer).valAt(SS_KEYWORD);
+        logger.info(ClojureBundle.message("started.local.repl", serverSocket.getLocalPort()));
+
         RT.var(ClojureUtils.CORE_NAMESPACE, REQUIRE_FUNCTION).invoke(INITIALISE_NS_SYMBOL);
         Var.find(INITIALISE).invoke();
 
@@ -80,6 +84,10 @@ public class REPLComponent implements ApplicationComponent
         String trace = (String) RT.var(STACKTRACE_NS, PST_STR_FUNCTION).invoke(e);
         logger.error("Error initialising:\n" + trace);
       }
+      finally
+      {
+        Var.popThreadBindings();
+      }
     }
     catch (Exception e)
     {
@@ -87,7 +95,6 @@ public class REPLComponent implements ApplicationComponent
     }
     finally
     {
-      Var.popThreadBindings();
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }

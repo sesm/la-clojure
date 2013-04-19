@@ -17,15 +17,6 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/clojure-1.4.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
     <orderEntry type="module" module-name="clojure-jps-plugin" />
     <orderEntry type="module-library">
       <library>
@@ -49,6 +40,15 @@
       <library>
         <CLASSES>
           <root url="jar://$APPLICATION_HOME_DIR$/plugins/copyright/lib/copyright.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/clojure-1.5.1.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
