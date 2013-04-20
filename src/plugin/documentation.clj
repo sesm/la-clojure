@@ -9,12 +9,23 @@
            (com.intellij.lang LanguageDocumentation)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile ClLiteral ClMetadata ClVector ClList ClListLike ClMap))
   (:require [plugin.psi :as psi]
-            [plugin.intellij.extension :as extension]))
+            [plugin.intellij.extension :as extension]
+            [plugin.resolve.namespaces :as namespaces]))
+
+(defn escape-html
+  "Change special characters into HTML character entities."
+  [text]
+  (.. ^String text
+      (replace "&"  "&amp;")
+      (replace "<"  "&lt;")
+      (replace ">"  "&gt;")
+      (replace "\"" "&quot;")
+      (replace "'" "&apos;")))
 
 (defn process-string [^PsiElement element]
   (let [text (.getText element)
         trimmed (.substring text 1 (dec (.length text)))]
-    (.replaceAll trimmed "\n *" "<br/>")))
+    (escape-html (.replaceAll trimmed "\n *" "<br/>"))))
 
 ; TODO make test cases out of these
 ;(defn test1 [])
@@ -68,7 +79,7 @@
             (get-multi-arity-lists siblings)))))))
 
 (defn get-defn-doc [^ClDef element]
-  (let [namespace (.getNamespace ^ClojureFile (.getContainingFile element))
+  (let [namespace (namespaces/symbol-ns element)
         name (.getName element)
         param-lists (get-param-lists element)
         header (str "<b>"

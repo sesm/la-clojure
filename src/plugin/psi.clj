@@ -1,6 +1,6 @@
 (ns plugin.psi
   (:refer-clojure :exclude [contains? descendants tree-seq ancestors])
-  (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata)
+  (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata ClojureFile)
            (com.intellij.psi PsiElement PsiComment PsiWhiteSpace SmartPointerManager PsiDocumentManager
                              SmartPsiElementPointer)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
@@ -65,6 +65,15 @@
     (when-let [next (parent element)]
       (cons next
             (ancestors next)))))
+
+(defn top-ancestor
+  "Returns the top ancestor of element, not including the file."
+  [^PsiElement element]
+  (if-not (nil? element)
+    (let [parent (parent element)]
+      (if (instance? ClojureFile parent)
+        element
+        (recur parent)))))
 
 (defn significant-offset [element]
   (count (filter significant? (prev-siblings element))))

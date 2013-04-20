@@ -171,7 +171,7 @@
             (.endsWith text "::")
             (-> (.substring text 1)
                 (.contains "::")))
-      (let [annotation (.createErrorAnnotation holder element (ClojureBundle/message "invalid.token" text))]
+      (let [annotation (.createErrorAnnotation holder element (ClojureBundle/message "invalid.token" (object-array [text])))]
         (.setHighlightType annotation ProblemHighlightType/GENERIC_ERROR_OR_WARNING)))))
 
 (defprotocol Annotatable
