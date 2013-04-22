@@ -8,7 +8,8 @@
                         [doTest [] void]]
               :exposes-methods {createFile superCreateFile})
   (:import [com.intellij.testFramework PsiTestCase]
-           (com.intellij.openapi.vfs JarFileSystem LocalFileSystem VirtualFile)))
+           (java.io File)
+           (java.util.zip ZipFile)))
 
 (defn test-init [test-fn]
   [[] (atom {:test test-fn})])
@@ -19,14 +20,13 @@
 (def load-clojure-core
      (memoize
        (fn []
-         (let [lib-dir (.findFileByPath (LocalFileSystem/getInstance)
-                                        (str (System/getProperty "plugin.path") "/lib"))
-               clojure-lib (first (filter #(.startsWith (.getName ^VirtualFile %) "clojure-")
-                                          (seq (.getChildren lib-dir))))
-               clojure-fs (.getJarRootForLocalFile (JarFileSystem/getInstance) clojure-lib)
-               core-file (.findFileByRelativePath clojure-fs "clojure/core.clj")]
-           (String. (.contentsToByteArray core-file)
-                    (.getCharset core-file))))))
+         (let [lib-dir (File. (str (System/getProperty "plugin.path") "/lib"))
+               clojure-lib-name (first (filter #(.startsWith % "clojure-1.")
+                                          (seq (.list lib-dir))))
+               clojure-lib (ZipFile. (File. lib-dir clojure-lib-name))
+               core-file-entry (.getEntry clojure-lib "clojure/core.clj")]
+           (with-open [stream (.getInputStream clojure-lib core-file-entry)]
+             (slurp stream))))))
 
 (defn test-testImpl [this]
   ((@(.state this) :test) this {:project      (.getProject this),
