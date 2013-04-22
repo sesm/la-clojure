@@ -52,7 +52,6 @@ public interface ClojureElementTypes extends ClojureTokenTypes {
   final IElementType MAP_ENTRY = new ClojureElementType("map");
   final IElementType LITERAL = new ClojureElementType("literal");
   final IElementType SYMBOL = new ClojureElementType("symbol");
-  final IElementType IMPLICIT_ARG = new ClojureElementType("function argument");
 
   final IElementType QUOTED_FORM = new ClojureElementType("quoted expression");
   final IElementType BACKQUOTED_EXPRESSION = new ClojureElementType("backquoted expression");

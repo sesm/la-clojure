@@ -9,7 +9,8 @@
   (:use [plugin.util :only [in? assoc-all safely]])
   (:require [plugin.resolve :as resolve]
             [plugin.psi :as psi]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [plugin.extension :as extension]))
 
 (def resolve-keys-key (psi/cache-key ::resolve-keys))
 (def resolve-symbols-key (psi/cache-key ::resolve-symbols))
@@ -21,6 +22,7 @@
 ; TODO verify this list - these are probably not all correct
 (def defn-forms [:clojure.core/defn :clojure.core/defn- :clojure.core/defmacro
                  :clojure.core/defmethod :clojure.core/definline])
+(def fn-forms [:clojure.core/fn :fn*])
 (def name-only-forms [:def :clojure.core/declare :clojure.core/defmulti :clojure.core/defonce
                       :clojure.core/defstruct])
 
@@ -151,15 +153,13 @@
   (not (ImportOwner/processRequires processor place list (.getHeadText list))))
 
 (defn to-keyword [^ClKeyword key]
-  (keyword (.substring (.getName key) 1)))
-
-(defn calculate-resolve-keys [^ClList element]
-  (if-let [head-element (first (psi/significant-children element))]
-    (cond
-      (instance? ClSymbol head-element) (resolve/resolve-keys head-element)
-      (instance? ClKeyword head-element) [(to-keyword head-element)]
-      :else [])
-    []))
+  (let [name (.getName key)
+        length (count name)]
+    (loop [index 0]
+      (if (and (< index length)
+               (= (get name index) \:))
+        (recur (inc index))
+        (keyword (.substring name index))))))
 
 (defn in-scope? [place scope]
   (cond
@@ -175,8 +175,20 @@
         (not (ResolveUtil/processElement processor element state))
         false)))
 
+(defn local-name [^ClSymbol sym]
+  (if (.isQualified sym)
+    (-> (.getSeparatorToken sym)
+        .getNextSibling
+        .getText)
+    (.getName sym)))
+
+; TODO disambiguate when we have more information from namespace elements
 (defn resolve-keys [list]
-  (psi/cached-value list resolve-keys-key calculate-resolve-keys))
+  (if-let [head-element (first (psi/significant-children list))]
+    (if (instance? ClSymbol head-element)
+      (extension/list-keys-by-short-name (local-name head-element))
+      [])
+    []))
 
 (defn calculate-resolve-symbols [list]
   (let [keys (filter resolve/has-symbols? (resolve-keys list))]
@@ -204,7 +216,7 @@
                   (filter resolve/has-resolver? keys))))))))
 
 (resolve/register-symbols local-binding-forms let-symbols)
-(resolve/register-symbols :clojure.core/fn fn-symbols)
+(resolve/register-symbols fn-forms fn-symbols)
 (resolve/register-symbols defn-forms defn-symbols)
 (resolve/register-symbols name-only-forms def-symbols)
 

@@ -8,12 +8,12 @@ import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.ClojureBundle;
 import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
-import static org.jetbrains.plugins.clojure.parser.ClojureElementTypes.*;
-import org.jetbrains.plugins.clojure.parser.util.ParserUtils;
-import static org.jetbrains.plugins.clojure.parser.ClojureSpecialFormTokens.DEF_TOKENS;
 
 import java.util.Arrays;
 import java.util.Set;
+
+import static org.jetbrains.plugins.clojure.parser.ClojureElementTypes.*;
+import static org.jetbrains.plugins.clojure.parser.ClojureSpecialFormTokens.DEF_TOKENS;
 
 
 /**
@@ -135,7 +135,7 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
     //parse implicit
     if (builder.getTokenType() == symIMPLICIT_ARG) {
       builder.advanceLexer();
-      marker.done(IMPLICIT_ARG);
+      marker.done(SYMBOL);
       return;
     }
     builder.advanceLexer(); // eat atom
