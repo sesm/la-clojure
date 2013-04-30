@@ -4,7 +4,7 @@
     <option name="MAIN_CLASS_NAME" value="com.intellij.idea.Main" />
     <option name="VM_PARAMETERS" value="-Xmx800m -XX:ReservedCodeCacheSize=64m -XX:MaxPermSize=250m -XX:+HeapDumpOnOutOfMemoryError -ea -Didea.is.internal=true -Didea.debug.mode=true -Didea.system.path=../clojure-system -Didea.config.path=../clojure-config -Dapple.laf.useScreenMenuBar=true -Dplugin.path=$PROJECT_DIR$/out/artifacts/Clojure" />
     <option name="PROGRAM_PARAMETERS" value="" />
-    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/lib/TrunkSDK/bin" />
+    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/lib/LedaSDK/bin" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" value="" />
     <option name="ENABLE_SWING_INSPECTOR" value="false" />
@@ -12,6 +12,11 @@
     <option name="PASS_PARENT_ENVS" value="true" />
     <module name="clojure-runner" />
     <envs />
+    <RunnerSettings RunnerId="Debug">
+      <option name="DEBUG_PORT" value="" />
+      <option name="TRANSPORT" value="0" />
+      <option name="LOCAL" value="true" />
+    </RunnerSettings>
     <RunnerSettings RunnerId="Debug">
       <option name="DEBUG_PORT" value="" />
       <option name="TRANSPORT" value="0" />
@@ -39,7 +44,13 @@
     </RunnerSettings>
     <RunnerSettings RunnerId="Run" />
     <ConfigurationWrapper RunnerId="Debug" />
+    <ConfigurationWrapper RunnerId="Debug" />
     <ConfigurationWrapper RunnerId="Run" />
-    <method />
+    <method>
+      <option name="Make" enabled="false" />
+      <option name="BuildArtifacts" enabled="true">
+        <artifact name="ClojurePlugin" />
+      </option>
+    </method>
   </configuration>
 </component>

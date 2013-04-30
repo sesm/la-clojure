@@ -186,6 +186,8 @@
       <option name="excludeDeprecated" value="true" />
       <option name="excludeEnum" value="false" />
       <option name="excludeAbstract" value="false" />
+      <option name="excludeTestCode" value="false" />
+      <option name="excludeInnerClasses" value="false" />
     </inspection_tool>
     <inspection_tool class="ClassInTopLevelPackage" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ClassIndependentOfModule" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -293,6 +295,7 @@
     <inspection_tool class="ConstantStringIntern" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ConstantValueVariableUse" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ConstructorCount" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="ignoreDeprecatedConstructors" value="false" />
       <option name="m_limit" value="5" />
     </inspection_tool>
     <inspection_tool class="ContinueOrBreakFromFinallyBlock" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -332,6 +335,8 @@
     <inspection_tool class="CssUnknownTargetInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CssUnusedSymbolInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CucumberExamplesColon" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="CucumberJavaStepDefClassInDefaultPackage" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="CucumberJavaStepDefClassIsPublic" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CucumberMissedExamples" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="CucumberTableInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CucumberUndefinedStep" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -468,6 +473,7 @@
     <inspection_tool class="ExtendsObject" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ExtendsThread" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ExtendsUtilityClass" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ExtensionPointBeanClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ExternalizableWithSerializationMethods" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ExternalizableWithoutPublicNoArgConstructor" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="FallthruInSwitchStatement" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -523,6 +529,7 @@
       <option name="ignoreCollectionLoops" value="false" />
     </inspection_tool>
     <inspection_tool class="ForeachStatement" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ForwardReference" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="FunctionTupleSyntacticSugar" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="GrDeprecatedAPIUsage" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="GrFieldAlreadyDefined" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -787,6 +794,7 @@
     </inspection_tool>
     <inspection_tool class="IncompatibleMask" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InconsistentLanguageLevel" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="InconsistentLineSeparators" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InconsistentResourceBundle" enabled="false" level="ERROR" enabled_by_default="false">
       <option name="REPORT_MISSING_TRANSLATIONS" value="true" />
       <option name="REPORT_INCONSISTENT_PROPERTIES" value="true" />
@@ -907,6 +915,9 @@
       <option name="IGNORE_POINT_TO_ITSELF" value="false" />
       <option name="myAdditionalJavadocTags" value="" />
     </inspection_tool>
+    <inspection_tool class="JavaFxDefaultTag" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="JavaFxUnresolvedFxIdReference" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="JavaFxUnresolvedStyleClassReference" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JavaLangImport" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JavaLangReflect" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JavaMutatorMethodAccessedAsParameterless" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -932,6 +943,7 @@
     <inspection_tool class="JspAbsolutePathInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JspDirectiveInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="JspPropertiesInspection" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="JspUnescapedEl" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="KeySetIterationMayUseEntrySet" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LabeledStatement" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LanguageMismatch" enabled="false" level="WARNING" enabled_by_default="false">
@@ -994,9 +1006,11 @@
     <inspection_tool class="MathRandomCastToInt" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MavenDuplicateDependenciesInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MavenModelInspection" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="MavenRedundantGroupId" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MethodCallInLoopCondition" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="MethodCanBeVariableArityMethod" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="ignoreByteAndShortArrayParameters" value="false" />
+      <option name="ignoreOverridingMethods" value="false" />
     </inspection_tool>
     <inspection_tool class="MethodCount" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="m_limit" value="20" />
@@ -1291,6 +1305,8 @@
     <inspection_tool class="PhpWrongCatchClausesOrderInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PhpWrongForeachArgumentTypeInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PhpWrongStringConcatenationInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="Play2RoutingActionInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="Play2RoutingUrlClashInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PlayCustomTagNameInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PlayPropertyInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PluginXmlValidity" enabled="false" level="ERROR" enabled_by_default="false" />
@@ -1460,6 +1476,7 @@
     <inspection_tool class="SimplifiableEqualsExpression" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SimplifiableIfStatement" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SimplifiableJUnitAssertion" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="SimplifyBoolean" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="Since15" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="SingleCharacterStartsWith" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SingleClassImport" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -1650,6 +1667,7 @@
     <inspection_tool class="TryFinallyCanBeTryWithResources" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TryWithIdenticalCatches" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TypeAnnotation" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="TypeCustomizer" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TypeMayBeWeakened" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="useRighthandTypeAsWeakestTypeInAssignments" value="true" />
       <option name="useParameterizedTypeForCollectionMethods" value="true" />
@@ -1785,6 +1803,7 @@
     <inspection_tool class="UnusedProperty" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnusedReturnValue" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UpperCaseFieldNameNotConstant" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="UseJBColor" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UseOfAWTPeerClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UseOfAnotherObjectsPrivateField" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="ignoreSameClass" value="false" />
@@ -1838,6 +1857,7 @@
     <inspection_tool class="WrongPackageStatement" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="XmlDuplicatedId" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="XmlHighlighting" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="XmlInvalidId" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="XmlPathReference" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="XmlUnboundNsPrefix" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="XmlUnusedNamespaceDeclaration" enabled="false" level="WARNING" enabled_by_default="false" />

@@ -162,7 +162,7 @@
                                                 (str (.getText element) " can be imported"))]
           (.setTextAttributes annotation CodeInsightColors/WARNINGS_ATTRIBUTES)
           (.registerFix annotation
-                        (proxy [ImportClassFixBase] [element]
+                        (proxy [ImportClassFixBase] [element element]
                           (getReferenceName [^ClSymbol reference]
                             (if-let [ref-name (.getReferenceName element)]
                               (if (.endsWith ref-name ".")

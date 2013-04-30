@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="clojure.sdk">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/clojure-1.4.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/tools.nrepl-0.2.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/clj-stacktrace-0.2.5.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
