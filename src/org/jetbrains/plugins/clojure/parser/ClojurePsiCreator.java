@@ -4,13 +4,12 @@ import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.plugins.clojure.psi.impl.*;
-import org.jetbrains.plugins.clojure.psi.impl.ns.ClNsImpl;
-import org.jetbrains.plugins.clojure.psi.impl.ns.ClInNsImpl;
-import org.jetbrains.plugins.clojure.psi.impl.ns.ClCreateNsImpl;
 import org.jetbrains.plugins.clojure.psi.impl.defs.ClDefImpl;
 import org.jetbrains.plugins.clojure.psi.impl.defs.ClDefnMethodImpl;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListImpl;
-import org.jetbrains.plugins.clojure.psi.impl.symbols.ClImplicitArgumentImpl;
+import org.jetbrains.plugins.clojure.psi.impl.ns.ClCreateNsImpl;
+import org.jetbrains.plugins.clojure.psi.impl.ns.ClInNsImpl;
+import org.jetbrains.plugins.clojure.psi.impl.ns.ClNsImpl;
 import org.jetbrains.plugins.clojure.psi.impl.symbols.ClSymbolImpl;
 
 /**
@@ -32,7 +31,6 @@ public class ClojurePsiCreator {
     if (elementType == ClojureElementTypes.METADATA) return new ClMetadataImpl(node);
 
     if (elementType == ClojureElementTypes.SYMBOL) return new ClSymbolImpl(node);
-    if (elementType == ClojureElementTypes.IMPLICIT_ARG) return new ClImplicitArgumentImpl(node);
 
     if (elementType == ClojureElementTypes.DEF) return new ClDefImpl(node);
     if (elementType == ClojureElementTypes.DEFMETHOD) return new ClDefnMethodImpl(node);

@@ -1,7 +1,6 @@
 (ns plugin.formatting
   (:import (com.intellij.formatting FormattingModelBuilder FormattingModelProvider Indent Block Spacing ChildAttributes
                                     Alignment Wrap WrapType)
-           (com.intellij.openapi.diagnostic Logger)
            (org.jetbrains.plugins.clojure.psi.api ClList ClListLike ClVector ClMap ClSet ClKeyword)
            (org.jetbrains.plugins.clojure.psi.impl ClMapEntry)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
@@ -10,16 +9,17 @@
            (org.jetbrains.plugins.clojure.lexer ClojureTokenTypes)
            (com.intellij.psi PsiComment PsiFile)
            (com.intellij.psi.tree TokenSet)
-           (com.intellij.lang ASTNode)
+           (com.intellij.lang ASTNode LanguageFormatting)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (java.util Collection ArrayList))
-  (:use [plugin.util :only [safely with-logging]]
+  (:use [plugin.util :only [safely]]
         [plugin.tokens]
-        [plugin.predicates]))
+        [plugin.predicates])
+  (:require [plugin.logging :as log]
+            [plugin.intellij.extension :as extension]
+            [plugin.psi :as psi]))
 
 ;(set! *warn-on-reflection* true)
-
-(def ^Logger logger (Logger/getInstance "plugin.formatting"))
 
 (def no-spacing (Spacing/createSpacing 0 0 0 false 0))
 (def no-spacing-with-newline (Spacing/createSpacing 0 0 0 true 1))
@@ -39,13 +39,13 @@
   (getTextRange [this] (.getTextRange node))
   (getSubBlocks [this]
     (if (.isEmpty children)
-      (.addAll children (with-logging (sub-blocks this))))
+      (.addAll children (log/with-logging (sub-blocks this))))
     children)
   (getWrap [this] wrap)
   (getIndent [this] indent)
   (getAlignment [this] alignment)
-  (getSpacing [this child1 child2] (with-logging (spacing child1 child2)))
-  (getChildAttributes [this newChildIndex] (with-logging (child-attributes this newChildIndex)))
+  (getSpacing [this child1 child2] (log/with-logging (spacing child1 child2)))
+  (getChildAttributes [this newChildIndex] (log/with-logging (child-attributes this newChildIndex)))
   (isIncomplete [this] (incomplete? node))
   (isLeaf [this] (nil? (.getFirstChildNode node))))
 
@@ -282,11 +282,10 @@
         (= "," (.getText node2)) no-spacing
         (or (brace? type1)
             (brace? type2)) no-spacing-with-newline
-        (instance? ClKeyword psi1) no-newline
         (and (instance? ClListLike psi1)
              (instance? ClListLike psi2)
-             (= (.getParent psi1) (.getParent psi2))
-             (ClojurePsiCheckers/isImportingClause (.getParent psi1))) mandatory-newline
+             (= (psi/parent psi1) (psi/parent psi2))
+             (ClojurePsiCheckers/isImportingClause (psi/parent psi1))) mandatory-newline
         (.contains ClojureElementTypes/MODIFIERS type1) no-spacing
         (.contains ClojureTokenTypes/ATOMS type2) no-spacing
         :else common-spacing))))
@@ -304,19 +303,14 @@
 (defn incomplete? [node] false)
 
 (defn initialise []
-  (.addExplicitExtension
-    com.intellij.lang.LanguageFormatting/INSTANCE
-    (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)
+  (extension/remove-all LanguageFormatting/INSTANCE)
+  (extension/register
+    LanguageFormatting/INSTANCE
     (reify FormattingModelBuilder
       (createModel [this element settings]
-        (with-logging
+        (log/with-logging
           (let [file (.getContainingFile element)
                 node (.getNode file)
                 block (create-block node settings)]
             (FormattingModelProvider/createFormattingModelForPsiFile file block settings))))
       (getRangeAffectingIndent [this file offset elementAtOffset] nil))))
-
-;; debugging tools
-(defn get-extension []
-  (.forLanguage com.intellij.lang.LanguageFormatting/INSTANCE
-                (org.jetbrains.plugins.clojure.ClojureLanguage/getInstance)))

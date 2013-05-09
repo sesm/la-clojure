@@ -4,7 +4,6 @@
            (com.intellij.openapi.actionSystem AnAction ActionManager DefaultActionGroup AnActionEvent)
            (java.io Writer PrintWriter StringReader StringWriter File Closeable)
            (clojure.lang LineNumberingPushbackReader)
-           (com.intellij.openapi.diagnostic Logger)
            (com.intellij.execution.configurations JavaParameters GeneralCommandLine ParametersList)
            (com.intellij.facet FacetManager)
            (org.jetbrains.plugins.clojure.config ClojureFacet ClojureConfigUtil)
@@ -18,7 +17,8 @@
            (com.intellij.openapi.roots ModuleRootManager ModuleRootModel)
            (java.util List)
            (com.intellij.openapi.editor.ex EditorEx)
-           (com.intellij.openapi.vfs VirtualFile))
+           (com.intellij.openapi.vfs VirtualFile)
+           (com.intellij.openapi.util Pair))
   (:require [plugin.actions :as actions]
             [clojure.tools.nrepl :as nrepl]
             [clojure.tools.nrepl.ack :as ack]
@@ -27,9 +27,8 @@
             [plugin.repl :as repl]
             [plugin.repl.toolwindow :as toolwindow]
             [plugin.util :as util]
-            [plugin.executor :as executor]))
-
-(def ^Logger logger (Logger/getInstance (str *ns*)))
+            [plugin.executor :as executor]
+            [plugin.logging :as log]))
 
 (defn ^ClojureFacet clojure-facet [module]
   (let [facet-manager (FacetManager/getInstance module)]
@@ -73,7 +72,7 @@
   (try
     (.createProcess command-line)
     (catch Exception e#
-      (.error logger "Error creating REPL process" e#)
+      (log/error e# "Error creating REPL process")
       (ExecutionHelper/showErrors project [e#] "Errors" nil)
       (throw e#))))
 
@@ -145,8 +144,12 @@
         arguments (runtime-arguments project module working-dir)
         process (create-process project arguments)
         handler (proxy [ColoredProcessHandler] [process (.getCommandLineString arguments)]
-                  (textAvailable [text attributes]
-                    (.info logger (str/trim text))))]
+                  (textAvailable
+                          ([chunks]
+                           (doseq [^Pair chunk chunks]
+                             (log/info (str/trim (.getFirst chunk)))))
+                          ([text attributes]
+                           (log/info (str/trim text)))))]
     (ProcessTerminatedListener/attach handler)
     (.addProcessListener handler (proxy [ProcessAdapter] []
                                    (processTerminated [event]
@@ -157,7 +160,7 @@
     (swap! state assoc :process-handler handler)
     (if-let [port (ack/wait-for-ack 30000)]
       (let [connection (nrepl/connect :port port)
-            client (nrepl/client connection 1000)
+            client (nrepl/client connection Long/MAX_VALUE)
             session (nrepl/client-session client)
             tooling-session (nrepl/client-session client)]
         (swap! state assoc

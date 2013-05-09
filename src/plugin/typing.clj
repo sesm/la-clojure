@@ -1,6 +1,5 @@
 (ns plugin.typing
-  (:import (com.intellij.openapi.diagnostic Logger)
-           (com.intellij.openapi.editor Editor EditorModificationUtil)
+  (:import (com.intellij.openapi.editor Editor EditorModificationUtil)
            (com.intellij.openapi.editor.ex EditorEx)
            (com.intellij.openapi.editor.actionSystem TypedActionHandler EditorActionManager)
            (com.intellij.openapi.editor.highlighter HighlighterIterator)
@@ -17,8 +16,6 @@
             [plugin.tokens :as tokens]))
 
 ;(set! *warn-on-reflection* true)
-
-(def ^Logger logger (Logger/getInstance "plugin.typing"))
 
 (defn not-nil? [x] (not (nil? x)))
 

@@ -34,7 +34,6 @@ import org.jetbrains.plugins.clojure.psi.api.*;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.ImportOwner;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.ClojureResolveResult;
@@ -65,9 +64,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
   @NotNull
   @Override
   public PsiReference[] getReferences() {
-    PsiReference fakeClassReference = new MyFakeClassPsiReference();
-    PsiReference[] refs = {this, fakeClassReference};
-    return refs;
+    return new PsiReference[] {this};
   }
 
   @Override
@@ -307,9 +304,9 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
           name = ((ClKeyword) listParentFirstSymbol).getName();
         }
         boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ListDeclarations.IMPORT)) && !onlyRequireOrUse) isOk = true;
+        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
         else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ListDeclarations.REQUIRE) || name.equals(ListDeclarations.USE)) && isQuoted) isOk = true;
+        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
         final ClSymbol firstSymbol = list.getFirstSymbol();
         if (isOk && firstSymbol != this && firstSymbol instanceof ClSymbol) {
           return firstSymbol;
@@ -330,9 +327,9 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
           name = ((ClKeyword) firstSymbol).getName();
         }
         boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ListDeclarations.IMPORT)) && !onlyRequireOrUse) isOk = true;
+        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
         else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ListDeclarations.REQUIRE) || name.equals(ListDeclarations.USE)) && isQuoted) isOk = true;
+        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
         if (isOk) {
           final PsiElement firstNonLeafElement = vector.getFirstNonLeafElement();
           if (firstNonLeafElement != null && firstNonLeafElement != this && firstNonLeafElement instanceof ClSymbol) {
@@ -436,50 +433,5 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
   @NotNull
   public String getNameString() {
     return getText();
-  }
-
-  private class MyFakeClassPsiReference implements PsiReference {
-    public PsiElement getElement() {
-      return ClSymbolImpl.this;
-    }
-
-    public TextRange getRangeInElement() {
-      return new TextRange(0, 0);
-    }
-
-    public PsiElement resolve() {
-      for (PsiElement element : multipleResolveResults()) {
-        if (element instanceof PsiClass) {
-          return element;
-        }
-      }
-      return null;
-    }
-
-    @NotNull
-    public String getCanonicalText() {
-      return ClSymbolImpl.this.getCanonicalText();
-    }
-
-    public PsiElement handleElementRename(String newElementName) throws IncorrectOperationException {
-      return null;
-    }
-
-    public PsiElement bindToElement(@NotNull PsiElement element) throws IncorrectOperationException {
-      return null;
-    }
-
-    public boolean isReferenceTo(PsiElement element) {
-      return ClSymbolImpl.this.isReferenceTo(element);
-    }
-
-    @NotNull
-    public Object[] getVariants() {
-      return new Object[0];
-    }
-
-    public boolean isSoft() {
-      return false;
-    }
   }
 }

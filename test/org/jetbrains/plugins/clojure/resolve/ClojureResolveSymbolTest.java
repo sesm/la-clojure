@@ -1,11 +1,6 @@
 package org.jetbrains.plugins.clojure.resolve;
 
-import com.intellij.openapi.module.Module;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiReference;
-import com.intellij.psi.ResolveResult;
-import com.intellij.psi.impl.source.resolve.reference.impl.PsiMultiReference;
+import com.intellij.psi.*;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.util.TestUtils;
@@ -294,8 +289,8 @@ public class ClojureResolveSymbolTest extends ClojureResolveTestCaseBase {
   public void testJavaClass() throws Exception {
     configureByFileName(commonTestFile());
     final PsiReference reference = findReference();
-    if (reference instanceof PsiMultiReference) {
-      PsiMultiReference multiReference = (PsiMultiReference) reference;
+    if (reference instanceof PsiPolyVariantReference) {
+      PsiPolyVariantReference multiReference = (PsiPolyVariantReference) reference;
       for (ResolveResult result : multiReference.multiResolve(false)) {
         final PsiElement element = result.getElement();
         if (element instanceof PsiClass) {

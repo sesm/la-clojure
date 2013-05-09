@@ -103,7 +103,7 @@ public class ClojureWordsScanner implements WordsScanner {
   }
 
   // Based on LispReader.java
-  private static boolean isIdentifierStart(char c) {
+  public static boolean isIdentifierStart(char c) {
     if (c >= '0' && c <= '9') return false;
     else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) return true;
     else if (Character.isWhitespace(c)) return false;
@@ -112,7 +112,7 @@ public class ClojureWordsScanner implements WordsScanner {
     else return true;
   }
 
-  private static boolean isIdentifierPart(char c) {
+  public static boolean isIdentifierPart(char c) {
     if (Character.isWhitespace(c)) return false;
     else if (c == '#') return true;
     else if (MACROS.indexOf(c) >= 0) return false;

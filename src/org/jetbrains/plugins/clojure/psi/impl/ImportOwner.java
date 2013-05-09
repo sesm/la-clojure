@@ -7,7 +7,6 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
 import org.jetbrains.plugins.clojure.psi.api.*;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
@@ -19,6 +18,15 @@ import java.util.*;
  * @author ilya
  */
 public abstract class ImportOwner {
+  public static final String FN = "fn";
+  public static final String DEFN = "defn";
+  public static final String DEFN_ = "defn-";
+  public static final String NS = "ns";
+  public static final String IMPORT = "import";
+  public static final String USE = "use";
+  public static final String REFER = "refer";
+  public static final String REQUIRE = "require";
+
   public static boolean processDeclarations(PsiElement self, PsiScopeProcessor processor, PsiElement place) {
     for (PsiElement element : self.getChildren()) {
       if (element instanceof ClList || element instanceof ClVector) {
@@ -64,7 +72,7 @@ public abstract class ImportOwner {
    */
   public static boolean processRequires(PsiScopeProcessor processor, PsiElement place, ClListLike child, String headText) {
     final boolean isRequireKeyword = ClojureKeywords.REQUIRE.equals(headText);
-    final boolean isRequireFunction = ListDeclarations.REQUIRE.equals(headText);
+    final boolean isRequireFunction = REQUIRE.equals(headText);
     if (isRequireKeyword || isRequireFunction) {
       if (processRequireInner(processor, place, child, isRequireKeyword, isRequireFunction)) return false;
     }
@@ -104,7 +112,7 @@ public abstract class ImportOwner {
    */
   public static boolean processRefer(PsiScopeProcessor processor, PsiElement place, ClListLike directive, String headText) {
     final boolean isReferKeyword = ClojureKeywords.REFER.equals(headText);
-    final boolean isReferFunction = ListDeclarations.REFER.equals(headText);
+    final boolean isReferFunction = REFER.equals(headText);
     if (isReferKeyword || isReferFunction) {
       if (processReferInner(processor, place, directive, isReferKeyword, isReferFunction)) return false;
     }
@@ -116,7 +124,7 @@ public abstract class ImportOwner {
    */
   public static boolean processUses(PsiScopeProcessor processor, PsiElement place, ClListLike directive, String headText) {
     final boolean isUseKeyword = ClojureKeywords.USE.equals(headText);
-    final boolean isUseFunction = ListDeclarations.USE.equals(headText);
+    final boolean isUseFunction = USE.equals(headText);
     if (isUseKeyword || isUseFunction) {
       if (processRequireInner(processor, place, directive, isUseKeyword, isUseFunction)) return false;
       if (processReferInner(processor, place, directive, isUseKeyword, isUseFunction)) return false;
@@ -148,7 +156,7 @@ public abstract class ImportOwner {
    */
   public static boolean processImports(PsiScopeProcessor processor, PsiElement place, ClListLike child, String headText) {
     final boolean isImportKeyword = ClojureKeywords.IMPORT.equals(headText);
-    final boolean isImportFunction = ListDeclarations.IMPORT.equals(headText);
+    final boolean isImportFunction = IMPORT.equals(headText);
     if (isImportKeyword || isImportFunction) {
       for (PsiElement stmt : child.getChildren()) {
         if (!checkImportStatement(processor, place, child, stmt)) return false;

@@ -12,8 +12,6 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/lib/LedaSDK" />
-      <excludeFolder url="file://$MODULE_DIR$/lib/NikaSDK" />
-      <excludeFolder url="file://$MODULE_DIR$/lib/TrunkSDK" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

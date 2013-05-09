@@ -11,12 +11,9 @@
            (javax.swing Icon KeyStroke)
            (com.intellij.openapi.util IconLoader SystemInfo)
            (com.intellij.openapi.editor.actionSystem EditorWriteActionHandler EditorAction)
-           (org.jetbrains.plugins.clojure.utils ClojureUtils)
-           (com.intellij.openapi.diagnostic Logger))
+           (org.jetbrains.plugins.clojure.utils ClojureUtils))
   (:require [clojure.string :as str]
             [plugin.util :as util]))
-
-(def logger (Logger/getInstance (str ::logger)))
 
 (defn find-action [id]
   (let [manager (ActionManager/getInstance)]
@@ -102,9 +99,12 @@
         (.copyShortcutFrom action other)))
     (if-let [key (:shortcut-set opts)]
       (if (vector? key)
+        ; This is some really ugly type hinting
         (let [shortcut (KeyboardShortcut. (remap-key-stroke (first key))
                                           (remap-key-stroke (second key)))]
-          (.setShortcutSet action (CustomShortcutSet. (into-array Shortcut shortcut))))
+          (.setShortcutSet action (CustomShortcutSet.
+                                    ^"[Lcom.intellij.openapi.actionSystem.Shortcut;"
+                                    (into-array Shortcut shortcut))))
         (let [key-stroke (remap-key-stroke key)]
           (.setShortcutSet action (CustomShortcutSet. ^KeyStroke key-stroke)))))
     action))

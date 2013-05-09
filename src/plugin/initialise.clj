@@ -10,7 +10,8 @@
             plugin.resolve.namespaces
             plugin.documentation
             plugin.actions.paredit
-            plugin.repl.actions))
+            plugin.repl.actions
+            plugin.completion))
 
 (defn initialise-all []
   (plugin.formatting/initialise)
@@ -20,4 +21,5 @@
   (plugin.repl.ide/initialise)
   (plugin.repl.process/initialise)
   (plugin.documentation/initialise)
-  (plugin.actions.paredit/initialise))
+  (plugin.actions.paredit/initialise)
+  (plugin.completion/initialise))

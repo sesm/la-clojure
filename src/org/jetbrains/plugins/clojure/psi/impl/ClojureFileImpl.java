@@ -30,7 +30,6 @@ import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
-import org.jetbrains.plugins.clojure.psi.impl.list.ListDeclarations;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
 import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.impl.synthetic.ClSyntheticClassImpl;
@@ -254,7 +253,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     if (ns != null) return ns;
     commitDocument();
     final ClojurePsiFactory factory = ClojurePsiFactory.getInstance(getProject());
-    final ClList nsList = factory.createListFromText(ListDeclarations.NS + " " + getName());
+    final ClList nsList = factory.createListFromText(ImportOwner.NS + " " + getName());
     final PsiElement anchor = getFirstChild();
     if (anchor != null) {
       return (ClNs) addBefore(nsList, anchor);
@@ -407,7 +406,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     }
 
     public static boolean
-    processDeclarations(CompletionSyntheticNamespace namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    processDeclarations(CompletionSyntheticNamespace namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state) {
       final String qualifiedName = namespace.getQualifiedName();
       PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
 
@@ -450,50 +449,4 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       PsiDocumentManager.getInstance(project).commitDocument(document);
     }
   }
-
-  /*public void addImportForClass(PsiClass clazz) {
-    final String qualifiedName = clazz.getQualifiedName();
-    final ClNs namespaceElement = getNamespaceElement();
-    PsiElement child = getFirstChild();
-    if (namespaceElement != null) {
-      child = namespaceElement.getNextSibling();
-    }
-    final int i = qualifiedName.lastIndexOf('.');
-    if (i == -1) {
-      addNewImportForPath(qualifiedName);
-      return;
-    }
-    final ArrayList<ClList> lists = new ArrayList<ClList>();
-    while (true) {
-      if (child instanceof ClList) {
-        ClList list = (ClList) child;
-        final String name = list.getFirstSymbol().getName();
-        if (name.equals(ListDeclarations.IMPORT)) {
-          lists.add(list);
-        } else {
-          break;
-        }
-      } else if (!isWrongElement(child)) {
-        break;
-      }
-      child = child.getNextSibling();
-    }
-
-    if (lists.isEmpty()) {
-      addNewImportForPath(qualifiedName);
-      return;
-    }
-
-    addNewImportForPath(qualifiedName); //todo: find appropriate import and add it here, then replace import
-  }
-
-  private void addNewImportForPath(String path) {
-    final ClList importList = ClojurePsiFactory.getInstance(getProject()).createListFromText("(import " + path + ")");
-    final ClNs namespaceElement = getNamespaceElement();
-    if (namespaceElement != null) {
-      addAfter(importList, namespaceElement);
-    } else {
-      add(importList);
-    }
-  }*/
 }

@@ -10,7 +10,6 @@
            (org.jetbrains.plugins.clojure ClojureIcons)
            (com.intellij.ui.content Content)
            (com.intellij.openapi.fileEditor FileDocumentManager)
-           (com.intellij.openapi.diagnostic Logger)
            (com.intellij.openapi.editor Editor)
            (org.jetbrains.plugins.clojure.psi.util ClojurePsiUtil ClojurePsiElementFactoryImpl ClojurePsiFactory)
            (com.intellij.openapi.ui Messages))

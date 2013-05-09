@@ -80,8 +80,6 @@
                     serviceImplementation="org.jetbrains.plugins.clojure.settings.ClojureProjectSettings"/>
 
     <java.elementFinder implementation="org.jetbrains.plugins.clojure.psi.impl.javaView.ClojureClassFinder"/>
-    <lang.namesValidator language="Clojure"
-                         implementationClass="org.jetbrains.plugins.clojure.refactoring.rename.ClojureNameValidator"/>
     <referencesSearch implementation="org.jetbrains.plugins.clojure.findUsages.ClojureReferenceSearcher"/>
     <renamePsiElementProcessor
         implementation="org.jetbrains.plugins.clojure.refactoring.rename.RenameClojureFileProcessor" order="first"/>

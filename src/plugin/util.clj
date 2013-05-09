@@ -1,6 +1,5 @@
 (ns plugin.util
-  (:import (com.intellij.openapi.diagnostic Logger)
-           (com.intellij.openapi.application ApplicationManager)
+  (:import (com.intellij.openapi.application ApplicationManager)
            (com.intellij.openapi.util Computable)
            (com.intellij.openapi.progress ProcessCanceledException)
            (java.lang.reflect InvocationTargetException)
@@ -13,7 +12,18 @@
            (com.intellij.openapi.command CommandProcessor)
            (com.intellij.openapi.editor Editor)))
 
-(def ^Logger logger (Logger/getInstance "plugin.util"))
+(defn in?
+  "true if seq contains elm"
+  [seq elm]
+  (some #(= elm %) seq))
+
+(defn assoc-all
+  "Associates val in map with all keys in keys."
+  [map keys val]
+  (reduce (fn [map key]
+            (assoc map key val))
+          map
+          keys))
 
 (defmacro with-read-action
   "Runs body inside a read action."
@@ -56,21 +66,6 @@
   [form]
   `(if-not (nil? ~(second form)) ~form))
 
-(defmacro with-logging
-  "Calls body and logs any exceptions caught. Logs targets of InvocationTargetExceptions."
-  [& body]
-  `(try
-     ~@body
-     (catch ProcessCanceledException e#
-       (throw e#))
-     (catch InvocationTargetException e#
-       (.error logger "Invocation target exception:" (.getTargetException e#))
-       (throw e#))
-     (catch Exception e#
-       (.error logger e#)
-       (throw e#))))
-
-
 (defn ^ProjectManager project-manager [] (ProjectManager/getInstance))
 (defn ^VirtualFileManager file-manager [] (VirtualFileManager/getInstance))
 (defn ^FileEditorManager editor-manager [project] (FileEditorManager/getInstance project))
@@ -107,5 +102,5 @@
   (if-let [editor (find-editor name-pattern)]
     (let [element (PsiUtilBase/getElementAtCaret editor)]
       (if (instance? LeafPsiElement element)
-        (.getParent element)
+        (.getContext element)
         element))))

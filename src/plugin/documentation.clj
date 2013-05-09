@@ -8,12 +8,24 @@
            (org.jetbrains.plugins.clojure ClojureLanguage)
            (com.intellij.lang LanguageDocumentation)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile ClLiteral ClMetadata ClVector ClList ClListLike ClMap))
-  (:require [plugin.psi :as psi]))
+  (:require [plugin.psi :as psi]
+            [plugin.intellij.extension :as extension]
+            [plugin.resolve.namespaces :as namespaces]))
+
+(defn ^String escape-html
+  "Change special characters into HTML character entities."
+  [text]
+  (.. ^String text
+      (replace "&"  "&amp;")
+      (replace "<"  "&lt;")
+      (replace ">"  "&gt;")
+      (replace "\"" "&quot;")
+      (replace "'" "&apos;")))
 
 (defn process-string [^PsiElement element]
   (let [text (.getText element)
         trimmed (.substring text 1 (dec (.length text)))]
-    (.replaceAll trimmed "\n *" "<br/>")))
+    (.replaceAll (escape-html trimmed) "\n *" "<br/>")))
 
 ; TODO make test cases out of these
 ;(defn test1 [])
@@ -67,7 +79,7 @@
             (get-multi-arity-lists siblings)))))))
 
 (defn get-defn-doc [^ClDef element]
-  (let [namespace (.getNamespace ^ClojureFile (.getContainingFile element))
+  (let [namespace (namespaces/symbol-ns element)
         name (.getName element)
         param-lists (get-param-lists element)
         header (str "<b>"
@@ -89,17 +101,16 @@
 (defn get-doc [element]
   (cond
     (instance? ClDef element) (get-defn-doc element)
-    ; TODO formatting bug with let here
     (and (instance? ClSymbol element)
-         (instance? ClDef (.getParent ^ClSymbol element)))
-    (let [^ClDef parent (.getParent ^ClSymbol element)]
+         (instance? ClDef (psi/parent element)))
+    (let [^ClDef parent (psi/parent element)]
       (if (= element (.getNameSymbol parent))
         (get-defn-doc parent)))))
 
 (defn initialise []
-  (.addExplicitExtension
+  (extension/remove-all LanguageDocumentation/INSTANCE)
+  (extension/register
     LanguageDocumentation/INSTANCE
-    (ClojureLanguage/getInstance)
     (reify DocumentationProvider
       (getQuickNavigateInfo [this element original-element]
         (cond
@@ -112,8 +123,7 @@
              "</pre>"))
       (getDocumentationElementForLookupItem [this manager object element]
         (if (instance? ClojurePsiElement object)
-          object
-          nil))
+          object))
       (getDocumentationElementForLink [this manager link context]
         (JavaDocUtil/findReferenceTarget manager link context))
       (getUrlFor [this element original-element]

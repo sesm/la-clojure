@@ -1,11 +1,15 @@
 package org.jetbrains.plugins.clojure.parser;
 
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.DebugUtil;
 import com.intellij.openapi.fileTypes.FileTypeManager;
 import org.jetbrains.plugins.clojure.ClojureBaseTestCase;
 import org.junit.Test;
 import junit.framework.Assert;
+
+import java.io.File;
+import java.io.IOException;
 
 
 /**
@@ -33,10 +37,14 @@ public class ParserTest extends ClojureBaseTestCase {
 
   public void doParse(String fileName) {
     String contents = fetchFile("", fileName, TEST_FILE_EXT);
-    PsiFile psiFile = createPseudoPhysicalFile(getProject(), "test.clj", contents);
+    PsiFile psiFile = createPseudoPhysicalFile(getProject(), "clj_98.clj", contents);
     String psiTree = DebugUtil.psiToString(psiFile, false);
 
-    System.out.println(psiTree);
+    try {
+      assertEquals(FileUtil.loadFile(new File(getDataPath() + fileName + "-tree.txt")), psiTree);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Test
@@ -71,6 +79,14 @@ public class ParserTest extends ClojureBaseTestCase {
 
   public void testMultilineString() {
     doParse("multiline_string");
+  }
+
+  public void testUnicodeSymbol() {
+    doParse("unicode_symbol");
+  }
+
+  public void testNameApostrophe() {
+    doParse(getTestName(true));
   }
 
   @Test

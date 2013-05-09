@@ -3,6 +3,7 @@
   <component name="ClojureCompilerSettings">
     <option name="COMPILE_CLOJURE" value="true" />
     <option name="CLOJURE_BEFORE" value="false" />
+    <option name="COPY_CLJ_SOURCES" value="true" />
   </component>
 </project>
 
