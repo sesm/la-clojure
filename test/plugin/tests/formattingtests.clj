@@ -1,8 +1,46 @@
 (ns plugin.tests.formattingtests
-  (:use [clojure.test :only [deftest is]])
+  (:import [com.intellij.openapi.actionSystem IdeActions]
+           (junit.framework AssertionFailedError)
+           (com.intellij.psi.codeStyle CodeStyleManager))
+  (:use [clojure.test :only [deftest is assert-expr do-report use-fixtures]])
   (:require [plugin.test :as test]
-            [clojure.string :as string])
-  (:import [com.intellij.openapi.actionSystem IdeActions]))
+            [clojure.string :as string]
+            [plugin.psi :as psi]
+            [plugin.util :as util]
+            plugin.tests.editoractiontests))
+
+(defn reformat []
+  (let [project (test/project)
+        psi-file (test/file)]
+    (util/invoke-and-wait
+      (util/with-write-action
+        (let [style-manager (CodeStyleManager/getInstance project)]
+          (.reformatText style-manager
+                         psi-file
+                         (psi/start-offset psi-file)
+                         (psi/end-offset psi-file)))))))
+
+(defmethod assert-expr 'reformat-result? [msg form]
+  `(let [before# ~(nth form 1)
+         after# ~(nth form 2)]
+     (try
+       (test/create-file "formatting-test.clj" before#)
+       (reformat)
+       (test/check-result after# false)
+       (do-report {:type     :pass,
+                   :message  ~msg,
+                   :expected '~form,
+                   :actual   nil})
+       (catch AssertionFailedError e#
+         (do-report {:type     :fail,
+                     :message  (str ~msg ": " (.getMessage e#)),
+                     :expected '~form,
+                     :actual   e#})
+         e#))))
+
+
+(use-fixtures :once test/light-idea-fixture)
+
 
 (deftest application-tests
   (is (reformat-result?

@@ -1,11 +1,136 @@
 (ns plugin.tests.resolvetests
-  (:use [clojure.test :only [deftest is run-tests]])
+  (:import (java.io File)
+           (java.util.zip ZipFile)
+           (java.util.regex Matcher)
+           (com.intellij.psi PsiPolyVariantReference PsiNamedElement)
+           (org.jetbrains.plugins.clojure.psi.api ClojureFile)
+           (junit.framework AssertionFailedError))
+  (:use [clojure.test :only [deftest is run-tests use-fixtures assert-expr do-report]])
   (:require [plugin.test :as test]
-            [clojure.string :as string]))
+            [clojure.string :as str]))
+
+(defn load-clojure-core []
+  (let [lib-dir (File. (str (System/getProperty "plugin.path") "/lib"))
+        clojure-lib-name (first (filter #(.startsWith % "clojure-1.")
+                                        (seq (.list lib-dir))))
+        clojure-lib (ZipFile. (File. lib-dir clojure-lib-name))
+        core-file-entry (.getEntry clojure-lib "clojure/core.clj")]
+    (with-open [stream (.getInputStream clojure-lib core-file-entry)]
+      (slurp stream))))
+
+(defn re-pos [re string]
+  (loop [s string
+         res {}]
+    (let [^Matcher m (re-matcher re s)]
+      (if (.find m)
+        (let [start (.start m)
+              match (.group m)
+              len (.length match)]
+          (recur (str (.substring s 0 start)
+                      (.substring s (+ start len)))
+                 (assoc res start (.substring match 1 (dec len)))))
+        [s res]))))
+
+(defn find-key [map value]
+  (loop [items (seq map)]
+    (when (seq items)
+      (if (= (val (first items)) value)
+        (key (first items))
+        (recur (rest items))))))
+
+(defn check-self-resolution [element]
+  (if (and (instance? PsiPolyVariantReference element)
+           (some #(= element (.getElement %))
+                 (seq (.multiResolve element false))))
+    (test/fail (.getText element) ":" (.getTextOffset element) " resolves to self"))
+  (doseq [child (.getChildren element)]
+    (check-self-resolution child)))
+
+(defn check-resolve [text extra]
+  (if (:files extra)
+    (doseq [[file text] (:files extra)]
+      (test/add-file file text)))
+  (let [[text tags] (re-pos #"<[^ >]+>" text)
+        file (test/create-file "check-resolve.clj" text)]
+    (check-self-resolution file)
+    (doseq [entry tags]
+      (let [offset (key entry)
+            item (val entry)]
+        (when-not (.startsWith item "@")
+          (let [ref (or (.findReferenceAt file offset)
+                        (test/fail "Can't find reference at " item))
+                resolve-elements (filter (complement nil?)
+                                         (map #(.getElement %) (.multiResolve ref false)))
+                offsets (set (map #(.getTextOffset %) resolve-elements))
+                ref-text (.getText (.getElement ref))]
+            (cond
+              (re-matches #"[0-9]+" item)
+              (let [target-offset (or (find-key tags (str "@" item))
+                                      (test/fail "Can't find target for ref " item))
+                    target (or (.findElementAt file target-offset)
+                               (test/fail "Can't find element at @" item))]
+                (if-not (offsets target-offset)
+                  (test/fail ref-text
+                             ":"
+                             offset
+                             " does not resolve to "
+                             (.getText target)
+                             ":"
+                             target-offset)))
+              (= "/" item)
+              (if-not (empty? offsets)
+                (test/fail ref-text
+                           ":"
+                           offset
+                           " should not resolve but resolves to "
+                           (count offsets)
+                           " item(s): "
+                           offsets))
+              (.contains item "/")
+              (if-not (= 1 (count resolve-elements))
+                (test/fail ref-text
+                           ":"
+                           offset
+                           " should uniquely resolve but resolves to "
+                           (count resolve-elements)
+                           " item(s): "
+                           resolve-elements)
+                (let [target (first resolve-elements)
+                      psi-file (.getContainingFile target)
+                      [nspace sym-name] (str/split item #"/" 2)]
+                  (if (and (instance? PsiNamedElement target)
+                           (instance? ClojureFile psi-file))
+                    (do
+                      (test/assert= sym-name (.getName target) "symbol")
+                      (test/assert= nspace (.getNamespace psi-file) "namespace"))
+                    (test/fail "Unexpected types " (class target) " " (class psi-file))))))))))))
+
+(defmethod assert-expr 'valid-resolve? [msg form]
+  `(let [text# ~(nth form 1)
+         extra# ~(let [params (drop 2 form)]
+                   (if (seq params)
+                     (apply assoc {} params)))]
+     (test/with-tmp-files
+       (test/with-unique-default-definitions
+         (try (check-resolve text# extra#)
+              (do-report {:type     :pass,
+                          :message  ~msg,
+                          :expected '~form,
+                          :actual   nil})
+              (catch AssertionFailedError e#
+                (do-report {:type     :fail,
+                            :message  (str ~msg ": " (.getMessage e#)),
+                            :expected '~form,
+                            :actual   e#})
+                e#))))))
+
+
+
+(use-fixtures :once test/light-idea-fixture)
 
 (deftest basic-tests
-  ;  (is (valid-resolve? "(declare <@1>x) <1>x")
-  ;      "Basic declare")
+  (is (valid-resolve? "(declare <@1>x) <1>x")
+      "Basic declare")
   (is (valid-resolve? "(def <@1>x 10) <1>x")
       "Basic define")
   (is (valid-resolve? "(defn <@1>f []) <1>f")
@@ -76,8 +201,11 @@
                                             "(defn another-fun [])"
                                             "(defn another-fun2 [])")})
 
+(def clojure-core {"clojure/core.clj" (load-clojure-core)})
+
 (deftest multi-file
-  (is (valid-resolve? "(<clojure.core/defn>defn x [])")
+  (is (valid-resolve? "(<clojure.core/defn>defn x [])"
+                      :files clojure-core)
       "clojure.core resolution")
   (is (valid-resolve? (test/lines "(ns test (:use other another))"
                                   "(<other/fun>fun)"

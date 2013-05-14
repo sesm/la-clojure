@@ -1,6 +1,29 @@
 (ns plugin.tests.editoractiontests
-  (:use [clojure.test :only [deftest is]])
+  (:import (junit.framework AssertionFailedError))
+  (:use [clojure.test :only [deftest is assert-expr do-report use-fixtures]])
   (:require [plugin.test :as test]))
+
+(defmethod assert-expr 'editor-action-result? [msg form]
+  `(let [action# ~(nth form 1)
+         before# ~(nth form 2)
+         after# ~(nth form 3)]
+     (try
+       (test/create-file "editor-action-test.clj" before#)
+       (test/invoke-editor-action action#)
+       (test/check-result after# false)
+       (do-report {:type     :pass,
+                   :message  ~msg,
+                   :expected '~form,
+                   :actual   nil})
+       (catch AssertionFailedError e#
+         (do-report {:type     :fail,
+                     :message  (str ~msg ": " (.getMessage e#)),
+                     :expected '~form,
+                     :actual   e#})
+         e#))))
+
+
+(use-fixtures :once test/light-idea-fixture)
 
 ;(deftest barf-backwards-tests
 ;  (is (editor-action-result? "org.jetbrains.plugins.clojure.actions.editor.BarfBackwardsAction"

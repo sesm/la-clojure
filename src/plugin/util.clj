@@ -10,7 +10,8 @@
            (com.intellij.psi.util PsiUtilBase)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
            (com.intellij.openapi.command CommandProcessor)
-           (com.intellij.openapi.editor Editor)))
+           (com.intellij.openapi.editor Editor)
+           (com.intellij.util.ui UIUtil)))
 
 (defn in?
   "true if seq contains elm"
@@ -56,6 +57,13 @@
   [& body]
   `(.invokeLater
      (ApplicationManager/getApplication)
+     (reify Runnable
+       (run [this] ~@body))))
+
+(defmacro invoke-and-wait
+  "Runs body synchronously on the EDT."
+  [& body]
+  `(UIUtil/invokeAndWaitIfNeeded
      (reify Runnable
        (run [this] ~@body))))
 

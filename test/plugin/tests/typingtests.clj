@@ -1,6 +1,32 @@
 (ns plugin.tests.typingtests
-  (:use [clojure.test :only [deftest is]])
-  (:require plugin.test))
+  (:import (junit.framework AssertionFailedError)
+           (com.intellij.openapi.editor.actionSystem EditorActionManager)
+           (com.intellij.ide DataManager))
+  (:use [clojure.test :only [deftest is assert-expr do-report use-fixtures]])
+  (:require [plugin.test :as test]
+            [plugin.psi :as psi]
+            [plugin.util :as util]))
+
+(defmethod assert-expr 'typing-result? [msg form]
+  `(let [character# ~(nth form 1)
+         before# ~(nth form 2)
+         after# ~(nth form 3)]
+     (try
+       (test/create-file "typing-test.clj" before#)
+       (test/type character#)
+       (test/check-result after# false)
+       (do-report {:type     :pass,
+                   :message  ~msg,
+                   :expected '~form,
+                   :actual   nil})
+       (catch AssertionFailedError e#
+         (do-report {:type     :fail,
+                     :message  (str ~msg ": " (.getMessage e#)),
+                     :expected '~form,
+                     :actual   e#})
+         e#))))
+
+(use-fixtures :once test/light-idea-fixture)
 
 (deftest open-paren-tests
   (is (typing-result? \( "<caret>" "(<caret>)"))
