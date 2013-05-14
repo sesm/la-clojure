@@ -14,7 +14,7 @@ public class ClojureClassNameCompletionTest extends ClojureCompletionTestBase {
     final CompleteResult complete = complete(2);
     String resultText =
         "(ns dummy.clj\n" +
-            "  (:import [java.util ArrayList]))\n" +
+            "  (:import (java.util ArrayList)))\n" +
             "\n" +
             "(ArrayList<caret>)";
     completeLookupItem(complete.getElements()[0]);
@@ -32,6 +32,23 @@ public class ClojureClassNameCompletionTest extends ClojureCompletionTestBase {
     String resultText =
         "(ns dummy.clj\n" +
             "  (:import [java.util ArrayList Iterator]))\n" +
+            "\n" +
+            "(Iterator<caret>)";
+    completeLookupItem(complete.getElements()[0]);
+    checkResultByText(resultText);
+  }
+
+  public void testMoreClassName2() throws IOException {
+    String fileText =
+        "(ns dummy.clj\n" +
+            "  (:import (java.util ArrayList)))\n" +
+            "\n" +
+            "(Iterator<caret>)";
+    configureFromFileText("dummy.clj", fileText);
+    final CompleteResult complete = complete(2);
+    String resultText =
+        "(ns dummy.clj\n" +
+            "  (:import (java.util ArrayList Iterator)))\n" +
             "\n" +
             "(Iterator<caret>)";
     completeLookupItem(complete.getElements()[0]);

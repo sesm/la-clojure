@@ -11,9 +11,8 @@
   (:require [plugin.psi :as psi]))
 
 (defn process-string [^PsiElement element]
-  (let [text (.getText element)
-        trimmed (.substring text 1 (dec (.length text)))]
-    (.replaceAll trimmed "\n *" "<br/>")))
+  (let [text (.getText element)]
+    (.replaceAll text "\n *" "<br/>")))
 
 ; TODO make test cases out of these
 ;(defn test1 [])

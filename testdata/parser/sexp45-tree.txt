@@ -4,7 +4,7 @@ ClojureFile
     ClKeyword
       PsiElement(key)(':static')
     PsiWhiteSpace(' ')
-    MetaForm
+    ClMetadata
       PsiElement(^)('^')
       ClSymbol
         PsiElement(atom)('foo')

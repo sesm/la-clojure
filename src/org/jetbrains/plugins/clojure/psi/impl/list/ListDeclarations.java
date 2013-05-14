@@ -14,8 +14,12 @@ import org.jetbrains.plugins.clojure.psi.api.ClQuotedForm;
 import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
+import org.jetbrains.plugins.clojure.psi.impl.ImportOwner;
+import org.jetbrains.plugins.clojure.psi.impl.ns.ClSyntheticNamespace;
+import org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil;
 import org.jetbrains.plugins.clojure.psi.impl.symbols.ClSymbolImpl;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
+import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -106,7 +110,7 @@ public class ListDeclarations {
     return true;
   }
 
-  private static boolean processDeclareDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
+  public static boolean processDeclareDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
     final ClVector paramVector = list.findFirstChildByClass(ClVector.class);
     if (paramVector != null) {
       for (ClSymbol symbol : paramVector.getOddSymbols()) {
@@ -143,7 +147,7 @@ public class ListDeclarations {
     return true;
   }
 
-  private static boolean processDotDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
+  public static boolean processDotDeclaration(PsiScopeProcessor processor, ClList list, PsiElement place, PsiElement lastParent) {
     final PsiElement parent = place.getParent();
     if (parent == null || list == parent) return true;
 

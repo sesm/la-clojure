@@ -56,21 +56,4 @@ public abstract class ResolveProcessor implements PsiScopeProcessor, NameHint, E
     }
     return false;
   }
-
-  public boolean kindMatches(PsiNamedElement element) {
-    if (element instanceof PsiClass) {
-      return hasKind(ResolveKind.JAVA_CLASS);
-    } else if (element instanceof PsiPackage) {
-      return hasKind(ResolveKind.NAMESPACE);
-    } else {
-      return hasKind(ResolveKind.OTHER);
-    }
-  }
-
-  private boolean hasKind(ResolveKind kind) {
-    for (ResolveKind myKind : myKinds) {
-      if (myKind == kind) return true;
-    }
-    return false;
-  }
 }

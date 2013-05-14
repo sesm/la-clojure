@@ -36,8 +36,7 @@ ClojureFile
           PsiElement(atom)('considered')
         PsiWhiteSpace(' ')
         ClSet
-          PsiElement(#)('#')
-          PsiElement({)('{')
+          PsiElement(#{)('#{')
           PsiElement(})('}')
         PsiWhiteSpace('\n         ')
         ClSymbol
