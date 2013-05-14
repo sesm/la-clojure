@@ -6,10 +6,12 @@ import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClDefStub;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClDefNameIndex;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubOutputStream;
 import com.intellij.psi.stubs.StubInputStream;
 import com.intellij.psi.stubs.IndexSink;
+import com.intellij.lang.ASTNode;
 import com.intellij.util.io.StringRef;
 
 import java.io.IOException;
@@ -32,6 +34,10 @@ public class ClDefElementType extends ClStubElementType<ClDefStub, ClDef> {
     StringRef ref = dataStream.readName();
     int textOffset = dataStream.readInt();
     return new ClDefStub(parentStub, ref, this, textOffset);
+  }
+
+  public PsiElement createElement(ASTNode node) {
+    return new ClDefImpl(node);
   }
 
   public ClDef createPsi(ClDefStub stub) {

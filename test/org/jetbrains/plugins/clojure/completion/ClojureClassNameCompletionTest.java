@@ -38,6 +38,23 @@ public class ClojureClassNameCompletionTest extends ClojureCompletionTestBase {
     checkResultByText(resultText);
   }
 
+  public void testMoreClassName2() throws IOException {
+    String fileText =
+        "(ns dummy.clj\n" +
+            "  (:import (java.util ArrayList)))\n" +
+            "\n" +
+            "(Iterator<caret>)";
+    configureFromFileText("dummy.clj", fileText);
+    final CompleteResult complete = complete(2);
+    String resultText =
+        "(ns dummy.clj\n" +
+            "  (:import (java.util ArrayList Iterator)))\n" +
+            "\n" +
+            "(Iterator<caret>)";
+    completeLookupItem(complete.getElements()[0]);
+    checkResultByText(resultText);
+  }
+
   public void testClassNameInImport() throws IOException {
     String fileText =
         "(import ArrayList<caret>)";
