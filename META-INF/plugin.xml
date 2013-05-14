@@ -7,7 +7,7 @@
   </module-components>
 
   <name>La Clojure</name>
-  <id>org.intellij.clojure.redux</id>
+  <id>org.intellij.clojure</id>
   <description>Provides Clojure language support: syntax and error highlighting, completion, navigation and
     refactorings
   </description>
