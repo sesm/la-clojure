@@ -18,7 +18,6 @@
           </element>
         </element>
         <element id="file-copy" path="$PROJECT_DIR$/lib/clj-stacktrace-0.2.5.jar" />
-        <element id="file-copy" path="$APPLICATION_HOME_DIR$/plugins/copyright/lib/copyright.jar" />
         <element id="file-copy" path="$PROJECT_DIR$/lib/tools.nrepl-0.2.2.jar" />
         <element id="file-copy" path="$PROJECT_DIR$/lib/clojure-1.5.1.jar" />
       </element>
