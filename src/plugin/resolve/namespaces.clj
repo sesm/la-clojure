@@ -13,15 +13,11 @@
 
 (def ns-forms [:clojure.core/ns :in-ns])
 
-(extend-type org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (not (org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace/processDeclarations this processor state last-parent place))))
+(defn process-synthetic-ns-decls [this processor state last-parent place]
+  (not (org.jetbrains.plugins.clojure.psi.impl.ns.NamespaceUtil$MyClSyntheticNamespace/processDeclarations this processor state last-parent place)))
 
-(extend-type org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (not (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state))))
+(defn process-completion-ns-decls [this processor state last-parent place]
+  (not (org.jetbrains.plugins.clojure.psi.impl.ClojureFileImpl$CompletionSyntheticNamespace/processDeclarations this processor state)))
 
 (defn symbol-ns [sym]
   (if-let [ancestor (psi/top-ancestor sym)]

@@ -1,8 +1,9 @@
 package org.jetbrains.plugins.clojure.psi.impl.ns;
 
+import clojure.lang.RT;
+import clojure.lang.Var;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
-import com.intellij.openapi.util.Trinity;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
@@ -16,13 +17,14 @@ import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
-import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+
+import static org.jetbrains.plugins.clojure.utils.ClojureUtils.truthy;
 
 /**
  * @author ilyas
@@ -123,7 +125,12 @@ public class NamespaceUtil {
 
     @Override
     public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-      return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
+      return !truthy(NamespaceResolve.var.invoke(this, processor, state, lastParent, place));
+    }
+
+    private static final class NamespaceResolve
+    {
+      private static final Var var = RT.var("plugin.resolve.namespaces", "process-synthetic-ns-decls");
     }
 
     public static boolean

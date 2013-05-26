@@ -26,10 +26,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.clojure.build.ClojureBuilder;
-import org.jetbrains.plugins.clojure.config.ClojureFacet;
-import org.jetbrains.plugins.clojure.config.ClojureFacetType;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 
 /**
@@ -77,5 +74,11 @@ public class ClojureUtils
     if (module == null) return false;
     ModuleType type = ModuleType.get(module);
     return type instanceof JavaModuleType || "PLUGIN_MODULE".equals(type.getId());
+  }
+
+  public static boolean truthy(Object val) {
+    return (val == null ? false :
+        (val instanceof Boolean ? ((Boolean) val).booleanValue() :
+            true));
   }
 }

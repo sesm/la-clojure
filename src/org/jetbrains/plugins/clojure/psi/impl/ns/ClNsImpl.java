@@ -4,9 +4,7 @@ import com.intellij.lang.ASTNode;
 import com.intellij.openapi.util.Condition;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.ResolveState;
 import com.intellij.psi.StubBasedPsiElement;
-import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
@@ -18,7 +16,6 @@ import org.jetbrains.plugins.clojure.psi.api.ClListLike;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListBaseImpl;
-import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
@@ -81,11 +78,6 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
   public PsiElement setName(@NonNls String name) throws IncorrectOperationException {
     //todo implement me
     return this;
-  }
-
-  @Override
-  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
   }
 
   @Override
