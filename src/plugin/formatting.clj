@@ -104,24 +104,6 @@
   (let [elements (map #(.getElementType ^ASTNode %) (significant-elements node))]
     (every? true? (map = elements types))))
 
-(defn defn-parameters [^ASTNode
-                       node]
-  (if (has-types? node [ClojureElementTypes/SYMBOL
-                        ClojureElementTypes/SYMBOL
-                        ClojureElementTypes/VECTOR])
-    2
-    1))
-
-(defn fn-parameters [^ASTNode node]
-  (cond (has-types? node [ClojureElementTypes/SYMBOL
-                          ClojureElementTypes/SYMBOL
-                          ClojureElementTypes/VECTOR]) 2
-        (has-types? node [ClojureElementTypes/SYMBOL
-                          ClojureElementTypes/VECTOR]) 1
-        (has-types? node [ClojureElementTypes/SYMBOL
-                          ClojureElementTypes/SYMBOL]) 1
-        :else 0))
-
 (def indent-form {:ns              1,
                   :let             1,
                   :for             1,
@@ -134,11 +116,11 @@
                   :loop            1,
                   :binding         1,
                   :defmethod       3,
-                  :defn            defn-parameters,
-                  :defmacro        defn-parameters,
-                  :definline       defn-parameters,
-                  :defn-           defn-parameters,
-                  :fn              fn-parameters,
+                  :defn            1,
+                  :defmacro        1,
+                  :definline       1,
+                  :defn-           1,
+                  :fn              1,
                   :defrecord       2,
                   :deftype         2,
                   :defprotocol     1,
@@ -197,9 +179,8 @@
                 (head-text? "ns"))) (application-params 0)
     :else (normal-params)))
 
-; TODO fix lexer to lex #{ as single token
 (defn set-params []
-  (concat (repeat 2 (brace-params))
+  (concat [(brace-params)]
           (repeat (body-params))))
 
 (defn map-params []
