@@ -6,32 +6,19 @@ import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.NameHint;
 import com.intellij.psi.scope.PsiScopeProcessor;
-import com.intellij.psi.util.PsiTreeUtil;
 
 /**
  * @author ilyas
  */
 public abstract class ResolveUtil {
 
-  public static boolean treeWalkUp(PsiElement place, PsiScopeProcessor processor) {
+  public static boolean treeWalkUp(PsiElement place, PsiScopeProcessor processor, ResolveState state) {
     PsiElement lastParent = null;
     PsiElement run = place;
     while (run != null) {
-      if (!run.processDeclarations(processor, ResolveState.initial(), lastParent, place)) return false;
+      if (!run.processDeclarations(processor, state, lastParent, place)) return false;
       lastParent = run;
       run = run.getContext(); //same as getParent
-    }
-
-    return true;
-  }
-
-  public static boolean processChildren(PsiElement element, PsiScopeProcessor processor,
-                                        ResolveState substitutor, PsiElement lastParent, PsiElement place) {
-    PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
-    while (run != null) {
-      if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
-        return false;
-      run = run.getPrevSibling();
     }
 
     return true;
@@ -43,15 +30,28 @@ public abstract class ResolveUtil {
 
   public static boolean processElement(PsiScopeProcessor processor, PsiNamedElement namedElement, ResolveState state) {
     if (namedElement == null) return true;
-    NameHint nameHint = processor.getHint(NameHint.KEY);
-    String name = nameHint == null ? null : nameHint.getName(ResolveState.initial());
-    String actualName = namedElement.getName();
-    final String renamed = state.get(RENAMED_KEY);
-    if (renamed != null) actualName = renamed;
+    String name = getName(processor, state);
+    String actualName = getActualName(namedElement, state);
     if (name == null || name.equals(actualName)) {
       return processor.execute(namedElement, state);
     }
     return true;
+  }
+
+  public static String getActualName(PsiNamedElement namedElement, ResolveState state) {
+    String actualName = namedElement.getName();
+    final String renamed = state.get(RENAMED_KEY);
+    if (renamed != null) actualName = renamed;
+    return actualName;
+  }
+
+  public static boolean hasName(PsiScopeProcessor processor, ResolveState state) {
+    return getName(processor, state) != null;
+  }
+
+  public static String getName(PsiScopeProcessor processor, ResolveState state) {
+    NameHint nameHint = processor.getHint(NameHint.KEY);
+    return nameHint == null ? null : nameHint.getName(state);
   }
 
   public static PsiElement[] mapToElements(ClojureResolveResult[] candidates) {

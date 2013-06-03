@@ -15,6 +15,7 @@ import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiElementProcessor;
 import com.intellij.psi.stubs.StubElement;
+import com.intellij.psi.stubs.StubIndex;
 import com.intellij.psi.stubs.StubTree;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
@@ -36,11 +37,14 @@ import org.jetbrains.plugins.clojure.psi.impl.synthetic.ClSyntheticClassImpl;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClFileStub;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClDefNameIndex;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
+import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.util.*;
 
@@ -292,12 +296,31 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
   public static boolean processDeclarations(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState resolveState, PsiElement lastParent, PsiElement place) {
     //Process precedent read forms
-    ResolveUtil.processChildren(file, processor, resolveState, lastParent, place);
+    processChildren(file, processor, resolveState, lastParent, place);
 
     final JavaPsiFacade facade = JavaPsiFacade.getInstance(file.getProject());
 
     Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
-    if (state != null) {
+    if (state == null) {
+      //Add top-level package names
+      final PsiPackage rootPackage = facade.findPackage("");
+      if (rootPackage != null) {
+        NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
+      }
+
+      // Add all java.lang classes
+      final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+      if (javaLang != null) {
+        for (PsiClass clazz : javaLang.getClasses()) {
+          if (!ResolveUtil.processElement(processor, clazz)) {
+            return false;
+          }
+        }
+      }
+
+      if (!processCoreSymbols(file, processor, resolveState, place)) return false;
+    } else {
+      // Completion for REPL
       Associative stateValue = (Associative) state.deref();
       Object repl = stateValue.valAt(REPL_KEYWORD);
       Var doCompletions = RT.var("plugin.repl", "completions");
@@ -338,32 +361,55 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
           }
         }
       }
-    } else {
-      //Add top-level package names
-      final PsiPackage rootPackage = facade.findPackage("");
-      if (rootPackage != null) {
-        NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
-      }
+    }
 
-      // Add all java.lang classes
-      final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
-      if (javaLang != null) {
-        for (PsiClass clazz : javaLang.getClasses()) {
-          if (!ResolveUtil.processElement(processor, clazz)) {
-            return false;
-          }
-        }
-      }
+    return true;
+  }
 
-      // Add all symbols from default namespaces
-      // We don't resolve symbols that come from the same file as place. This is to stop us
-      // resolving symbols in infinite loops when editing e.g. clojure.core.
-      PsiFile placeFile = place.getContainingFile();
-      for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(file.getProject())) {
+  private static boolean processCoreSymbols(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState resolveState, PsiElement place) {
+    // We don't resolve symbols that come from the same file as place. This is to stop us
+    // resolving symbols in infinite loops when editing e.g. clojure.core.
+    PsiFile placeFile = place.getContainingFile();
+
+    String name = ResolveUtil.getName(processor, resolveState);
+    if (name == null) {
+      // If we don't know the name of the element (i.e. during completion) we add all symbols from clojure.core
+      for (PsiNamedElement element : NamespaceUtil.getDeclaredElements(ClojureUtils.CORE_NAMESPACE, file.getProject())) {
         if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
           return false;
         }
       }
+    } else {
+      // We know the name of the element, so we'll look up all files containing symbols from clojure.core.
+      // Then we'll look up all defined symbols with the given name and process any of them whose files
+      // are one of the clojure.core files.
+      StubIndex stubIndex = StubIndex.getInstance();
+      Project project = file.getProject();
+      Set<PsiFile> coreFiles = new HashSet<PsiFile>();
+      for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, ClojureUtils.CORE_NAMESPACE, project, GlobalSearchScope.allScope(project))) {
+        PsiFile psiFile = ns.getContainingFile();
+        if (!psiFile.equals(placeFile)) {
+          coreFiles.add(psiFile);
+        }
+      }
+      for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.allScope(project))) {
+        if (coreFiles.contains(def.getContainingFile())) {
+          if (!ResolveUtil.processElement(processor, def)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  public static boolean processChildren(PsiElement element, PsiScopeProcessor processor,
+                                        ResolveState substitutor, PsiElement lastParent, PsiElement place) {
+    PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
+    while (run != null) {
+      if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
+        return false;
+      run = run.getPrevSibling();
     }
 
     return true;

@@ -188,7 +188,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
     public static ResolveResult[] resolveJavaMethodReference(final ClSymbol symbol, @Nullable PsiElement start, final boolean forCompletion) {
       final CompletionProcessor processor = new CompletionProcessor(symbol, symbol.getKinds());
       if (start == null) start = symbol;
-      ResolveUtil.treeWalkUp(start, processor);
+      ResolveUtil.treeWalkUp(start, processor, ResolveState.initial());
       final String name = symbol.getReferenceName();
       assert name != null;
 
@@ -217,7 +217,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
 
       //process other places
       if (qualifier == null) {
-        ResolveUtil.treeWalkUp(symbol, processor);
+        ResolveUtil.treeWalkUp(symbol, processor, ResolveState.initial());
       } else {
         for (ResolveResult result : qualifier.multiResolve(false)) {
           final PsiElement element = result.getElement();
