@@ -7,6 +7,7 @@ import com.intellij.psi.ResolveState;
 import com.intellij.psi.scope.NameHint;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.util.PsiTreeUtil;
+import org.jetbrains.plugins.clojure.metrics.Metrics;
 
 /**
  * @author ilyas
@@ -27,14 +28,19 @@ public abstract class ResolveUtil {
 
   public static boolean processChildren(PsiElement element, PsiScopeProcessor processor,
                                         ResolveState substitutor, PsiElement lastParent, PsiElement place) {
-    PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
-    while (run != null) {
-      if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
-        return false;
-      run = run.getPrevSibling();
-    }
+    Metrics.Timer.Instance timer = Metrics.getInstance(element.getProject()).start("file.processChildren");
+    try {
+      PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
+      while (run != null) {
+        if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
+          return false;
+        run = run.getPrevSibling();
+      }
 
-    return true;
+      return true;
+    } finally {
+      timer.stop();
+    }
   }
 
   public static boolean processElement(PsiScopeProcessor processor, PsiNamedElement namedElement) {

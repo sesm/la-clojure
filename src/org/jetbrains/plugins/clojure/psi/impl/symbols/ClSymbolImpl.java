@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.ClojureIcons;
 import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
 import org.jetbrains.plugins.clojure.lexer.TokenSets;
+import org.jetbrains.plugins.clojure.metrics.Metrics;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElementImpl;
 import org.jetbrains.plugins.clojure.psi.api.*;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
@@ -113,8 +114,13 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
 
   @NotNull
   public ResolveResult[] multiResolve(boolean incomplete) {
-    final ResolveCache resolveCache = ResolveCache.getInstance(getProject());
-    return resolveCache.resolveWithCaching(this, RESOLVER, true, incomplete);
+    Metrics.Timer.Instance timer = Metrics.getInstance(getProject()).start("symbol.multiResolve");
+    try {
+      final ResolveCache resolveCache = ResolveCache.getInstance(getProject());
+      return resolveCache.resolveWithCaching(this, RESOLVER, true, incomplete);
+    } finally {
+      timer.stop();
+    }
   }
 
   public PsiElement setName(@NotNull @NonNls String newName) throws IncorrectOperationException {
@@ -157,32 +163,37 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
   public static class MyResolver implements ResolveCache.PolyVariantResolver<ClSymbol> {
 
     public ResolveResult[] resolve(ClSymbol symbol, boolean incompleteCode) {
-      final String name = symbol.getReferenceName();
-      if (name == null) return null;
+      Metrics.Timer.Instance timer = Metrics.getInstance(symbol.getProject()).start("symbol.resolver.resolve");
+      try {
+        final String name = symbol.getReferenceName();
+        if (name == null) return null;
 
-      // Resolve Java methods invocations
-      ClSymbol qualifier = symbol.getQualifierSymbol();
-      final String nameString = symbol.getNameString();
-      if (qualifier == null && nameString.startsWith(".")) {
-        return resolveJavaMethodReference(symbol, null, false);
+        // Resolve Java methods invocations
+        ClSymbol qualifier = symbol.getQualifierSymbol();
+        final String nameString = symbol.getNameString();
+        if (qualifier == null && nameString.startsWith(".")) {
+          return resolveJavaMethodReference(symbol, null, false);
+        }
+
+        ResolveKind[] kinds = symbol.getKinds();
+        if (nameString.endsWith(".")) {
+          kinds = ResolveKind.javaClassesKinds();
+        }
+        ResolveProcessor processor = new SymbolResolveProcessor(StringUtil.trimEnd(name, "."), symbol, incompleteCode, kinds);
+        resolveImpl(symbol, processor);
+
+        if (nameString.contains(".")) {
+          ResolveProcessor nsProcessor = new SymbolResolveProcessor(nameString, symbol, incompleteCode, ResolveKind.namesSpaceKinds());
+          resolveNamespace(symbol, nsProcessor);
+        }
+
+        ClojureResolveResult[] candidates = processor.getCandidates();
+        if (candidates.length > 0) return candidates;
+
+        return ClojureResolveResult.EMPTY_ARRAY;
+      } finally {
+        timer.stop();
       }
-
-      ResolveKind[] kinds = symbol.getKinds();
-      if (nameString.endsWith(".")) {
-        kinds = ResolveKind.javaClassesKinds();
-      }
-      ResolveProcessor processor = new SymbolResolveProcessor(StringUtil.trimEnd(name, "."), symbol, incompleteCode, kinds);
-      resolveImpl(symbol, processor);
-
-      if (nameString.contains(".")) {
-        ResolveProcessor nsProcessor = new SymbolResolveProcessor(nameString, symbol, incompleteCode, ResolveKind.namesSpaceKinds());
-        resolveNamespace(symbol, nsProcessor);
-      }
-
-      ClojureResolveResult[] candidates = processor.getCandidates();
-      if (candidates.length > 0) return candidates;
-
-      return ClojureResolveResult.EMPTY_ARRAY;
     }
 
     public static ResolveResult[] resolveJavaMethodReference(final ClSymbol symbol, @Nullable PsiElement start, final boolean forCompletion) {
@@ -423,7 +434,12 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
 
   @NotNull
   public Object[] getVariants() {
-    return CompleteSymbol.getVariants(this);
+    Metrics.Timer.Instance timer = Metrics.getInstance(getProject()).start("symbol.getVariants");
+    try {
+      return CompleteSymbol.getVariants(this);
+    } finally {
+      timer.stop();
+    }
   }
 
   public boolean isSoft() {

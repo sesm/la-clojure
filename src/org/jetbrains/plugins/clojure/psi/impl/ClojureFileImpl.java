@@ -22,6 +22,7 @@ import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
+import org.jetbrains.plugins.clojure.metrics.Metrics;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
 import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
@@ -339,30 +340,47 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         }
       }
     } else {
-      //Add top-level package names
-      final PsiPackage rootPackage = facade.findPackage("");
-      if (rootPackage != null) {
-        NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
+      Metrics metrics = Metrics.getInstance(place.getProject());
+
+      Metrics.Timer.Instance timer = metrics.start("file.topLevelPackages");
+      try {
+        //Add top-level package names
+        final PsiPackage rootPackage = facade.findPackage("");
+        if (rootPackage != null) {
+          NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
+        }
+      } finally {
+        timer.stop();
       }
 
-      // Add all java.lang classes
-      final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
-      if (javaLang != null) {
-        for (PsiClass clazz : javaLang.getClasses()) {
-          if (!ResolveUtil.processElement(processor, clazz)) {
+      timer = metrics.start("file.javaLangClasses");
+      try {
+        // Add all java.lang classes
+        final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+        if (javaLang != null) {
+          for (PsiClass clazz : javaLang.getClasses()) {
+            if (!ResolveUtil.processElement(processor, clazz)) {
+              return false;
+            }
+          }
+        }
+      } finally {
+        timer.stop();
+      }
+
+      timer = metrics.start("file.defaultDefinitions");
+      try {
+        // Add all symbols from default namespaces
+        // We don't resolve symbols that come from the same file as place. This is to stop us
+        // resolving symbols in infinite loops when editing e.g. clojure.core.
+        PsiFile placeFile = place.getContainingFile();
+        for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(file.getProject())) {
+          if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
             return false;
           }
         }
-      }
-
-      // Add all symbols from default namespaces
-      // We don't resolve symbols that come from the same file as place. This is to stop us
-      // resolving symbols in infinite loops when editing e.g. clojure.core.
-      PsiFile placeFile = place.getContainingFile();
-      for (PsiNamedElement element : NamespaceUtil.getDefaultDefinitions(file.getProject())) {
-        if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
-          return false;
-        }
+      } finally {
+        timer.stop();
       }
     }
 
