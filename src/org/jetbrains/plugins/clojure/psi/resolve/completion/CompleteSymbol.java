@@ -29,7 +29,7 @@ public class CompleteSymbol {
     ClSymbol qualifier = symbol.getQualifierSymbol();
     final CompletionProcessor processor = new CompletionProcessor(symbol, symbol.getKinds());
     if (qualifier == null) {
-      ResolveUtil.treeWalkUp(symbol, processor);
+      ResolveUtil.treeWalkUp(symbol, processor, ResolveState.initial());
     } else {
       for (ResolveResult result : qualifier.multiResolve(false)) {
         final PsiElement element = result.getElement();

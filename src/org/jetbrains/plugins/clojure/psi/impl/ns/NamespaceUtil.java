@@ -3,7 +3,6 @@ package org.jetbrains.plugins.clojure.psi.impl.ns;
 import clojure.lang.RT;
 import clojure.lang.Var;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
@@ -17,10 +16,8 @@ import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
-import org.jetbrains.plugins.clojure.utils.ClojureUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -30,17 +27,6 @@ import static org.jetbrains.plugins.clojure.utils.ClojureUtils.truthy;
  * @author ilyas
  */
 public class NamespaceUtil {
-
-  public static final Key<PsiNamedElement[]> DEFAULT_DEFINITIONS_KEY = new Key<PsiNamedElement[]>("DEFAULT_DEFINITIONS_KEY");
-
-  public static final String[] DEFAULT_NSES = new String[]{ClojureUtils.CORE_NAMESPACE,
-//          "clojure.inspector",
-//          "clojure.main",
-//          "clojure.parallel",
-//          "clojure.set",
-//          "clojure.zip",
-//          "clojure.xml"
-  };
 
   public static PsiNamedElement[] getDeclaredElements(@NotNull String nsFqn, @NotNull Project project) {
     final Collection<ClNs> nses = StubIndex.getInstance().get(ClojureNsNameIndex.KEY, nsFqn, project, GlobalSearchScope.allScope(project));
@@ -59,30 +45,6 @@ public class NamespaceUtil {
       }
     }
     return result.toArray(PsiNamedElement.EMPTY_ARRAY);
-  }
-
-  public static PsiNamedElement[] getDefaultDefinitions(@NotNull Project project) {
-    PsiNamedElement[] ret;
-    synchronized (project) {
-      ret = project.getUserData(DEFAULT_DEFINITIONS_KEY);
-      if (ret != null) {
-        for (PsiNamedElement namedElement : ret) {
-          if (!namedElement.isValid()) {
-            ret = null;
-            break;
-          }
-        }
-      }
-      if (ret == null) {
-        final ArrayList<PsiNamedElement> res = new ArrayList<PsiNamedElement>();
-        for (String ns : DEFAULT_NSES) {
-          res.addAll(Arrays.asList(getDeclaredElements(ns, project)));
-        }
-        ret = res.toArray(PsiNamedElement.EMPTY_ARRAY);
-        project.putUserData(DEFAULT_DEFINITIONS_KEY, ret);
-      }
-    }
-    return ret;
   }
 
   public static ClSyntheticNamespace[] getTopLevelNamespaces(@NotNull Project project) {
@@ -116,11 +78,9 @@ public class NamespaceUtil {
   }
 
   public static class MyClSyntheticNamespace extends ClSyntheticNamespace {
-    private final Project project;
 
     public MyClSyntheticNamespace(Project project, String refName, String synthName, ClNs navigationElement) {
       super(PsiManager.getInstance(project), refName, synthName, navigationElement);
-      this.project = project;
     }
 
     @Override
