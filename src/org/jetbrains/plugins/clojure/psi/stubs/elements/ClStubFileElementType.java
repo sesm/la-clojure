@@ -17,7 +17,7 @@ import java.io.IOException;
  * @author ilyas
  */
 public class ClStubFileElementType extends IStubFileElementType<ClFileStub> {
-  private static final int CACHES_VERSION = 14;
+  private static final int CACHES_VERSION = 15;
 
   public ClStubFileElementType() {
     super(ClojureFileType.CLOJURE_LANGUAGE);

@@ -79,7 +79,6 @@ public class ClSyntheticClassImpl extends LightElement implements ClSyntheticCla
     super(file.getManager(), ClojureFileType.CLOJURE_LANGUAGE);
     myFile = file;
     assert myFile.isClassDefiningFile();
-    assert myFile.getNamespaceElement() != null;
     cachesNames();
   }
 

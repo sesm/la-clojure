@@ -4,7 +4,10 @@
            (com.intellij.psi PsiManager PsiElement PsiReference PsiPolyVariantReference PsiFile)
            (org.jetbrains.plugins.clojure.metrics Metrics)
            (java.util.concurrent TimeUnit)
-           (com.intellij.openapi.fileTypes FileTypeManager))
+           (com.intellij.openapi.fileTypes FileTypeManager)
+           (com.intellij.openapi.vfs VirtualFileFilter VirtualFile)
+           (org.jetbrains.plugins.clojure.file ClojureFileType)
+           (com.intellij.psi.impl PsiManagerImpl))
   (:require [plugin.util :as util]))
 
 (defn find-project [name-pattern]
@@ -18,16 +21,32 @@
        (finally
          (.stop instance#)))))
 
+(defmacro with-stub-switch-alert [project & body]
+  `(let [psi-manager# ^PsiManagerImpl (PsiManager/getInstance ~project)
+         filter# (reify VirtualFileFilter
+                   (accept [this# file#]
+                     (= ClojureFileType/CLOJURE_FILE_TYPE
+                        (.getFileType file#))))]
+     (.setAssertOnFileLoadingFilter psi-manager# filter#)
+     (try
+       ~@body
+       (finally
+         (.setAssertOnFileLoadingFilter psi-manager# VirtualFileFilter/NONE)))))
+
 (defn resolve-all-elements [^PsiElement element [total refs resolved]]
   (let [result (reduce (fn [[total refs resolved] ref]
-                         (let [resolved? (or (and (instance? PsiPolyVariantReference ref)
-                                                  (if-let [result (with-timer (.getProject element)
-                                                                              "total.multiResolve"
-                                                                              (.multiResolve ^PsiPolyVariantReference ref false))]
+                         (let [project (.getProject element)
+                               resolved? (or (and (instance? PsiPolyVariantReference ref)
+                                                  (if-let [result (with-stub-switch-alert
+                                                                    project
+                                                                    (with-timer
+                                                                      project "total.multiResolve"
+                                                                      (.multiResolve ^PsiPolyVariantReference ref false)))]
                                                     (> (alength result) 0)))
-                                             (with-timer (.getProject element)
-                                                         "total.resolve"
-                                                         (.resolve ^PsiReference ref)))]
+                                             (with-stub-switch-alert
+                                               project
+                                               (with-timer project "total.resolve"
+                                                           (.resolve ^PsiReference ref))))]
                            (if resolved?
                              [total (inc refs) (inc resolved)]
                              [total (inc refs) resolved])))
@@ -54,7 +73,7 @@
                        (* factor (.mean snapshot))
                        (* factor (.stdDev snapshot)))))))
 
-(defn calculate-totals [project psi-manager files]
+(defn calculate-totals [project ^PsiManager psi-manager files]
   (reduce (fn [totals i]
             (let [print? (= i 4)]
               (.reset (Metrics/getInstance project))
@@ -94,5 +113,4 @@
       (println (format "%-20s %5.2f" "Elements/file:" (double (/ total num-files))))
       (println (format "%-20s %5.2f" "Refs/file:" (double (/ refs num-files))))
       (println (format "%-20s %5.2f" "Refs/element:" (double (/ refs total))))
-      (println)
       (print-report project))))

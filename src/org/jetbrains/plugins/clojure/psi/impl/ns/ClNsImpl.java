@@ -6,6 +6,7 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.StubBasedPsiElement;
 import com.intellij.psi.stubs.IStubElementType;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NonNls;
@@ -47,7 +48,13 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
       return stub.getName();
     }
 
-    return getDefinedName();
+    ClSymbol sym = getNameSymbol();
+    if (sym != null) {
+      String name = sym.getText();
+      assert name != null;
+      return name;
+    }
+    return "";
   }
 
   /**
@@ -63,16 +70,6 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
       return (ClSymbol) element;
     }
     return null;
-  }
-
-  public String getDefinedName() {
-    ClSymbol sym = getNameSymbol();
-    if (sym != null) {
-      String name = sym.getText();
-      assert name != null;
-      return name;
-    }
-    return "";
   }
 
   public PsiElement setName(@NonNls String name) throws IncorrectOperationException {
@@ -117,6 +114,21 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
     final ClojurePsiFactory factory = ClojurePsiFactory.getInstance(getProject());
     final ClList importClause = findOrCreateImportClause(place);
     return factory.findOrCreateJavaImportForClass(clazz, importClause);
+  }
+
+  @Override
+  public boolean isClassDefinition() {
+    ClNsStub stub = getStub();
+    if (stub != null) {
+      return stub.isClassDefinition();
+    }
+
+    final ClSymbol first = findFirstChildByClass(ClSymbol.class);
+    if (first == null) return false;
+    final ClSymbol snd = PsiTreeUtil.getNextSiblingOfType(first, ClSymbol.class);
+    if (snd == null) return false;
+
+    return ClojurePsiUtil.findNamespaceKeyByName(this, ClojureKeywords.GEN_CLASS) != null;
   }
 
   @NotNull

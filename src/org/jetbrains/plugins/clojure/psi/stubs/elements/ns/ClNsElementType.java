@@ -20,9 +20,6 @@ public class ClNsElementType extends ClNsElementTypeBase {
   }
 
   public ClNsStub createStub(ClNs psi, StubElement parentStub) {
-    return new ClNsStub(parentStub, StringRef.fromString(psi.getDefinedName()), ClojureElementTypes.NS, psi.getTextOffset());
+    return new ClNsStub(parentStub, StringRef.fromString(psi.getName()), ClojureElementTypes.NS, psi.getTextOffset(), psi.isClassDefinition());
   }
-
-
-
 }

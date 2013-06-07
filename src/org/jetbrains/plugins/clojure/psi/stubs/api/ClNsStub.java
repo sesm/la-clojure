@@ -6,7 +6,6 @@ import com.intellij.psi.stubs.StubBase;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.util.io.StringRef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
-import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 
 /**
  * @author ilyas
@@ -14,11 +13,13 @@ import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 public class ClNsStub extends StubBase<ClNs> implements NamedStub<ClNs> {
   private final StringRef myName;
   private final int myTextOffset;
+  private final boolean classDefinition;
 
-  public ClNsStub(StubElement parent, StringRef name, final IStubElementType elementType, int textOffset) {
+  public ClNsStub(StubElement parent, StringRef name, final IStubElementType elementType, int textOffset, boolean classDefinition) {
     super(parent, elementType);
     myName = name;
     myTextOffset = textOffset;
+    this.classDefinition = classDefinition;
   }
 
   public int getTextOffset() {
@@ -29,4 +30,7 @@ public class ClNsStub extends StubBase<ClNs> implements NamedStub<ClNs> {
     return StringRef.toString(myName);
   }
 
+  public boolean isClassDefinition() {
+    return classDefinition;
+  }
 }

@@ -2,7 +2,9 @@ package org.jetbrains.plugins.clojure.psi.impl.javaView;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
-import com.intellij.psi.*;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiElementFinder;
+import com.intellij.psi.PsiPackage;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.stubs.StubIndex;
 import com.intellij.util.Function;
@@ -10,13 +12,16 @@ import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.compiler.ClojureCompilerSettings;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
+import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureFullScriptNameIndex;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
+import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.ArrayList;
 
 /**
  * @author ilyas
@@ -50,15 +55,20 @@ public class ClojureClassFinder extends PsiElementFinder {
 
   @NotNull
   public PsiClass[] getClasses(@NotNull PsiPackage psiPackage, @NotNull GlobalSearchScope scope) {
-    if (!ClojureCompilerSettings.getInstance(psiPackage.getProject()).getState().COMPILE_CLOJURE) return PsiClass.EMPTY_ARRAY;
+    if (!ClojureCompilerSettings.getInstance(myProject).getState().COMPILE_CLOJURE) return PsiClass.EMPTY_ARRAY;
 
     List<PsiClass> result = new ArrayList<PsiClass>();
-    for (final PsiDirectory dir : psiPackage.getDirectories(scope)) {
-      for (final PsiFile file : dir.getFiles()) {
-        if (file instanceof ClojureFile) {
-          ClojureFile clojureFile = (ClojureFile) file;
-          if (clojureFile.isClassDefiningFile() && clojureFile.getPackageName().equals(psiPackage.getQualifiedName())) {
-            result.add(clojureFile.getDefinedClass());
+    StubIndex stubIndex = StubIndex.getInstance();
+    String packageName = psiPackage.getQualifiedName();
+    for (String fqn : stubIndex.getAllKeys(ClojureNsNameIndex.KEY, myProject)) {
+      if (ClojureTextUtil.getSymbolPrefix(fqn).equals(packageName)) {
+        for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, fqn, myProject, scope)) {
+          if (ns.isClassDefinition()) {
+            ClojureFile file = (ClojureFile) ns.getContainingFile();
+            PsiClass psiClass = file.getDefinedClass();
+            if (psiClass != null) {
+              result.add(psiClass);
+            }
           }
         }
       }

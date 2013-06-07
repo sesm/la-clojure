@@ -111,18 +111,17 @@
                    (if (seq params)
                      (apply assoc {} params)))]
      (test/with-tmp-files
-       (test/with-unique-default-definitions
-         (try (check-resolve text# extra#)
-              (do-report {:type     :pass,
-                          :message  ~msg,
+       (try (check-resolve text# extra#)
+            (do-report {:type     :pass,
+                        :message  ~msg,
+                        :expected '~form,
+                        :actual   nil})
+            (catch AssertionFailedError e#
+              (do-report {:type     :fail,
+                          :message  (str ~msg ": " (.getMessage e#)),
                           :expected '~form,
-                          :actual   nil})
-              (catch AssertionFailedError e#
-                (do-report {:type     :fail,
-                            :message  (str ~msg ": " (.getMessage e#)),
-                            :expected '~form,
-                            :actual   e#})
-                e#))))))
+                          :actual   e#})
+              e#)))))
 
 
 

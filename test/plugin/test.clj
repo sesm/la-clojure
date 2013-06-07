@@ -9,10 +9,13 @@
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.api ClojureFile)
            (com.intellij.psi.stubs StubTree)
-           (com.intellij.testFramework.fixtures CodeInsightTestFixture IdeaTestFixtureFactory)
+           (com.intellij.testFramework.fixtures CodeInsightTestFixture IdeaTestFixtureFactory
+                                                DefaultLightProjectDescriptor JavaTestFixtureFactory)
            (com.intellij.testFramework.fixtures.impl LightTempDirTestFixtureImpl)
            (org.apache.log4j BasicConfigurator)
-           (org.jetbrains.plugins.clojure.psi.impl.ns NamespaceUtil))
+           (org.jetbrains.plugins.clojure.psi.impl.ns NamespaceUtil)
+           (org.jetbrains.plugins.clojure.util TestUtils)
+           (com.intellij.openapi.projectRoots JavaSdk))
   (:refer-clojure :exclude [type])
   (:use [clojure.test :only [assert-expr do-report]])
   (:require [clojure.string :as str]
@@ -60,10 +63,15 @@
 (defn light-idea-fixture [f]
   (BasicConfigurator/configure)
   (let [factory (IdeaTestFixtureFactory/getFixtureFactory)
-        builder (.createLightFixtureBuilder factory)
+        descriptor (proxy [DefaultLightProjectDescriptor] []
+                     (getSdk []
+                       (-> (JavaSdk/getInstance)
+                           (.createJdk "1.7" (TestUtils/getMockJdk) false))))
+        builder (.createLightFixtureBuilder factory descriptor)
         fixture (.getFixture builder)
         tmp-dir-fixture (LightTempDirTestFixtureImpl. true)
-        test-fixture (.createCodeInsightFixture factory fixture tmp-dir-fixture)]
+        java-factory (JavaTestFixtureFactory/getFixtureFactory)
+        test-fixture (.createCodeInsightFixture java-factory fixture tmp-dir-fixture)]
     (.setUp test-fixture)
     (try
       (binding [*fixture* test-fixture]

@@ -26,12 +26,14 @@ public abstract class ClNsElementTypeBase extends ClStubElementType<ClNsStub, Cl
   public void serialize(ClNsStub stub, StubOutputStream dataStream) throws IOException {
     dataStream.writeName(stub.getName());
     dataStream.writeInt(stub.getTextOffset());
+    dataStream.writeBoolean(stub.isClassDefinition());
   }
 
   public ClNsStub deserialize(StubInputStream dataStream, StubElement parentStub) throws IOException {
     StringRef ref = dataStream.readName();
     int textOffset = dataStream.readInt();
-    return new ClNsStub(parentStub, ref, this, textOffset);
+    boolean classDefinition = dataStream.readBoolean();
+    return new ClNsStub(parentStub, ref, this, textOffset, classDefinition);
   }
 
   @Override

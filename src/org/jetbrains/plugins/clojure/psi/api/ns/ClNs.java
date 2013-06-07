@@ -11,9 +11,8 @@ import org.jetbrains.plugins.clojure.psi.api.ClListLike;
  * @author ilyas
  */
 public interface ClNs extends ClList, PsiNamedElement {
-  String getDefinedName();
-
   @Nullable
   ClListLike addImportForClass(PsiElement place, PsiClass clazz);
 
+  boolean isClassDefinition();
 }

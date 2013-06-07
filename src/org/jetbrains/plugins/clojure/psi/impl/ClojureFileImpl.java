@@ -8,6 +8,7 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.source.PsiFileImpl;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
@@ -40,7 +41,6 @@ import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClFileStub;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClDefNameIndex;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
-import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.psi.util.ClojureTextUtil;
@@ -229,25 +229,14 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
       return ((ClFileStub) stub).isClassDefinition();
     }
 
-    final ClList ns = ClojurePsiUtil.findFormByName(this, "ns");
+    final ClNs ns = (ClNs) ClojurePsiUtil.findFormByName(this, "ns");
     if (ns == null) return false;
-    final ClSymbol first = ns.findFirstChildByClass(ClSymbol.class);
-    if (first == null) return false;
-    final ClSymbol snd = PsiTreeUtil.getNextSiblingOfType(first, ClSymbol.class);
-    if (snd == null) return false;
-
-    return ClojurePsiUtil.findNamespaceKeyByName(ns, ClojureKeywords.GEN_CLASS) != null;
+    return ns.isClassDefinition();
   }
 
   public String getNamespace() {
-    final ClList ns = getNamespaceElement();
-    if (ns == null) return null;
-    final ClSymbol first = ns.findFirstChildByClass(ClSymbol.class);
-    if (first == null) return null;
-    final ClSymbol snd = PsiTreeUtil.getNextSiblingOfType(first, ClSymbol.class);
-    if (snd == null) return null;
-
-    return snd.getNameString();
+    final ClNs ns = getNamespaceElement();
+    return ns == null ? null : ns.getName();
   }
 
   public ClNs getNamespaceElement() {
@@ -405,18 +394,16 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         // are one of the clojure.core files.
         StubIndex stubIndex = StubIndex.getInstance();
         Project project = file.getProject();
-        Set<PsiFile> coreFiles = new HashSet<PsiFile>();
+        Collection<VirtualFile> coreFiles = new HashSet<VirtualFile>();
         for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, ClojureUtils.CORE_NAMESPACE, project, GlobalSearchScope.allScope(project))) {
           PsiFile psiFile = ns.getContainingFile();
           if (!psiFile.equals(placeFile)) {
-            coreFiles.add(psiFile);
+            coreFiles.add(psiFile.getVirtualFile());
           }
         }
-        for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.allScope(project))) {
-          if (coreFiles.contains(def.getContainingFile())) {
-            if (!ResolveUtil.processElement(processor, def)) {
-              return false;
-            }
+        for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.filesScope(project, coreFiles))) {
+          if (!ResolveUtil.processElement(processor, def)) {
+            return false;
           }
         }
       } finally {
