@@ -8,7 +8,6 @@ import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Condition;
 import com.intellij.openapi.util.Iconable;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
@@ -17,11 +16,9 @@ import com.intellij.psi.impl.source.resolve.ResolveCache;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.stubs.StubIndex;
 import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.util.MethodSignature;
 import com.intellij.util.Function;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
-import com.intellij.util.containers.HashMap;
 import com.intellij.util.containers.HashSet;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +27,7 @@ import org.jetbrains.plugins.clojure.ClojureIcons;
 import org.jetbrains.plugins.clojure.lexer.ClojureTokenTypes;
 import org.jetbrains.plugins.clojure.lexer.TokenSets;
 import org.jetbrains.plugins.clojure.metrics.Metrics;
+import org.jetbrains.plugins.clojure.psi.ClojurePsiElement;
 import org.jetbrains.plugins.clojure.psi.ClojurePsiElementImpl;
 import org.jetbrains.plugins.clojure.psi.api.*;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
@@ -41,16 +39,17 @@ import org.jetbrains.plugins.clojure.psi.resolve.ClojureResolveResult;
 import org.jetbrains.plugins.clojure.psi.resolve.ClojureResolveResultImpl;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
-import org.jetbrains.plugins.clojure.psi.resolve.completion.CompletionProcessor;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveKind;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
+import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
 import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 
 import javax.swing.*;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -172,7 +171,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
         ClSymbol qualifier = symbol.getQualifierSymbol();
         final String nameString = symbol.getNameString();
         if (qualifier == null && nameString.startsWith(".")) {
-          return resolveJavaMethodReference(symbol, null, false);
+          return resolveJavaMethodReference(symbol);
         }
 
         ResolveKind[] kinds = symbol.getKinds();
@@ -196,31 +195,104 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
       }
     }
 
-    public static ResolveResult[] resolveJavaMethodReference(final ClSymbol symbol, @Nullable PsiElement start, final boolean forCompletion) {
-      final CompletionProcessor processor = new CompletionProcessor(symbol, symbol.getKinds());
-      if (start == null) start = symbol;
-      ResolveUtil.treeWalkUp(start, processor, ResolveState.initial());
+    private static void addClass(String qualifiedName, Collection<PsiClass> classes, Project project) {
+      final PsiClass clazz = JavaPsiFacade.getInstance(project).findClass(qualifiedName, GlobalSearchScope.allScope(project));
+      if (clazz != null) {
+        classes.add(clazz);
+      }
+    }
+
+    private static void checkImportStatement(PsiElement stmt, Collection<PsiClass> classes, Project project) {
+      if (stmt instanceof ClSymbol) {
+        addClass(((ClSymbol) stmt).getNameString(), classes, project);
+      } else if (stmt instanceof ClVector || stmt instanceof ClList) {
+        final ClListLike listLike = (ClListLike) stmt;
+        final PsiElement fst = listLike.getFirstNonLeafElement();
+        if (fst instanceof ClSymbol) {
+          PsiElement next = fst.getNextSibling();
+          while (next != null) {
+            if (next instanceof ClSymbol) {
+              ClSymbol clazzSym = (ClSymbol) next;
+              addClass(((ClSymbol) fst).getNameString() + "." + clazzSym.getNameString(), classes, project);
+            }
+            next = next.getNextSibling();
+          }
+        }
+      } else if (stmt instanceof ClQuotedForm) {
+        final ClojurePsiElement quotedElement = ((ClQuotedForm) stmt).getQuotedElement();
+        checkImportStatement(quotedElement, classes, project);
+      }
+    }
+
+    public static Collection<PsiClass>  importedClasses(ClNs ns, Project project) {
+      List<PsiClass> classes = new ArrayList<PsiClass>();
+      for (PsiElement element : ns.getChildren()) {
+        if (element instanceof ClList || element instanceof ClVector) {
+          ClListLike directive = (ClListLike) element;
+          final PsiElement first = directive.getFirstNonLeafElement();
+          if (first != null) {
+            final String headText = first.getText();
+            if (ClojureKeywords.IMPORT.equals(headText) || ImportOwner.IMPORT.equals(headText)) {
+              for (PsiElement stmt : directive.getChildren()) {
+                checkImportStatement(stmt, classes, project);
+              }
+            }
+          }
+        }
+      }
+      return classes;
+    }
+
+    public static PsiClass[] allImportedClasses(final ClSymbol symbol) {
+      // TODO: handle imports
+      Project project = symbol.getProject();
+
+      StubIndex stubIndex = StubIndex.getInstance();
+      ClNs symbolNs = null;
+      for (String fqn : stubIndex.getAllKeys(ClojureNsNameIndex.KEY, project)) {
+        for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, fqn, project, GlobalSearchScope.fileScope(symbol.getContainingFile()))) {
+          if (symbolNs == null ||
+              ((ns.getTextOffset() > symbolNs.getTextOffset()) &&
+                  (ns.getTextOffset() < symbol.getTextOffset()))) {
+            symbolNs = ns;
+          }
+        }
+      }
+
+      if (symbolNs != null) {
+        Collection<PsiClass> classes = importedClasses(symbolNs, project);
+        return classes.toArray(new PsiClass[classes.size()]);
+      }
+
+      return PsiClass.EMPTY_ARRAY;
+    }
+
+    public static ResolveResult[] resolveJavaMethodReference(final ClSymbol symbol) {
       final String name = symbol.getReferenceName();
       assert name != null;
-
       final String originalName = StringUtil.trimStart(name, ".");
-      final PsiElement[] elements = ResolveUtil.mapToElements(processor.getCandidates());
-      final HashMap<MethodSignature, HashSet<PsiMethod>> sig2Method = CompleteSymbol.collectAvailableMethods(elements);
-      final List<MethodSignature> goodSignatures = ContainerUtil.findAll(sig2Method.keySet(), new Condition<MethodSignature>() {
-        public boolean value(MethodSignature methodSignature) {
-          return forCompletion || originalName.equals(methodSignature.getName());
-        }
-      });
 
       final HashSet<ClojureResolveResult> results = new HashSet<ClojureResolveResult>();
-      for (MethodSignature signature : goodSignatures) {
-        final HashSet<PsiMethod> methodSet = sig2Method.get(signature);
-        for (PsiMethod method : methodSet) {
-          results.add(new ClojureResolveResultImpl(method, true));
+      for (PsiClass clazz : allImportedClasses(symbol)) {
+        addMethodsByName(clazz, originalName, results);
+      }
+      JavaPsiFacade facade = JavaPsiFacade.getInstance(symbol.getProject());
+      PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+      if (javaLang != null) {
+        for (PsiClass clazz : javaLang.getClasses()) {
+          addMethodsByName(clazz, originalName, results);
         }
       }
 
       return results.toArray(new ClojureResolveResult[results.size()]);
+    }
+
+    private static void addMethodsByName(PsiClass clazz, String methodName, HashSet<ClojureResolveResult> results) {
+      for (PsiMethod method : clazz.findMethodsByName(methodName, true)) {
+        if (!method.isConstructor() && method.hasModifierProperty(PsiModifier.PUBLIC)) {
+          results.add(new ClojureResolveResultImpl(method, true));
+        }
+      }
     }
 
     private void resolveImpl(ClSymbol symbol, ResolveProcessor processor) {

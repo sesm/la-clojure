@@ -32,13 +32,12 @@ import static org.jetbrains.plugins.clojure.parser.ClojureSpecialFormTokens.DEF_
  */
 public class ClojureParser implements PsiParser, ClojureTokenTypes {
 
-  private static final String CREATE_NS = "create-ns";
   private static final String IN_NS = "in-ns";
   private static final String NS = "ns";
   public static final Set<String> NS_TOKENS = new HashSet<String>();
 
   static {
-    NS_TOKENS.addAll(Arrays.asList(NS, IN_NS, CREATE_NS));
+    NS_TOKENS.addAll(Arrays.asList(NS, IN_NS));
   }
 
   @NotNull
@@ -389,8 +388,7 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
     } else {
       advanceLexerOrEOF(builder);
     }
-    if (CREATE_NS.equals(text)) marker.done(ClojureElementTypes.CREATE_NS);
-    else if (IN_NS.equals(text)) marker.done(ClojureElementTypes.IN_NS);
+    if (IN_NS.equals(text)) marker.done(ClojureElementTypes.IN_NS);
     else marker.done(ClojureElementTypes.NS);
   }
 }

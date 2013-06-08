@@ -14,7 +14,6 @@ import org.jetbrains.plugins.clojure.psi.stubs.api.ClDefStub;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClKeywordStub;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 import org.jetbrains.plugins.clojure.psi.stubs.elements.*;
-import org.jetbrains.plugins.clojure.psi.stubs.elements.ns.ClCreateNsElementType;
 import org.jetbrains.plugins.clojure.psi.stubs.elements.ns.ClInNsElementType;
 import org.jetbrains.plugins.clojure.psi.stubs.elements.ns.ClNsElementType;
 
@@ -47,7 +46,6 @@ public interface ClojureElementTypes extends ClojureTokenTypes {
 
   final ClStubElementType<ClNsStub, ClNs> NS = new ClNsElementType();
   final ClStubElementType<ClNsStub, ClNs> IN_NS = new ClInNsElementType();
-  final ClStubElementType<ClNsStub, ClNs> CREATE_NS = new ClCreateNsElementType();
 
   final IElementType MAP_ENTRY = new ClojureElementType("map");
   final IElementType LITERAL = new ClojureElementType("literal");

@@ -89,23 +89,23 @@
       nil)))
 
 (def completion-init
-     (nrepl/code
-       (ns la-clojure.repl)
-       (defn ns-symbols [the-ns]
-         (map str (keys (ns-interns the-ns))))
-       (defn ns-symbols-by-name [ns-name]
-         (if-let [the-ns (find-ns ns-name)]
-           (apply vector (ns-symbols the-ns))))
-       (defn completions [ns]
-         (if-let [ns (find-ns ns)]
-           {:imports    (map (fn [c] (.getName c)) (vals (ns-imports ns))),
-            :symbols    (into {} (for [[k v] (ns-map ns) :when (var? v)]
-                                   (let [metadata (meta v)
-                                         ns (ns-name (:ns metadata))
-                                         name (:name metadata)]
-                                     [(str k) (str ns "/" name)])))
-            :namespaces (map str (all-ns))}
-           {}))))
+     (str "(ns la-clojure.repl)"
+          (nrepl/code
+            (defn ns-symbols [the-ns]
+              (map str (keys (ns-interns the-ns))))
+            (defn ns-symbols-by-name [ns-name]
+              (if-let [the-ns (find-ns ns-name)]
+                (apply vector (ns-symbols the-ns))))
+            (defn completions [ns]
+              (if-let [ns (find-ns ns)]
+                {:imports    (map (fn [c] (.getName c)) (vals (ns-imports ns))),
+                 :symbols    (into {} (for [[k v] (ns-map ns) :when (var? v)]
+                                        (let [metadata (meta v)
+                                              ns (ns-name (:ns metadata))
+                                              name (:name metadata)]
+                                          [(str k) (str ns "/" name)])))
+                 :namespaces (map str (all-ns))}
+                {})))))
 
 (defn tooling-command [state command]
   (let [{:keys [tooling-session history-viewer]} @state]

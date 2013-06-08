@@ -7,7 +7,6 @@ import org.jetbrains.plugins.clojure.psi.impl.*;
 import org.jetbrains.plugins.clojure.psi.impl.defs.ClDefImpl;
 import org.jetbrains.plugins.clojure.psi.impl.defs.ClDefnMethodImpl;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListImpl;
-import org.jetbrains.plugins.clojure.psi.impl.ns.ClCreateNsImpl;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClInNsImpl;
 import org.jetbrains.plugins.clojure.psi.impl.ns.ClNsImpl;
 import org.jetbrains.plugins.clojure.psi.impl.symbols.ClSymbolImpl;
@@ -37,7 +36,6 @@ public class ClojurePsiCreator {
 
     if (elementType == ClojureElementTypes.NS) return new ClNsImpl(node);
     if (elementType == ClojureElementTypes.IN_NS) return new ClInNsImpl(node);
-    if (elementType == ClojureElementTypes.CREATE_NS) return new ClCreateNsImpl(node);
 
     if (elementType == ClojureElementTypes.KEYWORD) return new ClKeywordImpl(node);
     if (elementType == ClojureElementTypes.LITERAL) return new ClLiteralImpl(node);
