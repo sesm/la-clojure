@@ -15,6 +15,7 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiElementProcessor;
+import com.intellij.psi.search.PsiShortNamesCache;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubIndex;
 import com.intellij.psi.stubs.StubTree;
@@ -292,7 +293,8 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
     Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
     if (state == null) {
-      Metrics metrics = Metrics.getInstance(place.getProject());
+      Project project = place.getProject();
+      Metrics metrics = Metrics.getInstance(project);
 
       Metrics.Timer.Instance timer = metrics.start("file.topLevelPackages");
       try {
@@ -305,19 +307,36 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
         timer.stop();
       }
 
-      timer = metrics.start("file.javaLangClasses");
-      try {
-        // Add all java.lang classes
-        final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
-        if (javaLang != null) {
-          for (PsiClass clazz : javaLang.getClasses()) {
-            if (!ResolveUtil.processElement(processor, clazz)) {
-              return false;
+      String name = ResolveUtil.getName(processor, resolveState);
+      if (name == null) {
+        timer = metrics.start("file.javaLangClasses.noindex");
+        try {
+          // Add all java.lang classes
+          final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+          if (javaLang != null) {
+            for (PsiClass clazz : javaLang.getClasses()) {
+              if (!ResolveUtil.processElement(processor, clazz)) {
+                return false;
+              }
             }
           }
+        } finally {
+          timer.stop();
         }
-      } finally {
-        timer.stop();
+      } else {
+        timer = metrics.start("file.javaLangClasses.indexed");
+        try {
+          PsiShortNamesCache namesCache = PsiShortNamesCache.getInstance(project);
+          for (PsiClass psiClass : namesCache.getClassesByName(name, GlobalSearchScope.allScope(project))) {
+            if (psiClass.getQualifiedName().equals(ClojurePsiUtil.JAVA_LANG + "." + name)) {
+              if (!ResolveUtil.processElement(processor, psiClass)) {
+                return false;
+              }
+            }
+          }
+        } finally {
+          timer.stop();
+        }
       }
 
       if (!processCoreSymbols(file, processor, resolveState, place)) return false;
@@ -415,14 +434,19 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
   public static boolean processChildren(PsiElement element, PsiScopeProcessor processor,
                                         ResolveState substitutor, PsiElement lastParent, PsiElement place) {
-    PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
-    while (run != null) {
-      if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
-        return false;
-      run = run.getPrevSibling();
-    }
+    Metrics.Timer.Instance timer = Metrics.getInstance(place.getProject()).start("file.processChildren.noindex");
+    try {
+      PsiElement run = lastParent == null ? element.getLastChild() : lastParent.getPrevSibling();
+      while (run != null) {
+        if (PsiTreeUtil.findCommonParent(place, run) != run && !run.processDeclarations(processor, substitutor, null, place))
+          return false;
+        run = run.getPrevSibling();
+      }
 
-    return true;
+      return true;
+    } finally {
+      timer.stop();
+    }
   }
 
   public static Collection<String> topLevel(Collection<String> namespaces) {
