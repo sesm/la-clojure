@@ -4,10 +4,8 @@ import com.intellij.lang.ASTNode;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.openapi.util.Iconable;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.ResolveState;
 import com.intellij.psi.StubBasedPsiElement;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
-import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
@@ -19,9 +17,7 @@ import org.jetbrains.plugins.clojure.psi.api.ClVector;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 import org.jetbrains.plugins.clojure.psi.impl.list.ClListBaseImpl;
-import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.stubs.api.ClDefStub;
-import org.jetbrains.plugins.clojure.psi.stubs.api.ClNsStub;
 
 import javax.swing.*;
 
@@ -71,11 +67,6 @@ public class ClDefImpl extends ClListBaseImpl<ClDefStub> implements ClDef, StubB
     }
 
     return getDefinedName();
-  }
-
-  @Override
-  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-    return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
   }
 
   @Override

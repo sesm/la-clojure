@@ -1,8 +1,5 @@
 package org.jetbrains.plugins.clojure.psi.resolve;
 
-import clojure.lang.RT;
-import clojure.lang.Var;
-import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNamedElement;
@@ -15,9 +12,6 @@ import com.intellij.psi.util.PsiTreeUtil;
  * @author ilyas
  */
 public abstract class ResolveUtil {
-
-  private static Var punt;
-  private static final Object lock = new Object();
 
   public static boolean treeWalkUp(PsiElement place, PsiScopeProcessor processor) {
     PsiElement lastParent = null;
@@ -70,25 +64,4 @@ public abstract class ResolveUtil {
   }
 
   public static Key<String> RENAMED_KEY = Key.create("clojure.renamed.key");
-
-  public static boolean processDeclarations(PsiElement element, PsiScopeProcessor processor, ResolveState state, PsiElement lastParent, PsiElement place) {
-    Var var;
-    synchronized (lock) {
-      if (punt == null) {
-        punt = RT.var("plugin.resolve", "punt");
-      }
-      var = punt;
-    }
-
-    Object ret;
-    try {
-      ret = var.invoke(element, processor, state, lastParent, place);
-    } catch (RuntimeException e) {
-      if (e.getCause() instanceof ProcessCanceledException) {
-        throw (ProcessCanceledException) e.getCause();
-      }
-      throw e;
-    }
-    return !(ret == null ? false : ((Boolean) ret).booleanValue());
-  }
 }

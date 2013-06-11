@@ -7,19 +7,6 @@
 
 ;(set! *warn-on-reflection* true)
 
-(defprotocol Resolvable
-  (process-declarations [this processor state last-parent place]))
-
-(defn punt [element processor state last-parent place]
-  (if (satisfies? Resolvable element)
-    (boolean (process-declarations element processor state last-parent place))
-    true))
-
-(extend-type ClQuotedForm
-  Resolvable
-  (process-declarations [this processor state last-parent place]
-    false))
-
 (def resolvers (atom {}))
 
 (defn has-resolver? [key]

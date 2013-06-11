@@ -7,12 +7,8 @@
 
 ;(set! *warn-on-reflection* true)
 
-(extend-type ClojureFile
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (not (ClojureFileImpl/processDeclarations this processor state last-parent place))))
+(defn process-file-declarations [this processor state last-parent place]
+  (not (ClojureFileImpl/processDeclarations this processor state last-parent place)))
 
-(extend-type ClSyntheticClass
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (not (ClSyntheticClassImpl/processDeclarations this processor state last-parent place))))
+(defn process-synthetic-class-decls [this processor state last-parent place]
+  (not (ClSyntheticClassImpl/processDeclarations this processor state last-parent place)))

@@ -44,6 +44,8 @@ import org.jetbrains.plugins.clojure.repl.ClojureConsole;
 
 import java.util.*;
 
+import static org.jetbrains.plugins.clojure.utils.ClojureUtils.truthy;
+
 /**
  * User: peter
  * Date: Nov 21, 2008
@@ -275,11 +277,17 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   @Override
-  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState resolveState, PsiElement lastParent, @NotNull PsiElement place) {
-    if (!ResolveUtil.processDeclarations(this, processor, resolveState, lastParent, place)) {
+  public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
+    if (truthy(FileResolve.var.invoke(this, processor, state, lastParent, place)))
+    {
       return false;
     }
-    return super.processDeclarations(processor, resolveState, lastParent, place);
+    return super.processDeclarations(processor, state, lastParent, place);
+  }
+
+  private static final class FileResolve
+  {
+    private static final Var var = RT.var("plugin.resolve.files", "process-file-declarations");
   }
 
   public static boolean processDeclarations(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState resolveState, PsiElement lastParent, PsiElement place) {
@@ -402,7 +410,12 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
     @Override
     public boolean processDeclarations(@NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
-      return ResolveUtil.processDeclarations(this, processor, state, lastParent, place);
+      return !truthy(CompletionResolve.var.invoke(this, processor, state, lastParent, place));
+    }
+
+    private static final class CompletionResolve
+    {
+      private static final Var var = RT.var("plugin.resolve.namespaces", "process-completion-ns-decls");
     }
 
     public static boolean

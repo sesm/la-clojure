@@ -202,18 +202,16 @@
           (resolve-symbol element params list processor state place))
         (get-resolve-symbols list)))
 
-(extend-type ClList
-  resolve/Resolvable
-  (process-declarations [this processor state last-parent place]
-    (if-let [head-element (first (psi/significant-children this))]
-      (if (= place head-element)
-        false
-        (let [keys (resolve-keys this)]
-          (if (some resolve/has-symbols? keys)
-            (resolve-from-symbols this processor state place)
-            (some (fn [key]
-                    ((resolve/get-resolver key) this processor state last-parent place))
-                  (filter resolve/has-resolver? keys))))))))
+(defn process-list-declarations [this processor state last-parent place]
+  (if-let [head-element (first (psi/significant-children this))]
+    (if (= place head-element)
+      false
+      (let [keys (resolve-keys this)]
+        (if (some resolve/has-symbols? keys)
+          (resolve-from-symbols this processor state place)
+          (some (fn [key]
+                  ((resolve/get-resolver key) this processor state last-parent place))
+                (filter resolve/has-resolver? keys)))))))
 
 (resolve/register-symbols local-binding-forms let-symbols)
 (resolve/register-symbols fn-forms fn-symbols)
