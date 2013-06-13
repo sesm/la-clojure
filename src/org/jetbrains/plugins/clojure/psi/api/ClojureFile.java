@@ -26,9 +26,6 @@ public interface ClojureFile extends PsiFile, ClojurePsiElement, PsiFileWithStub
   @Nullable
   String getNamespace();
 
-  @Nullable
-  ClNs getNamespaceElement();
-
   @NotNull
   ClNs findOrCreateNamespaceElement() throws IncorrectOperationException;
 

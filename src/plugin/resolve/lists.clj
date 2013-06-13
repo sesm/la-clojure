@@ -177,9 +177,9 @@
 
 (defn local-name [^ClSymbol sym]
   (if (.isQualified sym)
-    (-> (.getSeparatorToken sym)
-        .getNextSibling
-        .getText)
+    (some-> (.getSeparatorToken sym)
+            .getNextSibling
+            .getText)
     (.getName sym)))
 
 ; TODO disambiguate when we have more information from namespace elements

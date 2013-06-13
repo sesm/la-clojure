@@ -148,12 +148,14 @@ public class ClojureParser implements PsiParser, ClojureTokenTypes {
   }
 
   private void parseSymbol1(PsiBuilder builder, PsiBuilder.Marker marker) {
-    if (SEPARATORS.contains(builder.getTokenType())) {
+    IElementType tokenType = builder.getTokenType();
+    if (SEPARATORS.contains(tokenType)) {
       builder.advanceLexer(); //eat separator
       if (builder.getTokenType() == symATOM) {
         builder.advanceLexer(); //eat atom
       }
-      if (SEPARATORS.contains(builder.getTokenType())) {
+      // Make sure we don't parse more than one NS_SEP (i.e. ns.ns/sym/sym)
+      if ((tokenType != symNS_SEP) && SEPARATORS.contains(builder.getTokenType())) {
         final PsiBuilder.Marker pred = marker.precede();
         marker.done(SYMBOL);
         parseSymbol1(builder, pred);

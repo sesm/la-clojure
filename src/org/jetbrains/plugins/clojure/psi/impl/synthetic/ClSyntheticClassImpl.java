@@ -41,7 +41,7 @@ public class ClSyntheticClassImpl extends LightElement implements ClSyntheticCla
 
   @Override
   public PsiElement getNavigationElement() {
-    return myFile.getNamespaceElement();
+    return myFile.getNs();
   }
 
   @NotNull
@@ -189,7 +189,7 @@ public class ClSyntheticClassImpl extends LightElement implements ClSyntheticCla
 
   @NotNull
   private ClList getNsElement() {
-    return myFile.getNamespaceElement();
+    return myFile.getNs();
   }
 
   public PsiClass[] getInterfaces() {

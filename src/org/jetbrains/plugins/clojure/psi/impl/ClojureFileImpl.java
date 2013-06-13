@@ -108,7 +108,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   public void setNamespace(String newNs) {
-    final ClList nsElem = getNamespaceElement();
+    final ClList nsElem = getNs();
     if (nsElem != null) {
       final ClSymbol first = nsElem.getFirstSymbol();
       final PsiElement second = nsElem.getSecondNonLeafElement();
@@ -236,17 +236,17 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   public String getNamespace() {
-    final ClNs ns = getNamespaceElement();
+    final ClNs ns = getNs();
     return ns == null ? null : ns.getName();
   }
 
-  public ClNs getNamespaceElement() {
+  public ClNs getNs() {
     return ((ClNs) ClojurePsiUtil.findFormByNameSet(this, ClojureParser.NS_TOKENS));
   }
 
   @NotNull
   public ClNs findOrCreateNamespaceElement() throws IncorrectOperationException {
-    final ClNs ns = getNamespaceElement();
+    final ClNs ns = getNs();
     if (ns != null) return ns;
     commitDocument();
     final ClojurePsiFactory factory = ClojurePsiFactory.getInstance(getProject());
@@ -289,57 +289,15 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     //Process precedent read forms
     processChildren(file, processor, resolveState, lastParent, place);
 
-    final JavaPsiFacade facade = JavaPsiFacade.getInstance(file.getProject());
-
     Atom state = file.getCopyableUserData(ClojureConsole.STATE_KEY);
     if (state == null) {
-      Project project = place.getProject();
-      Metrics metrics = Metrics.getInstance(project);
-
-      Metrics.Timer.Instance timer = metrics.start("file.topLevelPackages");
-      try {
-        //Add top-level package names
-        final PsiPackage rootPackage = facade.findPackage("");
-        if (rootPackage != null) {
-          NamespaceUtil.getNamespaceElement(rootPackage).processDeclarations(processor, resolveState, null, place);
-        }
-      } finally {
-        timer.stop();
-      }
-
       String name = ResolveUtil.getName(processor, resolveState);
-      if (name == null) {
-        timer = metrics.start("file.javaLangClasses.noindex");
-        try {
-          // Add all java.lang classes
-          final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
-          if (javaLang != null) {
-            for (PsiClass clazz : javaLang.getClasses()) {
-              if (!ResolveUtil.processElement(processor, clazz)) {
-                return false;
-              }
-            }
-          }
-        } finally {
-          timer.stop();
-        }
-      } else {
-        timer = metrics.start("file.javaLangClasses.indexed");
-        try {
-          PsiShortNamesCache namesCache = PsiShortNamesCache.getInstance(project);
-          for (PsiClass psiClass : namesCache.getClassesByName(name, GlobalSearchScope.allScope(project))) {
-            if (psiClass.getQualifiedName().equals(ClojurePsiUtil.JAVA_LANG + "." + name)) {
-              if (!ResolveUtil.processElement(processor, psiClass)) {
-                return false;
-              }
-            }
-          }
-        } finally {
-          timer.stop();
-        }
-      }
 
-      if (!processCoreSymbols(file, processor, resolveState, place)) return false;
+      if (name == null) {
+        if (!processNoIndex(processor, place)) return false;
+      } else {
+        if (!processIndexed(processor, place, name)) return false;
+      }
     } else {
       // Completion for REPL
       Associative stateValue = (Associative) state.deref();
@@ -373,6 +331,7 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
 
       Collection<String> imports = completions.get(IMPORTS_KEYWORD);
       if (imports != null) {
+        JavaPsiFacade facade = JavaPsiFacade.getInstance(place.getProject());
         for (String fqn : imports) {
           PsiClass psiClass = facade.findClass(fqn, GlobalSearchScope.allScope(file.getProject()));
           if (psiClass != null) {
@@ -387,47 +346,133 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
     return true;
   }
 
-  private static boolean processCoreSymbols(ClojureFileImpl file, PsiScopeProcessor processor, ResolveState resolveState, PsiElement place) {
-    // We don't resolve symbols that come from the same file as place. This is to stop us
-    // resolving symbols in infinite loops when editing e.g. clojure.core.
-    PsiFile placeFile = place.getContainingFile();
+  private static boolean processIndexed(PsiScopeProcessor processor, PsiElement place, String name) {
+    Project project = place.getProject();
+    JavaPsiFacade facade = JavaPsiFacade.getInstance(project);
+    Metrics metrics = Metrics.getInstance(project);
 
-    String name = ResolveUtil.getName(processor, resolveState);
-    if (name == null) {
-      Metrics.Timer.Instance timer = Metrics.getInstance(place.getProject()).start("file.coreSymbols.noindex");
-      try {
-        // If we don't know the name of the element (i.e. during completion) we add all symbols from clojure.core
-        for (PsiNamedElement element : NamespaceUtil.getDeclaredElements(ClojureUtils.CORE_NAMESPACE, file.getProject())) {
-          if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
+    Metrics.Timer.Instance timer = metrics.start("file.topLevelPackages.index");
+    StubIndex stubIndex = StubIndex.getInstance();
+    try {
+      // Top-level namespaces
+      for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, name, project, GlobalSearchScope.allScope(project))) {
+        if (!ResolveUtil.processElement(processor, ns)) {
+          return false;
+        }
+      }
+      // Top-level package names
+      PsiPackage pack = facade.findPackage(name);
+      if ((pack != null) && !ResolveUtil.processElement(processor, NamespaceUtil.getNamespaceElement(pack))) {
+        return false;
+      }
+      // Classes in unnamed namespace
+      PsiClass psiClass = facade.findClass(name, GlobalSearchScope.allScope(project));
+      if ((psiClass != null) && !ResolveUtil.processElement(processor, psiClass)) {
+        return false;
+      }
+    } finally {
+      timer.stop();
+    }
+
+    timer = metrics.start("file.javaLangClasses.indexed");
+    try {
+      PsiShortNamesCache namesCache = PsiShortNamesCache.getInstance(project);
+      for (PsiClass psiClass : namesCache.getClassesByName(name, GlobalSearchScope.allScope(project))) {
+        if (psiClass.getQualifiedName().equals(ClojurePsiUtil.JAVA_LANG + "." + name)) {
+          if (!ResolveUtil.processElement(processor, psiClass)) {
             return false;
           }
         }
-      } finally {
-        timer.stop();
       }
-    } else {
-      Metrics.Timer.Instance timer = Metrics.getInstance(place.getProject()).start("file.coreSymbols.indexed");
-      try {
-        // We know the name of the element, so we'll look up all files containing symbols from clojure.core.
-        // Then we'll look up all defined symbols with the given name and process any of them whose files
-        // are one of the clojure.core files.
-        StubIndex stubIndex = StubIndex.getInstance();
-        Project project = file.getProject();
-        Collection<VirtualFile> coreFiles = new HashSet<VirtualFile>();
-        for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, ClojureUtils.CORE_NAMESPACE, project, GlobalSearchScope.allScope(project))) {
-          PsiFile psiFile = ns.getContainingFile();
-          if (!psiFile.equals(placeFile)) {
-            coreFiles.add(psiFile.getVirtualFile());
-          }
+    } finally {
+      timer.stop();
+    }
+
+    timer = Metrics.getInstance(place.getProject()).start("file.coreSymbols.indexed");
+    try {
+      // We know the name of the element, so we'll look up all files containing symbols from clojure.core.
+      // Then we'll look up all defined symbols with the given name and process any of them whose files
+      // are one of the clojure.core files. We don't resolve symbols that come from the same file as place.
+      // This is to stop us resolving symbols in infinite loops when editing e.g. clojure.core.
+      PsiFile placeFile = place.getContainingFile();
+      Collection<VirtualFile> coreFiles = new HashSet<VirtualFile>();
+      for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, ClojureUtils.CORE_NAMESPACE, project, GlobalSearchScope.allScope(project))) {
+        PsiFile psiFile = ns.getContainingFile();
+        if (!psiFile.equals(placeFile)) {
+          coreFiles.add(psiFile.getVirtualFile());
         }
-        for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.filesScope(project, coreFiles))) {
-          if (!ResolveUtil.processElement(processor, def)) {
+      }
+      for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.filesScope(project, coreFiles))) {
+        if (!ResolveUtil.processElement(processor, def)) {
+          return false;
+        }
+      }
+    } finally {
+      timer.stop();
+    }
+    return true;
+  }
+
+  private static boolean processNoIndex(PsiScopeProcessor processor, PsiElement place) {
+    Project project = place.getProject();
+    JavaPsiFacade facade = JavaPsiFacade.getInstance(project);
+    Metrics metrics = Metrics.getInstance(project);
+
+    Metrics.Timer.Instance timer = metrics.start("file.topLevelPackages.noindex");
+    try {
+      // Add top-level namespaces
+      for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, project)) {
+        if (!fqn.contains(".")) {
+          final ClSyntheticNamespace inner = NamespaceUtil.getNamespace(fqn, project);
+          if (!ResolveUtil.processElement(processor, inner)) {
             return false;
           }
         }
-      } finally {
-        timer.stop();
       }
+      //Add top-level package names
+      final PsiPackage rootPackage = facade.findPackage("");
+      if (rootPackage != null) {
+        for (PsiClass clazz : rootPackage.getClasses(place.getResolveScope())) {
+          if (!ResolveUtil.processElement(processor, clazz)) return false;
+        }
+        for (PsiPackage pack : rootPackage.getSubPackages(place.getResolveScope())) {
+          if (!ResolveUtil.processElement(processor, NamespaceUtil.getNamespaceElement(pack))) {
+            return false;
+          }
+        }
+      }
+    } finally {
+      timer.stop();
+    }
+
+    timer = metrics.start("file.javaLangClasses.noindex");
+    try {
+      // Add all java.lang classes
+      final PsiPackage javaLang = facade.findPackage(ClojurePsiUtil.JAVA_LANG);
+      if (javaLang != null) {
+        for (PsiClass clazz : javaLang.getClasses()) {
+          if (!ResolveUtil.processElement(processor, clazz)) {
+            return false;
+          }
+        }
+      }
+    } finally {
+      timer.stop();
+    }
+
+    timer = Metrics.getInstance(place.getProject()).start("file.coreSymbols.noindex");
+    try {
+      // If we don't know the name of the element (i.e. during completion) we add all symbols from
+      // clojure.core. We don't resolve symbols that come from the same file as place. This is to
+      // stop us resolving symbols in infinite loops when editing e.g. clojure.core.
+      PsiFile placeFile = place.getContainingFile();
+      for (PsiNamedElement element : NamespaceUtil.getDeclaredElements(ClojureUtils.CORE_NAMESPACE, project)) {
+        if (element.getContainingFile() != placeFile && !ResolveUtil.processElement(processor, element)) {
+          return false;
+        }
+      }
+    } finally {
+      timer.stop();
     }
     return true;
   }

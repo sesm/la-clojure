@@ -4,17 +4,21 @@ import clojure.lang.RT;
 import clojure.lang.Var;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.PsiShortNamesCache;
 import com.intellij.psi.stubs.StubIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.plugins.clojure.metrics.Metrics;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.resolve.ResolveUtil;
 import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
+import org.jetbrains.plugins.clojure.psi.stubs.index.ClDefNameIndex;
 import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 
 import java.util.ArrayList;
@@ -97,41 +101,90 @@ public class NamespaceUtil {
     processDeclarations(MyClSyntheticNamespace namespace, @NotNull PsiScopeProcessor processor, @NotNull ResolveState state, PsiElement lastParent, @NotNull PsiElement place) {
       final HashSet<String> innerNamespaces = new HashSet<String>();
       PsiElement separator = state.get(CompleteSymbol.SEPARATOR);
+      Project project = place.getProject();
 
-      // Add inner namespaces
-      final String outerName = namespace.getQualifiedName();
-      for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, namespace.getProject())) {
-        if (fqn.startsWith(outerName) && !fqn.equals(outerName) &&
-                !StringUtil.trimStart(fqn, outerName + ".").contains(".")) {
-          final ClSyntheticNamespace inner = getNamespace(fqn, namespace.getProject());
-          innerNamespaces.add(fqn);
-          if (!ResolveUtil.processElement(processor, inner)) {
-            return false;
+      Metrics.Timer.Instance timer = Metrics.getInstance(place.getProject()).start("syntheticNs.innerNs");
+      try {
+        // Add inner namespaces
+        final String outerName = namespace.getQualifiedName();
+        for (String fqn : StubIndex.getInstance().getAllKeys(ClojureNsNameIndex.KEY, project)) {
+          if (fqn.startsWith(outerName) && !fqn.equals(outerName) &&
+              !StringUtil.trimStart(fqn, outerName + ".").contains(".")) {
+            final ClSyntheticNamespace inner = getNamespace(fqn, project);
+            innerNamespaces.add(fqn);
+            if (!ResolveUtil.processElement(processor, inner)) {
+              return false;
+            }
           }
         }
+      } finally {
+        timer.stop();
       }
 
+      String name = ResolveUtil.getName(processor, state);
       if (separator == null || separator.getText().equals("/")) {
-        // Add declared elements
-        for (PsiNamedElement element : getDeclaredElements(namespace.getQualifiedName(), namespace.getProject())) {
-          if (!ResolveUtil.processElement(processor, element)) {
-            return false;
+        if (name == null) {
+          timer = Metrics.getInstance(place.getProject()).start("syntheticNs.declaredElements.noindex");
+          try {
+            // Add declared elements
+            for (PsiNamedElement element : getDeclaredElements(namespace.getQualifiedName(), project)) {
+              if (!ResolveUtil.processElement(processor, element)) {
+                return false;
+              }
+            }
+          } finally {
+            timer.stop();
+          }
+        } else {
+          timer = Metrics.getInstance(place.getProject()).start("syntheticNs.declaredElements.index");
+          try {
+            // We know the name of the element, so we'll look up all files containing symbols from our
+            // namespace. Then we'll look up all defined symbols with the given name in those files and
+            // process them.
+            // TODO use a file-based index for this
+            StubIndex stubIndex = StubIndex.getInstance();
+            Collection<VirtualFile> nsFiles = new HashSet<VirtualFile>();
+            for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, namespace.getQualifiedName(), project, GlobalSearchScope.allScope(project))) {
+              nsFiles.add(ns.getContainingFile().getVirtualFile());
+            }
+            for (ClDef def : stubIndex.get(ClDefNameIndex.KEY, name, project, GlobalSearchScope.filesScope(project, nsFiles))) {
+              if (!ResolveUtil.processElement(processor, def)) {
+                return false;
+              }
+            }
+          } finally {
+            timer.stop();
           }
         }
       }
 
-      final String qualifiedName = namespace.getQualifiedName();
-      final PsiPackage aPackage = JavaPsiFacade.getInstance(namespace.getProject()).findPackage(qualifiedName);
-      if (aPackage != null) {
-        for (PsiClass clazz : aPackage.getClasses(place.getResolveScope())) {
-          if (!ResolveUtil.processElement(processor, clazz)) return false;
-        }
-        for (PsiPackage pack : aPackage.getSubPackages(place.getResolveScope())) {
-          if (!innerNamespaces.contains(pack.getQualifiedName()) &&
-              !ResolveUtil.processElement(processor, getNamespaceElement(pack))) {
-            return false;
+      timer = Metrics.getInstance(place.getProject()).start("syntheticNs.package");
+      try {
+        final String qualifiedName = namespace.getQualifiedName();
+        final PsiPackage aPackage = JavaPsiFacade.getInstance(project).findPackage(qualifiedName);
+        if (aPackage != null) {
+          if (name == null) {
+            for (PsiClass clazz : aPackage.getClasses(place.getResolveScope())) {
+              if (!ResolveUtil.processElement(processor, clazz)) return false;
+            }
+          } else {
+            String className = qualifiedName.isEmpty() ? name : qualifiedName + "." + name;
+            for (PsiClass psiClass : PsiShortNamesCache.getInstance(project).getClassesByName(name, GlobalSearchScope.allScope(project))) {
+              if (psiClass.getQualifiedName().equals(className)) {
+                if (!ResolveUtil.processElement(processor, psiClass)) return false;
+              }
+            }
+          }
+
+          for (PsiPackage pack : aPackage.getSubPackages(place.getResolveScope())) {
+            if (!innerNamespaces.contains(pack.getQualifiedName()) &&
+                !ResolveUtil.processElement(processor, getNamespaceElement(pack))) {
+              return false;
+            }
           }
         }
+      } finally {
+        timer.stop();
       }
 
       return true;

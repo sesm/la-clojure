@@ -1,13 +1,12 @@
 package org.jetbrains.plugins.clojure.parser;
 
+import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.DebugUtil;
-import com.intellij.openapi.fileTypes.FileTypeManager;
+import junit.framework.Assert;
 import org.jetbrains.plugins.clojure.ClojureBaseTestCase;
 import org.junit.Test;
-import junit.framework.Assert;
 
 import java.io.File;
 import java.io.IOException;
@@ -187,9 +186,9 @@ public class ParserTest extends ClojureBaseTestCase {
     doParse("str4");
   }
 
-  public void testSym1() {
-    doParse("symbols/sym1");
-  }
+//  public void testSym1() {
+//    doParse("symbols/sym1");
+//  }
 
   public void testSym2() {
     doParse("symbols/sym2");
@@ -199,9 +198,9 @@ public class ParserTest extends ClojureBaseTestCase {
     doParse("symbols/sym3");
   }
 
-  public void testSym4() {
-    doParse("symbols/sym4");
-  }
+//  public void testSym4() {
+//    doParse("symbols/sym4");
+//  }
 
   public void testSym5() {
     doParse("symbols/sym5");

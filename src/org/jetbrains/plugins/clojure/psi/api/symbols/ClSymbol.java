@@ -23,14 +23,6 @@ public interface ClSymbol extends ClojurePsiElement, PsiPolyVariantReference, Ps
   String getReferenceName();
 
   @Nullable
-  ClSymbol getRawQualifierSymbol();
-
-  /**
-   * Raw qualifier or in case of it's empty it can be symbol from import list
-   * (import '(java.util Date))
-   * @return real qualifier of the symbol
-   */
-  @Nullable
   ClSymbol getQualifierSymbol();
 
   boolean isQualified();

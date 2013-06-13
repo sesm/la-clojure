@@ -14,8 +14,9 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.source.resolve.ResolveCache;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.stubs.StubIndex;
+import com.intellij.psi.search.PsiShortNamesCache;
 import com.intellij.psi.tree.IElementType;
+import com.intellij.util.ArrayUtil;
 import com.intellij.util.Function;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
@@ -42,7 +43,6 @@ import org.jetbrains.plugins.clojure.psi.resolve.completion.CompleteSymbol;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveKind;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.ResolveProcessor;
 import org.jetbrains.plugins.clojure.psi.resolve.processors.SymbolResolveProcessor;
-import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 import org.jetbrains.plugins.clojure.psi.util.ClojureKeywords;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiFactory;
 import org.jetbrains.plugins.clojure.psi.util.ClojurePsiUtil;
@@ -181,11 +181,6 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
         ResolveProcessor processor = new SymbolResolveProcessor(StringUtil.trimEnd(name, "."), symbol, incompleteCode, kinds);
         resolveImpl(symbol, processor);
 
-        if (nameString.contains(".")) {
-          ResolveProcessor nsProcessor = new SymbolResolveProcessor(nameString, symbol, incompleteCode, ResolveKind.namesSpaceKinds());
-          resolveNamespace(symbol, nsProcessor);
-        }
-
         ClojureResolveResult[] candidates = processor.getCandidates();
         if (candidates.length > 0) return candidates;
 
@@ -244,23 +239,10 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
     }
 
     public static PsiClass[] allImportedClasses(final ClSymbol symbol) {
-      // TODO: handle imports
-      Project project = symbol.getProject();
-
-      StubIndex stubIndex = StubIndex.getInstance();
-      ClNs symbolNs = null;
-      for (String fqn : stubIndex.getAllKeys(ClojureNsNameIndex.KEY, project)) {
-        for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, fqn, project, GlobalSearchScope.fileScope(symbol.getContainingFile()))) {
-          if (symbolNs == null ||
-              ((ns.getTextOffset() > symbolNs.getTextOffset()) &&
-                  (ns.getTextOffset() < symbol.getTextOffset()))) {
-            symbolNs = ns;
-          }
-        }
-      }
-
+      // TODO: handle import forms
+      ClNs symbolNs = symbol.getNs();
       if (symbolNs != null) {
-        Collection<PsiClass> classes = importedClasses(symbolNs, project);
+        Collection<PsiClass> classes = importedClasses(symbolNs, symbol.getProject());
         return classes.toArray(new PsiClass[classes.size()]);
       }
 
@@ -295,135 +277,245 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
       }
     }
 
-    private void resolveImpl(ClSymbol symbol, ResolveProcessor processor) {
-      final ClSymbol qualifier = symbol.getQualifierSymbol();
-
-      //process other places
-      if (qualifier == null) {
-        ResolveUtil.treeWalkUp(symbol, processor, ResolveState.initial());
-      } else {
-        for (ResolveResult result : qualifier.multiResolve(false)) {
-          final PsiElement element = result.getElement();
-          if (element != null) {
-            final PsiElement sep = symbol.getSeparatorToken();
-            if (sep != null && "/".equals(sep.getText())) {
-
-              //get class elements
-              if (element instanceof PsiClass) {
-                element.processDeclarations(processor, ResolveState.initial(), null, symbol);
-              }
-
-              //get namespace declarations
-              if (element instanceof ClSyntheticNamespace) {
-                final String fqn = ((ClSyntheticNamespace) element).getQualifiedName();
-                // namespace declarations
-                for (PsiNamedElement named : NamespaceUtil.getDeclaredElements(fqn, element.getProject())) {
-                  if (!ResolveUtil.processElement(processor, named)) return;
+    private static ClSyntheticNamespace checkRequireStatementElement(PsiElement stmt, ClSymbol place, String outerName) {
+      if (stmt instanceof ClVector || stmt instanceof ClList) {
+        String first = null;
+        for (PsiElement child : stmt.getChildren()) {
+          if ((child instanceof ClSymbol) && (first == null)) {
+            String name = ((ClSymbol) child).getName();
+            first = outerName == null ? name : outerName + "." + name;
+          } else if ((child instanceof ClKeyword) && child.getText().equals(ClojureKeywords.AS)) {
+            PsiElement next = ClojurePsiUtil.getNextNonWhiteSpace(child);
+            if (next instanceof ClSymbol) {
+              if (((ClSymbol) next).getName().equals(place.getName())) {
+                ClSyntheticNamespace ns = NamespaceUtil.getNamespace(first, place.getProject());
+                if (ns != null) {
+                  return ns;
                 }
               }
+            }
+          } else if (child instanceof ClVector || child instanceof ClList) {
+            ClSyntheticNamespace namespace = checkRequireStatementElement(child, place, first);
+            if (namespace != null) {
+              return namespace;
+            }
+          }
+        }
+      } else if (stmt instanceof ClQuotedForm) {
+        return checkRequireStatementElement(((ClQuotedForm) stmt).getQuotedElement(), place, null);
+      }
+      return null;
+    }
 
-            } else if (sep == null || ".".equals(sep.getText())) {
-              element.processDeclarations(processor, ResolveState.initial(), null, symbol);
+    public static ClSyntheticNamespace getNsAliasResolve(final ClSymbol symbol) {
+      // TODO: handle require forms
+      ClNs symbolNs = symbol.getNs();
+      if (symbolNs == null) {
+        return null;
+      }
+      for (PsiElement element : symbolNs.getChildren()) {
+        if (element instanceof ClList || element instanceof ClVector) {
+          ClListLike directive = (ClListLike) element;
+          final PsiElement first = directive.getFirstNonLeafElement();
+          if (first != null) {
+            final String headText = first.getText();
+            if (ClojureKeywords.REQUIRE.equals(headText) || ImportOwner.REQUIRE.equals(headText)) {
+              for (PsiElement stmt : directive.getChildren()) {
+                ClSyntheticNamespace resolves = checkRequireStatementElement(stmt, symbol, null);
+                if (resolves != null) {
+                  return resolves;
+                }
+              }
             }
           }
         }
       }
+      return null;
     }
 
-    private void resolveNamespace(ClSymbol symbol, ResolveProcessor processor) {
-      // process namespaces
-      final Project project = symbol.getProject();
-      final GlobalSearchScope scope = GlobalSearchScope.allScope(project);
-      final Collection<ClNs> nses = StubIndex.getInstance().get(ClojureNsNameIndex.KEY, symbol.getNameString(), project, scope);
-      for (ClNs ns : nses) {
-        ResolveUtil.processElement(processor, ns);
+    private Collection<PsiNamedElement> resolveSingleSegmentQualifier(ClSymbol qualifier) {
+      Collection<PsiNamedElement> resolves = new ArrayList<PsiNamedElement>();
+
+      // Try alias first
+      ClSyntheticNamespace ns = getNsAliasResolve(qualifier);
+      if (ns != null) {
+        resolves.add(ns);
       }
-    }
-  }
 
-  @Nullable
-  public ClSymbol getRawQualifierSymbol() {
-    return findChildByClass(ClSymbol.class);
-  }
-
-  /**
-   * For references, which hasn't prefix
-   * (import '(prefix symbol))
-   * (require '(prefix symbol))
-   * (require '[prefix symbol])
-   * (require '(prefix [symbol :as id]))
-   * @return qualifier symbol
-   */
-  @Nullable
-  public ClSymbol getQualifierSymbol() {
-    final ClSymbol rawQualifierSymbol = getRawQualifierSymbol();
-    if (rawQualifierSymbol != null) return rawQualifierSymbol;
-    final PsiElement parent = getParent();
-    return getQualifiedNameInner(parent, false);
-  }
-
-  private ClSymbol getQualifiedNameInner(PsiElement parent, boolean onlyRequireOrUse) {
-    if (parent instanceof ClList) {
-      return getListQualifier(onlyRequireOrUse, (ClList) parent, parent.getParent(), false);
-    } else if (parent instanceof ClVector && ImportOwner.isSpecialVector((ClVector) parent)) {
-      final ClSymbol[] symbols = ((ClVector) parent).getAllSymbols();
-      return symbols[0] == this ? getQualifiedNameInner(parent.getParent(), true) : null;
-    } else if (parent instanceof ClVector) {
-      return getVectorQualifier(onlyRequireOrUse, (ClVector) parent, parent.getParent(), false);
-    }
-    return null;
-  }
-
-  private ClSymbol getListQualifier(boolean onlyRequireOrUse, ClList list, PsiElement listParent, boolean isQuoted) {
-    if (listParent instanceof ClQuotedForm) {
-      return getListQualifier(onlyRequireOrUse, list, listParent.getParent(), true);
-    } else if (listParent instanceof ClList) {
-      final PsiElement listParentFirstSymbol = ((ClList) listParent).getFirstNonLeafElement();
-      if (listParentFirstSymbol instanceof ClSymbol || listParentFirstSymbol instanceof ClKeyword) {
-        final String name;
-        if (listParentFirstSymbol instanceof ClSymbol) {
-          name = ((ClSymbol) listParentFirstSymbol).getNameString();
-        } else {
-          name = ((ClKeyword) listParentFirstSymbol).getName();
-        }
-        boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
-        else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
-        final ClSymbol firstSymbol = list.getFirstSymbol();
-        if (isOk && firstSymbol != this && firstSymbol instanceof ClSymbol) {
-          return firstSymbol;
-        }
+      // Check for NS
+      Project project = qualifier.getProject();
+      String qual = qualifier.getName();
+      ns = NamespaceUtil.getNamespace(qual, project);
+      if (ns != null) {
+        resolves.add(ns);
       }
-    }
-    return null;
-  }
 
-  private ClSymbol getVectorQualifier(boolean onlyRequireOrUse, ClVector vector, PsiElement list, boolean isQuoted) {
-    if (list instanceof ClList) {
-      final PsiElement firstSymbol = ((ClList) list).getFirstNonLeafElement();
-      if (firstSymbol instanceof ClSymbol || firstSymbol instanceof ClKeyword) {
-        final String name;
-        if (firstSymbol instanceof ClSymbol) {
-          name = ((ClSymbol) firstSymbol).getNameString();
-        } else {
-          name = ((ClKeyword) firstSymbol).getName();
-        }
-        boolean isOk = false;
-        if ((name.equals(ClojureKeywords.IMPORT) || name.equals(ImportOwner.IMPORT)) && !onlyRequireOrUse) isOk = true;
-        else if ((name.equals(ClojureKeywords.REQUIRE) || name.equals(ClojureKeywords.USE)) && !isQuoted) isOk = true;
-        else if ((name.equals(ImportOwner.REQUIRE) || name.equals(ImportOwner.USE)) && isQuoted) isOk = true;
-        if (isOk) {
-          final PsiElement firstNonLeafElement = vector.getFirstNonLeafElement();
-          if (firstNonLeafElement != null && firstNonLeafElement != this && firstNonLeafElement instanceof ClSymbol) {
-            return (ClSymbol) firstNonLeafElement;
+      // Check for Class
+      PsiShortNamesCache namesCache = PsiShortNamesCache.getInstance(project);
+      PsiClass[] classes = namesCache.getClassesByName(qual, GlobalSearchScope.allScope(project));
+      if (classes.length > 0) {
+        PsiClass[] imported = allImportedClasses(qualifier);
+        for (PsiClass psiClass : classes) {
+          String qualifiedName = psiClass.getQualifiedName();
+          if (qualifiedName.equals(ClojurePsiUtil.JAVA_LANG + "." + qual) || qualifiedName.equals(qual)) {
+            resolves.add(psiClass);
+          } else if (ArrayUtil.indexOf(imported, psiClass) >= 0) {
+            resolves.add(psiClass);
           }
         }
       }
-    } else if (list instanceof ClQuotedForm) {
-      return getVectorQualifier(onlyRequireOrUse, vector, list.getParent(), true);
+
+      return resolves;
     }
-    return null;
+
+    private Collection<PsiNamedElement> resolveMultiSegmentQualifier(ClSymbol qualifier, boolean processPackages) {
+      Collection<PsiNamedElement> resolves = new ArrayList<PsiNamedElement>();
+
+      // Check for NS
+      Project project = qualifier.getProject();
+      String qual = qualifier.getName();
+      ClSyntheticNamespace ns = NamespaceUtil.getNamespace(qual, project);
+      if (ns != null) {
+        resolves.add(ns);
+      }
+
+      // Check for Class
+      JavaPsiFacade facade = JavaPsiFacade.getInstance(project);
+      PsiClass psiClass = facade.findClass(qual, GlobalSearchScope.allScope(project));
+      if (psiClass != null) {
+        resolves.add(psiClass);
+      }
+
+      // Check for packages
+      if (processPackages) {
+        PsiPackage psiPackage = facade.findPackage(qual);
+        if (psiPackage != null) {
+          resolves.add(psiPackage);
+        }
+      }
+
+      return resolves;
+    }
+
+    private boolean isSlashSeparated(ClSymbol symbol) {
+      return (symbol.getSeparatorToken() != null) && "/".equals(symbol.getSeparatorToken().getText());
+    }
+
+    private void resolveImpl(ClSymbol place, ResolveProcessor processor) {
+      boolean isQualified = place.getQualifierSymbol() != null;
+      boolean isQualifier = place.getContext() instanceof ClSymbol;
+
+      if (!isQualified && !isQualifier) {
+        // Bare symbol cases
+        // symbol
+        // Class
+        ResolveUtil.treeWalkUp(place, processor, ResolveState.initial());
+      } else if (isQualifier) {
+        // Find fully-qualified qualifier symbol
+        ClSymbol qualifier = place;
+        PsiElement next = qualifier.getContext();
+        while ((next instanceof ClSymbol) && !isSlashSeparated((ClSymbol) next)) {
+          qualifier = (ClSymbol) next;
+          next = qualifier.getContext();
+        }
+
+        if (next instanceof ClSymbol && isSlashSeparated((ClSymbol) next)) {
+          if (qualifier.isQualified()) {
+            // Potential cases - qualifiers of:
+            // ns.ns/symbol
+            // pack.Class/method
+            if (place == qualifier) {
+              if (!resolveFullyQualified(processor, qualifier, false)) {
+                return;
+              }
+            } else {
+              if (!resolveSubSegment(processor, place, qualifier)) {
+                return;
+              }
+            }
+          } else {
+            // Potential cases:
+            // alias/symbol
+            // ns/symbol
+            // Class/method
+            for (PsiNamedElement element : resolveSingleSegmentQualifier(qualifier)) {
+              if (!processor.execute(element, ResolveState.initial())) {
+                return;
+              }
+            }
+          }
+        } else {
+          // Inner segment of qualified symbol cases:
+          // ns.ns
+          // pack.pack
+          // pack.Class
+          if (!resolveSubSegment(processor, place, qualifier)) {
+            return;
+          }
+        }
+      } else {
+        ClSymbol qualifier = place.getQualifierSymbol();
+        if (isSlashSeparated(place)) {
+          for (ResolveResult result : qualifier.multiResolve(false)) {
+            final PsiElement element = result.getElement();
+            if (element != null) {
+              //get class elements
+              if ((element instanceof PsiClass) &&
+                  !element.processDeclarations(processor, ResolveState.initial(), null, place)) {
+                return;
+              }
+
+              //get namespace declarations
+              if ((element instanceof ClSyntheticNamespace) &&
+                  !element.processDeclarations(processor, ResolveState.initial(), null, place)) {
+                return;
+              }
+            }
+          }
+        } else {
+          // Qualified symbol cases:
+          // ns.ns
+          // pack.pack
+          // pack.Class
+          if (!resolveFullyQualified(processor, place, true)) {
+            return;
+          }
+        }
+      }
+    }
+
+    private boolean resolveFullyQualified(ResolveProcessor processor, ClSymbol symbol, boolean processPackages) {
+      for (PsiNamedElement element : resolveMultiSegmentQualifier(symbol, processPackages)) {
+        if (!processor.execute(element, ResolveState.initial())) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private boolean resolveSubSegment(ResolveProcessor processor, ClSymbol place, ClSymbol qualifier) {
+      for (PsiNamedElement element : resolveMultiSegmentQualifier(qualifier, true)) {
+        String name = place.getName();
+        if (element instanceof ClSyntheticNamespace) {
+          ClSyntheticNamespace ns = NamespaceUtil.getNamespace(name, qualifier.getProject());
+          if (ns != null && !processor.execute(ns, ResolveState.initial())) {
+            return false;
+          }
+        } else if (element instanceof PsiClass || element instanceof PsiPackage) {
+          JavaPsiFacade facade = JavaPsiFacade.getInstance(qualifier.getProject());
+          PsiPackage psiPackage = facade.findPackage(name);
+          if (psiPackage != null && !processor.execute(psiPackage, ResolveState.initial())) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+  }
+
+  @Nullable
+  public ClSymbol getQualifierSymbol() {
+    return findChildByClass(ClSymbol.class);
   }
 
   public boolean isQualified() {
