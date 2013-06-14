@@ -7,17 +7,15 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
-import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.stubs.IStubElementType;
 import com.intellij.psi.stubs.StubElement;
-import com.intellij.psi.stubs.StubIndex;
 import com.intellij.util.Function;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.plugins.clojure.psi.api.ClQuotedForm;
+import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
-import org.jetbrains.plugins.clojure.psi.stubs.index.ClojureNsNameIndex;
 
 import java.util.List;
 
@@ -102,19 +100,10 @@ public abstract class ClojureBaseElementImpl<T extends StubElement> extends Stub
   }
 
   public ClNs getNs() {
-    StubIndex stubIndex = StubIndex.getInstance();
-    ClNs symbolNs = null;
     PsiFile containingFile = getContainingFile();
-    Project project = getProject();
-    for (String fqn : stubIndex.getAllKeys(ClojureNsNameIndex.KEY, project)) {
-      for (ClNs ns : stubIndex.get(ClojureNsNameIndex.KEY, fqn, project, GlobalSearchScope.fileScope(containingFile))) {
-        if ((symbolNs == null ||
-            ((ns.getTextOffset() > symbolNs.getTextOffset()) &&
-                (ns.getTextOffset() < getTextOffset())))) {
-          symbolNs = ns;
-        }
-      }
+    if (containingFile instanceof ClojureFile) {
+      return ((ClojureFile) containingFile).getNs();
     }
-    return symbolNs;
+    return null;
   }
 }
