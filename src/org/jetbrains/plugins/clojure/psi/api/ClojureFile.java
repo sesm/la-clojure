@@ -13,6 +13,7 @@ import org.jetbrains.plugins.clojure.psi.api.defs.ClDef;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 
 import java.util.List;
+import java.util.NavigableSet;
 
 /**
  * @author ilyas
@@ -44,4 +45,6 @@ public interface ClojureFile extends PsiFile, ClojurePsiElement, PsiFileWithStub
 
   @Nullable
   String getNamespacePrefix();
+
+  NavigableSet<PsiElement> getAllNamespaces();
 }

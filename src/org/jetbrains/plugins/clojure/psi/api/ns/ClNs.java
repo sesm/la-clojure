@@ -15,4 +15,6 @@ public interface ClNs extends ClList, PsiNamedElement {
   ClListLike addImportForClass(PsiElement place, PsiClass clazz);
 
   boolean isClassDefinition();
+
+  boolean isNamespaceDeclaration();
 }

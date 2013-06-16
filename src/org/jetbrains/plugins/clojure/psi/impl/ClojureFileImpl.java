@@ -7,6 +7,7 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Condition;
+import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
@@ -19,15 +20,18 @@ import com.intellij.psi.search.PsiShortNamesCache;
 import com.intellij.psi.stubs.StubElement;
 import com.intellij.psi.stubs.StubIndex;
 import com.intellij.psi.stubs.StubTree;
+import com.intellij.psi.util.CachedValue;
+import com.intellij.psi.util.CachedValueProvider;
+import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.clojure.file.ClojureFileType;
 import org.jetbrains.plugins.clojure.metrics.Metrics;
 import org.jetbrains.plugins.clojure.parser.ClojureElementTypes;
-import org.jetbrains.plugins.clojure.parser.ClojureParser;
 import org.jetbrains.plugins.clojure.psi.ClojureConsoleElement;
 import org.jetbrains.plugins.clojure.psi.api.ClList;
 import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
@@ -67,6 +71,7 @@ import static org.jetbrains.plugins.clojure.utils.ClojureUtils.truthy;
  * limitations under the License.
  */
 public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
+  public static final Key<CachedValue<NavigableSet<PsiElement>>> NAMESPACES_KEY = Key.create("FileNamespaceElements");
   public static final Keyword REPL_KEYWORD = Keyword.intern("repl");
   private PsiElement myContext = null;
   private PsiClass myClass;
@@ -241,7 +246,41 @@ public class ClojureFileImpl extends PsiFileBase implements ClojureFile {
   }
 
   public ClNs getNs() {
-    return ((ClNs) ClojurePsiUtil.findFormByNameSet(this, ClojureParser.NS_TOKENS));
+    Iterator<PsiElement> namespaces = getAllNamespaces().iterator();
+    return namespaces.hasNext() ? (ClNs) namespaces.next() : null;
+  }
+
+  public static class ByTextOffset implements Comparator<PsiElement> {
+    @Override
+    public int compare(PsiElement o1, PsiElement o2) {
+      return o1.getTextOffset() - o2.getTextOffset();
+    }
+  }
+
+  public class NamespacesProvider implements CachedValueProvider<NavigableSet<PsiElement>> {
+    @Nullable
+    @Override
+    public CachedValueProvider.Result<NavigableSet<PsiElement>> compute() {
+      NavigableSet<PsiElement> ret = new TreeSet<PsiElement>(new ByTextOffset());
+      for (PsiElement element : ClojureFileImpl.this.getChildren()) {
+        if (element instanceof ClList) {
+          ClList list = (ClList) element;
+          if (list instanceof ClNs) {
+            ret.add(list);
+          }
+        }
+      }
+      return new Result<NavigableSet<PsiElement>>(ret, ClojureFileImpl.this);
+    }
+  }
+
+  /**
+   * Gets a set of all namespaces, sorted by text offset order.
+   * @return the set of all namespaces in this file
+   */
+  @Override
+  public NavigableSet<PsiElement> getAllNamespaces() {
+    return CachedValuesManager.getManager(getProject()).getCachedValue(this, NAMESPACES_KEY, new NamespacesProvider(), false);
   }
 
   @NotNull

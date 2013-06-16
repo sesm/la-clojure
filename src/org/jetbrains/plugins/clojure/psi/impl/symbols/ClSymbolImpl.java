@@ -277,32 +277,32 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
       }
     }
 
-    private static ClSyntheticNamespace checkRequireStatementElement(PsiElement stmt, ClSymbol place, String outerName) {
+    private static ClSyntheticNamespace checkRequireStatementElement(PsiElement stmt, String headText, ClSymbol place, String prefix) {
       if (stmt instanceof ClVector || stmt instanceof ClList) {
-        String first = null;
+        String namespace = null;
         for (PsiElement child : stmt.getChildren()) {
-          if ((child instanceof ClSymbol) && (first == null)) {
+          if ((child instanceof ClSymbol) && (namespace == null)) {
             String name = ((ClSymbol) child).getName();
-            first = outerName == null ? name : outerName + "." + name;
+            namespace = prefix == null ? name : prefix + "." + name;
           } else if ((child instanceof ClKeyword) && child.getText().equals(ClojureKeywords.AS)) {
             PsiElement next = ClojurePsiUtil.getNextNonWhiteSpace(child);
             if (next instanceof ClSymbol) {
               if (((ClSymbol) next).getName().equals(place.getName())) {
-                ClSyntheticNamespace ns = NamespaceUtil.getNamespace(first, place.getProject());
+                ClSyntheticNamespace ns = NamespaceUtil.getNamespace(namespace, place.getProject());
                 if (ns != null) {
                   return ns;
                 }
               }
             }
           } else if (child instanceof ClVector || child instanceof ClList) {
-            ClSyntheticNamespace namespace = checkRequireStatementElement(child, place, first);
-            if (namespace != null) {
-              return namespace;
+            ClSyntheticNamespace ns = checkRequireStatementElement(child, headText, place, namespace);
+            if (ns != null) {
+              return ns;
             }
           }
         }
-      } else if (stmt instanceof ClQuotedForm) {
-        return checkRequireStatementElement(((ClQuotedForm) stmt).getQuotedElement(), place, null);
+      } else if (stmt instanceof ClQuotedForm && ImportOwner.REQUIRE.equals(headText)) {
+        return checkRequireStatementElement(((ClQuotedForm) stmt).getQuotedElement(), headText, place, null);
       }
       return null;
     }
@@ -321,7 +321,7 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
             final String headText = first.getText();
             if (ClojureKeywords.REQUIRE.equals(headText) || ImportOwner.REQUIRE.equals(headText)) {
               for (PsiElement stmt : directive.getChildren()) {
-                ClSyntheticNamespace resolves = checkRequireStatementElement(stmt, symbol, null);
+                ClSyntheticNamespace resolves = checkRequireStatementElement(stmt, headText, symbol, null);
                 if (resolves != null) {
                   return resolves;
                 }

@@ -17,7 +17,9 @@ import org.jetbrains.plugins.clojure.psi.api.ClojureFile;
 import org.jetbrains.plugins.clojure.psi.api.ns.ClNs;
 import org.jetbrains.plugins.clojure.psi.api.symbols.ClSymbol;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
 
 /**
  * @author ilyas
@@ -102,7 +104,10 @@ public abstract class ClojureBaseElementImpl<T extends StubElement> extends Stub
   public ClNs getNs() {
     PsiFile containingFile = getContainingFile();
     if (containingFile instanceof ClojureFile) {
-      return ((ClojureFile) containingFile).getNs();
+      ClojureFile clojureFile = (ClojureFile) containingFile;
+      NavigableSet<PsiElement> namespaces = clojureFile.getAllNamespaces();
+      Iterator<PsiElement> priorElements = namespaces.headSet(this, false).descendingIterator();
+      return priorElements.hasNext() ? (ClNs) priorElements.next() : null;
     }
     return null;
   }

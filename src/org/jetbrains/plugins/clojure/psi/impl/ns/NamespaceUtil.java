@@ -72,7 +72,7 @@ public class NamespaceUtil {
 
       ClNs navigationElement = null;
       for (ClNs clNs : nsWithPrefix) {
-        if (fqn.equals(clNs.getName())) {
+        if (clNs.isNamespaceDeclaration() && fqn.equals(clNs.getName())) {
           navigationElement = clNs;
         }
       }

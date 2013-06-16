@@ -131,6 +131,11 @@ public class ClNsImpl extends ClListBaseImpl<ClNsStub> implements ClNs, StubBase
     return ClojurePsiUtil.findNamespaceKeyByName(this, ClojureKeywords.GEN_CLASS) != null;
   }
 
+  @Override
+  public boolean isNamespaceDeclaration() {
+    return true;
+  }
+
   @NotNull
   protected ClList addFreshImportClause() {
     commitDocument();

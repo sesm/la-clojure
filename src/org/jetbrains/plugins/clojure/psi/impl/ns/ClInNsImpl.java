@@ -38,5 +38,8 @@ public class ClInNsImpl extends ClNsImpl{
     return null;
   }
 
-
+  @Override
+  public boolean isNamespaceDeclaration() {
+    return false;
+  }
 }
