@@ -39,9 +39,19 @@
 
 (def defn-names #{"defn" "defn-" "definline" "defmacro"})
 
-(defn should-resolve? [^ClSymbol element]
+(defn binding-resolves? [element binding]
+  (if (instance? ClSymbol binding)
+    (= element binding)
+    (= element (:element binding))))
+
+(defn should-resolve? [element]
   (nil? (some (fn [list]
-                (get (lists/get-resolve-symbols list) element))
+                (some (fn [[scope bindings]]
+                        (if-let [binding (bindings (name element))]
+                          (if (vector? binding)
+                            (some #(binding-resolves? element %) binding)
+                            (binding-resolves? element binding))))
+                      (lists/get-resolve-symbols list)))
               (filter #(instance? ClList %) (psi/ancestors element)))))
 
 (defn annotate-list [^ClList element ^AnnotationHolder holder]

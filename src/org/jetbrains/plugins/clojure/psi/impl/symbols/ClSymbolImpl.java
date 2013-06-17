@@ -523,8 +523,32 @@ public class ClSymbolImpl extends ClojurePsiElementImpl implements ClSymbol {
   }
 
   @Override
+  public String getNamespace() {
+    if (isQualified()) {
+      PsiElement separator = getSeparatorToken();
+      if (separator != null && "/".equals(separator.getText())) {
+        return getQualifierSymbol().getNameString();
+      } else {
+        return null;
+      }
+    } else {
+      return null;
+    }
+  }
+
+  @Override
   public String getName() {
-    return getNameString();
+    if (isQualified()) {
+      PsiElement separator = getSeparatorToken();
+      if (separator != null && "/".equals(separator.getText())) {
+        PsiElement atom = separator.getNextSibling();
+        return atom == null ? null : atom.getText();
+      } else {
+        return getNameString();
+      }
+    } else {
+      return getNameString();
+    }
   }
 
   @Nullable

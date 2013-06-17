@@ -1,4 +1,38 @@
 (ns plugin.resolve.lists
+  "Symbol resolution infrastructure for list-like forms. Each list form
+   that defines resolveable symbols should register (using
+   plugin.resolve/register-symbols) a function returning a map of those
+   symbols which will later be used for actual resolution. This map has
+   the following structure:
+
+   { <scope> { <name> <element> }
+             { <name> { :element <element>
+                        :condition <fn> }}
+     <scope> ...etc etc... }
+
+   The keys of the top layer in the map are the scopes of the symbols
+   defined in their corresponding values. The scope can be either
+   :ns (for namespace scope), :private (for namespace private scope) or
+   can be an element, in which case that element defines the scope of the
+   bindings. For example, a defn form would return a map like this:
+
+   { :ns            { <defn name> <defn name element> }
+     <defn element> { <param name> <param element>
+                      <param name> <param element>
+                      ... }}
+
+   All elements in the above definitions are PsiElement instances. If more
+   detail than just the element to resolve to is required, a map can be
+   supplied instead. This map should contain:
+
+   - an :element attribute indicating the element to resolve to
+   - a :condition attribute, which should indicate a function to be
+     which determines if the resolve is valid (optional)
+
+   Additionally, if more than one symbol is defined with the same name (for
+   example, shadowing let bindings), a vector of the symbol definitions can
+   be supplied. These will be processed in reverse order to allow later
+   bindings to shadow earlier ones."
   (:import (org.jetbrains.plugins.clojure.psi.api ClList ClVector ClLiteral ClListLike ClMetadata ClKeyword ClMap)
            (org.jetbrains.plugins.clojure.psi.api.defs ClDef)
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
@@ -62,34 +96,43 @@
     (drop 1 seq)
     seq))
 
+(defn sym-names
+  "Takes a collection of symbols and returns a map with the symbol
+  names as keys, and the symbols themselves as values."
+  [symbols]
+  (reduce (fn [ret symbol]
+            (assoc ret (name symbol) symbol))
+          {}
+          symbols))
+
 (defn with-fn-arg-symbols [symbols children element]
   (cond
     (instance? ClVector (first children))
-    (assoc-all symbols
-               (mapcat destructuring-symbols
-                       (psi/significant-children (first children)))
-               {:scope element})
+    (let [bindings (sym-names (mapcat destructuring-symbols
+                                      (psi/significant-children (first children))))]
+      (assoc symbols element (merge (symbols element) bindings)))
     (instance? ClList (first children))
     (reduce (fn [symbols list]
               (let [params (first (psi/significant-children list))]
                 (if (instance? ClVector params)
-                  (assoc-all symbols
-                             (mapcat destructuring-symbols
-                                     (psi/significant-children params))
-                             {:scope list})
+                  (let [bindings (sym-names (mapcat destructuring-symbols
+                                                    (psi/significant-children params)))]
+                    (assoc symbols list (merge (symbols list) bindings)))
                   symbols)))
             symbols
             (take-while #(instance? ClList %) children))
     :else symbols))
 
 (defn name-symbol
+  "Returns a symbol map for the name symbol of this def-like element.
+   Scope defaults to :ns."
   ([element]
-   (name-symbol element {:scope :ns}))
-  ([element params]
+   (name-symbol element :ns))
+  ([element scope]
    (let [children (psi/significant-children element)
          name-symbol (second children)]
      (if (instance? ClSymbol name-symbol)
-       {name-symbol params}
+       {scope {(name name-symbol) name-symbol}}
        {}))))
 
 (defn defn-symbols [element]
@@ -101,7 +144,7 @@
     (with-fn-arg-symbols symbols children element)))
 
 (defn fn-symbols [element]
-  (let [symbols (name-symbol element {:scope element})
+  (let [symbols (name-symbol element element)
         children (-> (drop 1 (psi/significant-children element))
                      (drop-instance ClSymbol))]
     (with-fn-arg-symbols symbols children element)))
@@ -119,20 +162,32 @@
          (= ":or" (.getText ^PsiElement previous))
          (psi/contains? list place))))
 
+(defn assoc-symbol
+  ([symbols symbol]
+   (assoc-symbol symbols symbol symbol))
+  ([symbols symbol value]
+   (let [name (name symbol)]
+     (assoc symbols name (if-let [binding (symbols name)]
+                           (if (vector? binding)
+                             (conj binding value)
+                             [binding value])
+                           value)))))
+
 (defn let-symbols [^ClList element]
   (let [children (psi/significant-children element)
         params (second children)]
     (if (instance? ClVector params)
       (let [children (psi/significant-children params)]
-        (reduce (fn [symbols [k v]]
-                  (assoc-all symbols
-                             (destructuring-symbols k)
-                             {:scope     element
-                              :condition (fn [list element place]
-                                           (or (psi/after? place v)
-                                               (or-variable? place list)))}))
-                {}
-                (partition 2 children))))))
+        {element (reduce (fn [symbols [k v]]
+                           (reduce (fn [symbols symbol]
+                                     (assoc-symbol symbols symbol {:element   symbol
+                                                                   :condition (fn [list element place]
+                                                                                (or (psi/after? place v)
+                                                                                    (or-variable? place list)))}))
+                                   symbols
+                                   (destructuring-symbols k)))
+                         {}
+                         (partition 2 children))}))))
 
 (defn def-symbols [list]
   (name-symbol list))
@@ -167,26 +222,28 @@
     (instance? PsiElement scope) (psi/contains? scope place)
     :else true))
 
-(defn resolve-symbol [element {:keys [scope condition]
-                               :or   {condition (constantly true)}} list processor state place]
-  (or (= element place)
-      (if (and (in-scope? place scope)
-               (condition list element place))
-        (not (ResolveUtil/processElement processor element state))
-        false)))
+(defn resolve-binding [binding list processor state place]
+  (if (instance? ClSymbol binding)
+    (or (= binding place)
+        (not (ResolveUtil/processElement processor binding state)))
+    (let [{:keys [element condition]} binding]
+      (or (= element place)
+          (if (or (nil? condition)
+                  (condition list element place))
+            (not (ResolveUtil/processElement processor element state)))))))
 
-(defn local-name [^ClSymbol sym]
-  (if (.isQualified sym)
-    (some-> (.getSeparatorToken sym)
-            .getNextSibling
-            .getText)
-    (.getName sym)))
+(defn resolve-symbol [bindings list processor state place]
+  (if-let [binding (bindings (name place))]
+    (if (vector? binding)
+      ; Process vector in reverse order so later bindings shadow earlier ones
+      (some #(resolve-binding % list processor state place) (rseq binding))
+      (resolve-binding binding list processor state place))))
 
 ; TODO disambiguate when we have more information from namespace elements
 (defn resolve-keys [list]
   (if-let [head-element (first (psi/significant-children list))]
     (if (instance? ClSymbol head-element)
-      (extension/list-keys-by-short-name (local-name head-element))
+      (extension/list-keys-by-short-name (name head-element))
       [])
     []))
 
@@ -198,8 +255,9 @@
   (psi/cached-value list resolve-symbols-key calculate-resolve-symbols))
 
 (defn resolve-from-symbols [list processor state place]
-  (some (fn [[element params]]
-          (resolve-symbol element params list processor state place))
+  (some (fn [[scope bindings]]
+          (if (in-scope? place scope)
+            (resolve-symbol bindings list processor state place)))
         (get-resolve-symbols list)))
 
 (defn process-list-declarations [this processor state last-parent place]
