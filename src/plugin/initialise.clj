@@ -11,7 +11,8 @@
             plugin.documentation
             plugin.actions.paredit
             plugin.repl.actions
-            plugin.completion))
+            plugin.completion
+            plugin.extensions.clojure.core))
 
 (defn initialise-all []
   (plugin.formatting/initialise)
