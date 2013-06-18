@@ -5,10 +5,21 @@
    symbols which will later be used for actual resolution. This map has
    the following structure:
 
-   { <scope> { <name> <element> }
-             { <name> { :element <element>
-                        :condition <fn> }}
+   { <scope> { <name> <binding> }
      <scope> ...etc etc... }
+
+   Where:
+
+   <scope> = :ns |
+             :private |
+             <element> |
+             { :scope <scope> :after <element> }
+
+   and:
+
+   <binding> = <element> |
+               { :element <element> :condition <fn> } |
+               [ <binding> ... ]
 
    The keys of the top layer in the map are the scopes of the symbols
    defined in their corresponding values. The scope can be either
@@ -21,6 +32,10 @@
                       <param name> <param element>
                       ... }}
 
+   The scope may also be a map containing the scope itself in the :scope
+   attribute, and an element in the :after attribute which restricts the
+   scope to elements following the given element.
+
    All elements in the above definitions are PsiElement instances. If more
    detail than just the element to resolve to is required, a map can be
    supplied instead. This map should contain:
@@ -30,7 +45,7 @@
      which determines if the resolve is valid (optional)
 
    Additionally, if more than one symbol is defined with the same name (for
-   example, shadowing let bindings), a vector of the symbol definitions can
+   example, shadowing let bindings), a vector of the symbol bindings can
    be supplied. These will be processed in reverse order to allow later
    bindings to shadow earlier ones."
 
@@ -39,8 +54,9 @@
            (org.jetbrains.plugins.clojure.psi.impl.defs ClDefImpl)
            (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)
            (org.jetbrains.plugins.clojure.psi.resolve ResolveUtil)
-           (com.intellij.psi PsiNamedElement PsiElement)
-           (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry))
+           (com.intellij.psi PsiNamedElement PsiElement ResolveState)
+           (org.jetbrains.plugins.clojure.psi.impl ImportOwner ClMapEntry)
+           (com.intellij.psi.scope PsiScopeProcessor NameHint))
   (:use [plugin.util :only [in? assoc-all safely]])
   (:require [plugin.resolve :as resolve]
             [plugin.psi :as psi]
@@ -61,26 +77,35 @@
 
 (defn in-scope? [place scope]
   (cond
+    (map? scope) (let [{:keys [scope after]} scope]
+                   (and (in-scope? place scope)
+                        (psi/after? place after)))
     (= scope :ns) true
     (instance? PsiElement scope) (psi/contains? scope place)
     :else true))
 
 (defn resolve-binding [binding list processor state place]
-  (if (psi/symbol? binding)
-    (or (= binding place)
-        (not (ResolveUtil/processElement processor binding state)))
-    (let [{:keys [element condition]} binding]
-      (or (= element place)
-          (if (or (nil? condition)
-                  (condition list element place))
-            (not (ResolveUtil/processElement processor element state)))))))
+  (if (vector? binding)
+    ; Process vector in reverse order so later bindings shadow earlier ones
+    (some #(resolve-binding % list processor state place) (rseq binding))
+    (if (psi/symbol? binding)
+      (or (= binding place)
+          (not (ResolveUtil/processElement processor binding state)))
+      (let [{:keys [element condition]} binding]
+        (or (= element place)
+            (if (or (nil? condition)
+                    (condition list element place))
+              (not (ResolveUtil/processElement processor element state))))))))
+
+(defn name-hint [^PsiScopeProcessor processor ^ResolveState state]
+  (if-let [hint (.getHint processor NameHint/KEY)]
+    (.getName hint state)))
 
 (defn resolve-symbol [bindings list processor state place]
-  (if-let [binding (bindings (name place))]
-    (if (vector? binding)
-      ; Process vector in reverse order so later bindings shadow earlier ones
-      (some #(resolve-binding % list processor state place) (rseq binding))
-      (resolve-binding binding list processor state place))))
+  (if-let [name (name-hint processor state)]
+    (if-let [binding (bindings name)]
+      (resolve-binding binding list processor state place))
+    (some #(resolve-binding % list processor state place) (vals bindings))))
 
 ; TODO disambiguate when we have more information from namespace elements
 (defn resolve-keys [list]

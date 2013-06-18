@@ -66,16 +66,19 @@
 (defn with-fn-arg-symbols [symbols children element]
   (cond
     (psi/vector? (first children))
-    (let [bindings (sym-names (mapcat destructuring-symbols
-                                      (psi/significant-children (first children))))]
-      (assoc symbols element (merge (symbols element) bindings)))
+    (let [params (first children)
+          bindings (sym-names (mapcat destructuring-symbols
+                                      (psi/significant-children params)))
+          scope {:scope element :after params}]
+      (assoc symbols scope (merge (symbols scope) bindings)))
     (psi/list? (first children))
     (reduce (fn [symbols list]
               (let [params (first (psi/significant-children list))]
                 (if (psi/vector? params)
                   (let [bindings (sym-names (mapcat destructuring-symbols
-                                                    (psi/significant-children params)))]
-                    (assoc symbols list (merge (symbols list) bindings)))
+                                                    (psi/significant-children params)))
+                        scope {:scope list :after params}]
+                    (assoc symbols scope (merge (symbols scope) bindings)))
                   symbols)))
             symbols
             (take-while #(psi/list? %) children))
