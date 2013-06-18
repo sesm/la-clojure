@@ -66,7 +66,7 @@
     :else true))
 
 (defn resolve-binding [binding list processor state place]
-  (if (instance? ClSymbol binding)
+  (if (psi/symbol? binding)
     (or (= binding place)
         (not (ResolveUtil/processElement processor binding state)))
     (let [{:keys [element condition]} binding]
@@ -85,7 +85,7 @@
 ; TODO disambiguate when we have more information from namespace elements
 (defn resolve-keys [list]
   (if-let [head-element (first (psi/significant-children list))]
-    (if (instance? ClSymbol head-element)
+    (if (psi/symbol? head-element)
       (extension/list-keys-by-short-name (name head-element))
       [])
     []))

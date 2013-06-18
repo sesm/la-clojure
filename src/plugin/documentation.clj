@@ -16,9 +16,9 @@
   "Change special characters into HTML character entities."
   [text]
   (.. ^String text
-      (replace "&"  "&amp;")
-      (replace "<"  "&lt;")
-      (replace ">"  "&gt;")
+      (replace "&" "&amp;")
+      (replace "<" "&lt;")
+      (replace ">" "&gt;")
       (replace "\"" "&quot;")
       (replace "'" "&apos;")))
 
@@ -43,8 +43,8 @@
 
 (defn get-multi-arity-lists [candidates]
   (map #(first (psi/significant-children %))
-       (filter #(and (instance? ClList %)
-                     (instance? ClVector (first (psi/significant-children %))))
+       (filter #(and (psi/list? %)
+                     (psi/vector? (first (psi/significant-children %))))
                candidates)))
 
 ; TODO duplicated from lists.clj
@@ -60,20 +60,20 @@
   (let [name-symbol (.getNameSymbol element)
         siblings (filter psi/significant? (psi/next-siblings name-symbol))
         after-name (first (drop-if
-                            #(instance? ClMap %)
+                            #(psi/map? %)
                             (drop-if
                               #(instance? ClLiteral %)
                               siblings)))]
-    (if (instance? ClVector after-name)
+    (if (psi/vector? after-name)
       [after-name]
-      (if (instance? ClList after-name)
+      (if (psi/list? after-name)
         (let [children (psi/significant-children after-name)
               head (first children)]
-          (if (and (instance? ClSymbol head)
+          (if (and (psi/symbol? head)
                    (= "fn" (.getText ^ClSymbol head)))
-            (let [params (drop-if #(instance? ClSymbol %)
+            (let [params (drop-if #(psi/symbol? %)
                                   (rest children))]
-              (if (instance? ClVector (first params))
+              (if (psi/vector? (first params))
                 [(first params)]
                 (get-multi-arity-lists params)))
             (get-multi-arity-lists siblings)))))))
@@ -101,7 +101,7 @@
 (defn get-doc [element]
   (cond
     (instance? ClDef element) (get-defn-doc element)
-    (and (instance? ClSymbol element)
+    (and (psi/symbol? element)
          (instance? ClDef (psi/parent element)))
     (let [^ClDef parent (psi/parent element)]
       (if (= element (.getNameSymbol parent))
@@ -115,7 +115,7 @@
       (getQuickNavigateInfo [this element original-element]
         (cond
           (instance? ClDef element) (.getPresentationText ^ClDef element)
-          (instance? ClSymbol element) (.getNameString ^ClSymbol element)
+          (psi/symbol? element) (.getNameString ^ClSymbol element)
           :else nil))
       (generateDoc [this element original-element]
         (str "<pre>"

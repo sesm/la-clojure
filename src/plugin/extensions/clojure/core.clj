@@ -30,23 +30,23 @@
              symbols
              element)
      (cond
-       (instance? ClVector element) (destructuring-symbols (psi/significant-children element) symbols)
-       (instance? ClMap element) (reduce (fn [symbols ^ClMapEntry map-entry]
-                                           (let [key (.getKey map-entry)
-                                                 value (.getValue map-entry)
-                                                 keyword-text (if (instance? ClKeyword key)
-                                                                (.getText key))]
-                                             (cond
-                                               (= ":keys" keyword-text)
-                                               (destructuring-symbols value symbols)
-                                               (= ":as" keyword-text)
-                                               (destructuring-symbols value symbols)
-                                               (= ":or" keyword-text)
-                                               symbols
-                                               :else (destructuring-symbols key symbols))))
-                                         symbols
-                                         (.getEntries ^ClMap element))
-       (instance? ClSymbol element) (conj symbols element)
+       (psi/vector? element) (destructuring-symbols (psi/significant-children element) symbols)
+       (psi/map? element) (reduce (fn [symbols ^ClMapEntry map-entry]
+                                    (let [key (.getKey map-entry)
+                                          value (.getValue map-entry)
+                                          keyword-text (if (psi/keyword? key)
+                                                         (.getText key))]
+                                      (cond
+                                        (= ":keys" keyword-text)
+                                        (destructuring-symbols value symbols)
+                                        (= ":as" keyword-text)
+                                        (destructuring-symbols value symbols)
+                                        (= ":or" keyword-text)
+                                        symbols
+                                        :else (destructuring-symbols key symbols))))
+                                  symbols
+                                  (.getEntries ^ClMap element))
+       (psi/symbol? element) (conj symbols element)
        :else symbols))))
 
 (defn drop-instance [seq type]
@@ -65,20 +65,20 @@
 
 (defn with-fn-arg-symbols [symbols children element]
   (cond
-    (instance? ClVector (first children))
+    (psi/vector? (first children))
     (let [bindings (sym-names (mapcat destructuring-symbols
                                       (psi/significant-children (first children))))]
       (assoc symbols element (merge (symbols element) bindings)))
-    (instance? ClList (first children))
+    (psi/list? (first children))
     (reduce (fn [symbols list]
               (let [params (first (psi/significant-children list))]
-                (if (instance? ClVector params)
+                (if (psi/vector? params)
                   (let [bindings (sym-names (mapcat destructuring-symbols
                                                     (psi/significant-children params)))]
                     (assoc symbols list (merge (symbols list) bindings)))
                   symbols)))
             symbols
-            (take-while #(instance? ClList %) children))
+            (take-while #(psi/list? %) children))
     :else symbols))
 
 (defn name-symbol
@@ -89,7 +89,7 @@
   ([element scope]
    (let [children (psi/significant-children element)
          name-symbol (second children)]
-     (if (instance? ClSymbol name-symbol)
+     (if (psi/symbol? name-symbol)
        {scope {(name name-symbol) name-symbol}}
        {}))))
 
@@ -116,7 +116,7 @@
         previous (first (filter psi/significant? (safely (psi/prev-siblings grandparent))))]
     (and (instance? ClMapEntry parent)
          (= place (.getKey ^ClMapEntry parent))
-         (instance? ClKeyword previous)
+         (psi/keyword? previous)
          (= ":or" (.getText ^PsiElement previous))
          (psi/contains? list place))))
 
@@ -134,7 +134,7 @@
 (defn let-symbols [^ClList element]
   (let [children (psi/significant-children element)
         params (second children)]
-    (if (instance? ClVector params)
+    (if (psi/vector? params)
       (let [children (psi/significant-children params)]
         {element (reduce (fn [symbols [k v]]
                            (reduce (fn [symbols symbol]

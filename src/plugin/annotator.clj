@@ -40,7 +40,7 @@
 (def defn-names #{"defn" "defn-" "definline" "defmacro"})
 
 (defn binding-resolves? [element binding]
-  (if (instance? ClSymbol binding)
+  (if (psi/symbol? binding)
     (= element binding)
     (= element (:element binding))))
 
@@ -52,7 +52,7 @@
                             (some #(binding-resolves? element %) binding)
                             (binding-resolves? element binding))))
                       (lists/get-resolve-symbols list)))
-              (filter #(instance? ClList %) (psi/ancestors element)))))
+              (filter #(psi/list? %) (psi/ancestors element)))))
 
 (defn annotate-list [^ClList element ^AnnotationHolder holder]
   (let [first (.getFirstSymbol element)]
@@ -131,12 +131,12 @@
         element-text (.getText element)]
     (.addImportForClass ns element target)
     (process-element (.getContainingFile element)
-                     #(and (instance? ClSymbol %)
+                     #(and (psi/symbol? %)
                            (= element-text (.getText ^ClSymbol %)))
                      #(let [qualifier (.getQualifierSymbol ^ClSymbol %)
                             separator (.getSeparatorToken ^ClSymbol %)]
-                        (.delete qualifier)
-                        (.delete separator)))))
+                       (.delete qualifier)
+                       (.delete separator)))))
 
 (defn annotate-fqn [^ClSymbol element target ^AnnotationHolder holder]
   (let [annotation (.createInfoAnnotation holder
@@ -155,7 +155,7 @@
 (defn has-ns-ancestor [^PsiElement element]
   (if (nil? element)
     false
-    (if (instance? ClList element)
+    (if (psi/list? element)
       (let [head-text (.getHeadText ^ClList element)]
         (if (= "ns" head-text)
           true

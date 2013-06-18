@@ -106,21 +106,21 @@
 
 (defn defn-parameters [^ASTNode
                        node]
-                      (if (has-types? node [ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/VECTOR])
-                        2
-                        1))
+  (if (has-types? node [ClojureElementTypes/SYMBOL
+                        ClojureElementTypes/SYMBOL
+                        ClojureElementTypes/VECTOR])
+    2
+    1))
 
 (defn fn-parameters [^ASTNode node]
-                    (cond (has-types? node [ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/VECTOR]) 2
-                          (has-types? node [ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/VECTOR]) 1
-                          (has-types? node [ClojureElementTypes/SYMBOL
-                                            ClojureElementTypes/SYMBOL]) 1
-                          :else 0))
+  (cond (has-types? node [ClojureElementTypes/SYMBOL
+                          ClojureElementTypes/SYMBOL
+                          ClojureElementTypes/VECTOR]) 2
+        (has-types? node [ClojureElementTypes/SYMBOL
+                          ClojureElementTypes/VECTOR]) 1
+        (has-types? node [ClojureElementTypes/SYMBOL
+                          ClojureElementTypes/SYMBOL]) 1
+        :else 0))
 
 (def indent-form {:ns              1,
                   :let             1,
@@ -221,10 +221,10 @@
 (defn get-params [^ASTNode node]
   (let [psi (.getPsi node)]
     (cond
-      (instance? ClList psi) (list-params node)
-      (instance? ClVector psi) (normal-params)
-      (instance? ClSet psi) (set-params)
-      (instance? ClMap psi) (map-params)
+      (psi/list? psi) (list-params node)
+      (psi/vector? psi) (normal-params)
+      (psi/set? psi) (set-params)
+      (psi/map? psi) (map-params)
       (instance? PsiFile psi) (file-params))))
 
 (defn create-block
@@ -282,8 +282,8 @@
         (= "," (.getText node2)) no-spacing
         (or (brace? type1)
             (brace? type2)) no-spacing-with-newline
-        (and (instance? ClListLike psi1)
-             (instance? ClListLike psi2)
+        (and (psi/list-like? psi1)
+             (psi/list-like? psi2)
              (= (psi/parent psi1) (psi/parent psi2))
              (ClojurePsiCheckers/isImportingClause (psi/parent psi1))) mandatory-newline
         (.contains ClojureElementTypes/MODIFIERS type1) no-spacing

@@ -26,15 +26,15 @@
                  ((extension/get-extension ::namespace-decl key) list)))
           (mapcat (fn [list]
                     (map (fn [key] [list key]) (lists/resolve-keys list)))
-                  (filter #(instance? ClList %) (cons ancestor (psi/prev-siblings ancestor)))))))
+                  (filter #(psi/list? %) (cons ancestor (psi/prev-siblings ancestor)))))))
 
 (defn declared-ns [^ClList list]
   (if-let [sym (second (psi/significant-children list))]
     (cond
-      (instance? ClSymbol sym) (.getNameString ^ClSymbol sym)
-      (instance? ClQuotedForm sym)
+      (psi/symbol? sym) (.getNameString ^ClSymbol sym)
+      (psi/quoted? sym)
       (if-let [sym (first (psi/significant-children sym))]
-        (if (instance? ClSymbol sym)
+        (if (psi/symbol? sym)
           (.getNameString ^ClSymbol sym))))))
 
 (extension/register-extension ::namespace-decl ns-forms declared-ns)

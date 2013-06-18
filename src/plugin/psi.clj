@@ -1,6 +1,7 @@
 (ns plugin.psi
-  (:refer-clojure :exclude [contains? descendants tree-seq ancestors])
-  (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata ClojureFile)
+  (:refer-clojure :exclude [contains? descendants tree-seq ancestors symbol? keyword? list? vector? map? set?])
+  (:import (org.jetbrains.plugins.clojure.psi.api ClMetadata ClojureFile ClList ClKeyword ClVector ClMap ClQuotedForm
+                                                  ClSet ClListLike)
            (com.intellij.psi PsiElement PsiComment PsiWhiteSpace SmartPointerManager PsiDocumentManager
                              SmartPsiElementPointer)
            (com.intellij.psi.impl.source.tree LeafPsiElement)
@@ -9,10 +10,38 @@
            (com.intellij.psi.codeStyle CodeStyleManager)
            (com.intellij.psi.util CachedValueProvider$Result)
            (clojure.lang IDeref)
-           (com.intellij.openapi.util Key)))
+           (com.intellij.openapi.util Key)
+           (org.jetbrains.plugins.clojure.psi.api.symbols ClSymbol)))
 
-(defn ^PsiElement parent [^PsiElement element]
-  (.getContext element))
+(definline ^PsiElement parent [^PsiElement element]
+  `(.getContext ~element))
+
+(definline symbol? [element]
+  `(instance? ClSymbol ~element))
+
+(definline keyword? [element]
+  `(instance? ClKeyword ~element))
+
+(definline list? [element]
+  `(instance? ClList ~element))
+
+(definline list-like? [element]
+  `(instance? ClListLike ~element))
+
+(definline vector? [element]
+  `(instance? ClVector ~element))
+
+(definline map? [element]
+  `(instance? ClMap ~element))
+
+(definline set? [element]
+  `(instance? ClSet ~element))
+
+(definline meta? [element]
+  `(instance? ClMetadata ~element))
+
+(definline quoted? [element]
+  `(instance? ClQuotedForm ~element))
 
 (defn visible?
   "Visible elements are any real program elements - non-leaf,
@@ -27,7 +56,7 @@
   "Significant elements are any visible elements except metadata"
   [element]
   (and (visible? element)
-       (not (instance? ClMetadata element))))
+       (not (meta? element))))
 
 (defn next-siblings
   "Lazy sequence of the following siblings of element"
@@ -89,7 +118,7 @@
 
 (defn ^ClMetadata metadata [element]
   (if-let [test (first (filter visible? (prev-siblings element)))]
-    (if (instance? ClMetadata test)
+    (if (meta? test)
       test)))
 
 (defn tree-seq [^PsiElement element]
